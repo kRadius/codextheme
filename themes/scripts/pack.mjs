@@ -12,13 +12,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repo = path.resolve(root, "..");
 const catalog = JSON.parse(await fs.readFile(path.join(root, "catalog.json"), "utf8"));
 const outputRoot = path.join(repo, "packages", "cli", "themes");
+const exportedAt = "2026-07-18T00:00:00.000Z";
 
 await fs.mkdir(outputRoot, { recursive: true });
 
 for (const entry of catalog) {
   const manifest = path.join(repo, entry.source);
   const output = path.join(outputRoot, `${entry.slug}.codedrobe-theme`);
-  await writeThemePackage(manifest, output, { force: true });
+  await writeThemePackage(manifest, output, { force: true, exportedAt });
   const bundle = await readThemePackage(output);
   const warnings = lintThemePackage(bundle);
   if (warnings.length) {

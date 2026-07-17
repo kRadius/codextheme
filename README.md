@@ -1,13 +1,52 @@
 # CodexTheme
 
-One-command, reversible themes for Codex Desktop on macOS.
+One-command, reversible themes for Codex Desktop on macOS. The traffic site lives at [codextheme.tech](https://codextheme.tech).
 
 ```bash
 npx --yes @codextheme/cli@0.1.0 apply midnight-circuit
 ```
 
-The public repository contains the auditable runtime, CLI, theme sources, and static site. The runtime is an Apache-2.0 derivative of CodeDrobe Core 0.3.0; see [UPSTREAM.md](UPSTREAM.md), [LICENSE](LICENSE), and [NOTICE](NOTICE).
+## Launch themes
 
-V1 requires Node.js 22.4+, never uses `sudo`, does not modify the Codex application bundle, asks before restarting a running Codex process, and supports `reapply` and `restore`. Themes apply to the current Codex process; reopening Codex normally requires `reapply`.
+| Theme | Slug | Scope |
+| --- | --- | --- |
+| Midnight Circuit / 午夜回路 | `midnight-circuit` | Home + session background |
+| Crimson Eclipse / 绯红蚀影 | `crimson-eclipse` | Home + session background |
+| Aurora Glass / 极光玻璃 | `aurora-glass` | Home + session background |
 
-CodexTheme is an independent project and is not affiliated with or endorsed by OpenAI.
+Each theme is built from original geometric artwork in this repository. Version 0.1.0 does not support uploads or remote theme downloads.
+
+## User flow
+
+Requirements: macOS, Node.js 22.4 or newer, and Codex Desktop.
+
+1. Open a curated theme page on codextheme.tech.
+2. Copy its single fixed-version command and paste it into Terminal.
+3. If the current Codex process must reopen, the CLI warns about unsent input and continues only after an explicit `y`.
+
+Themes apply to the current Codex process. After reopening Codex, run:
+
+```bash
+npx --yes @codextheme/cli@0.1.0 reapply
+```
+
+Restore the official appearance with:
+
+```bash
+npx --yes @codextheme/cli@0.1.0 restore
+```
+
+## Trust boundary
+
+- No `sudo`, admin permission, install script, postinstall hook, or application-bundle rewrite.
+- Runtime injection binds Chromium DevTools Protocol to `127.0.0.1` and does not modify `.app`, `app.asar`, or the official signature.
+- Theme packages contain data, CSS, and local images; themes cannot execute JavaScript or load remote CSS resources.
+- The fixed CLI version bundles the exact three theme packages and depends on the exact runtime version.
+- Local state contains only schema version, curated theme slug, and application timestamp.
+- `restore` is part of the same public, fixed-version CLI.
+
+## Source and license
+
+This public monorepo contains the runtime, CLI, original theme sources, release checks, and website. `packages/runtime` is an Apache-2.0 derivative of CodeDrobe Core 0.3.0. Its exact upstream tag and commit, preserved history, removed surfaces, and modification policy are recorded in [UPSTREAM.md](UPSTREAM.md), [LICENSE](LICENSE), and [NOTICE](NOTICE).
+
+CodexTheme is an independent project and is not affiliated with or endorsed by OpenAI. Codex and OpenAI are trademarks of their respective owners.

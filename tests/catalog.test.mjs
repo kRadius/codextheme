@@ -29,3 +29,13 @@ test("catalog contains only the three curated launch themes", async () => {
     assert.ok(theme.descriptionZh.length >= 8);
   }
 });
+
+test("packed launch themes use the canonical release timestamp", async () => {
+  for (const slug of ["midnight-circuit", "crimson-eclipse", "aurora-glass"]) {
+    const bundle = JSON.parse(await fs.readFile(
+      path.join(root, "packages", "cli", "themes", `${slug}.codedrobe-theme`),
+      "utf8",
+    ));
+    assert.equal(bundle.exportedAt, "2026-07-18T00:00:00.000Z");
+  }
+});

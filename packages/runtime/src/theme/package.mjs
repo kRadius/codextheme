@@ -308,7 +308,8 @@ export function resolveThemeTarget(bundle, appId) {
   };
 }
 
-export async function buildThemePackage(manifestFilename) {
+export async function buildThemePackage(manifestFilename, { exportedAt = new Date().toISOString() } = {}) {
+  assertString(exportedAt, "exportedAt");
   const manifestPath = path.resolve(manifestFilename);
   const base = path.dirname(manifestPath);
   const source = JSON.parse(await fs.readFile(manifestPath, "utf8"));
@@ -357,7 +358,7 @@ export async function buildThemePackage(manifestFilename) {
   const bundle = validateThemePackage({
     format: THEME_FORMAT,
     schemaVersion: THEME_SCHEMA_VERSION,
-    exportedAt: new Date().toISOString(),
+    exportedAt,
     theme: {
       id: source.id,
       displayName: source.displayName,
@@ -374,7 +375,7 @@ export async function buildThemePackage(manifestFilename) {
   return { bundle, serialized };
 }
 
-export async function writeThemePackage(manifestFilename, outputFilename, { force = false } = {}) {
+export async function writeThemePackage(manifestFilename, outputFilename, { force = false, exportedAt } = {}) {
   const output = path.resolve(outputFilename);
   if (path.extname(output) !== THEME_EXTENSION) {
     throw new Error(`Output filename must end with ${THEME_EXTENSION}.`);
@@ -387,7 +388,7 @@ export async function writeThemePackage(manifestFilename, outputFilename, { forc
       if (error.code !== "ENOENT") throw error;
     }
   }
-  const result = await buildThemePackage(manifestFilename);
+  const result = await buildThemePackage(manifestFilename, { exportedAt });
   await fs.mkdir(path.dirname(output), { recursive: true });
   await fs.writeFile(output, result.serialized, "utf8");
   return { output, bundle: result.bundle };

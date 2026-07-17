@@ -40,6 +40,14 @@ test("writes, reads, and resolves a .codedrobe-theme package", async () => {
   await assert.rejects(() => writeThemePackage(exampleManifest.pathname, output), /already exists/);
 });
 
+test("accepts an explicit export timestamp for reproducible release artifacts", async () => {
+  const exportedAt = "2026-07-18T00:00:00.000Z";
+  const first = await buildThemePackage(exampleManifest.pathname, { exportedAt });
+  const second = await buildThemePackage(exampleManifest.pathname, { exportedAt });
+  assert.equal(first.bundle.exportedAt, exportedAt);
+  assert.equal(first.serialized, second.serialized);
+});
+
 test("packs and resolves multiple named images with a backward-compatible hero alias", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-theme-images-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
