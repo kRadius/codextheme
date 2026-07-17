@@ -1,0 +1,39 @@
+{
+  "name": "@codextheme/cli",
+  "version": "0.1.0",
+  "description": "One-command curated themes for Codex Desktop on macOS.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "bin": {
+    "codextheme": "src/bin.mjs"
+  },
+  "files": [
+    "src",
+    "themes",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@codextheme/runtime": "0.1.0"
+  },
+  "engines": {
+    "node": ">=22.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kRadius/codextheme.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://codextheme.tech",
+  "bugs": {
+    "url": "https://github.com/kRadius/codextheme/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}
