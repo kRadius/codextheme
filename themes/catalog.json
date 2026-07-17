@@ -1,0 +1,35 @@
+[
+  {
+    "slug": "midnight-circuit",
+    "name": "Midnight Circuit",
+    "nameZh": "午夜回路",
+    "description": "Electric violet circuitry suspended over a deep graphite workspace.",
+    "descriptionZh": "深石墨工作区里悬浮着电紫色数字回路。",
+    "accent": "#9b7bff",
+    "surface": "#10111a",
+    "source": "themes/midnight-circuit/theme.json",
+    "command": "npx --yes @codextheme/cli@0.1.0 apply midnight-circuit"
+  },
+  {
+    "slug": "crimson-eclipse",
+    "name": "Crimson Eclipse",
+    "nameZh": "绯红蚀影",
+    "description": "A restrained red eclipse cuts through a near-black editorial shell.",
+    "descriptionZh": "克制的红色日蚀划过近黑色编辑空间。",
+    "accent": "#ff526a",
+    "surface": "#120d12",
+    "source": "themes/crimson-eclipse/theme.json",
+    "command": "npx --yes @codextheme/cli@0.1.0 apply crimson-eclipse"
+  },
+  {
+    "slug": "aurora-glass",
+    "name": "Aurora Glass",
+    "nameZh": "极光玻璃",
+    "description": "Cold cyan aurora light drifts behind calm translucent work surfaces.",
+    "descriptionZh": "冷青极光在沉静的半透明工作界面后流动。",
+    "accent": "#55e5d7",
+    "surface": "#0b1518",
+    "source": "themes/aurora-glass/theme.json",
+    "command": "npx --yes @codextheme/cli@0.1.0 apply aurora-glass"
+  }
+]

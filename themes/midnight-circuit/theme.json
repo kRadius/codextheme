@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "midnight-circuit",
+  "displayName": "Midnight Circuit / 午夜回路",
+  "version": "1.0.0",
+  "images": {
+    "hero": "assets/hero.jpg",
+    "session-bg": "assets/session.jpg"
+  },
+  "copy": {
+    "brandTitle": "MIDNIGHT CIRCUIT",
+    "brandSubtitle": "codextheme.tech",
+    "signature": "01 / VIOLET",
+    "tagline": "让思路在午夜回路中保持清晰",
+    "projectPrefix": "CIRCUIT / ",
+    "projectLabel": "选择一个任务开始",
+    "ribbon": "◈"
+  },
+  "targets": {
+    "codex": {
+      "css": "../shared/codex.css",
+      "options": {
+        "rendererProfile": "codex-theme-v1",
+        "baseTheme": {
+          "mode": "dark",
+          "codeTheme": "codex",
+          "accent": "#9b7bff",
+          "contrast": 72,
+          "ink": "#f1edff",
+          "surface": "#10111a",
+          "opaqueWindows": true,
+          "semanticColors": {
+            "diffAdded": "#75d6ad",
+            "diffRemoved": "#ff7188",
+            "skill": "#b89cff"
+          }
+        }
+      },
+      "verification": {
+        "recommended": [
+          { "name": "session-surface", "any": ["main.main-surface"] },
+          { "name": "composer-surface", "any": [".composer-surface-chrome"] }
+        ]
+      }
+    }
+  }
+}

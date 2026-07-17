@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "crimson-eclipse",
+  "displayName": "Crimson Eclipse / 绯红蚀影",
+  "version": "1.0.0",
+  "images": {
+    "hero": "assets/hero.jpg",
+    "session-bg": "assets/session.jpg"
+  },
+  "copy": {
+    "brandTitle": "CRIMSON ECLIPSE",
+    "brandSubtitle": "codextheme.tech",
+    "signature": "02 / SCARLET",
+    "tagline": "在安静的蚀影中聚焦下一步",
+    "projectPrefix": "ECLIPSE / ",
+    "projectLabel": "选择一个任务开始",
+    "ribbon": "●"
+  },
+  "targets": {
+    "codex": {
+      "css": "../shared/codex.css",
+      "options": {
+        "rendererProfile": "codex-theme-v1",
+        "baseTheme": {
+          "mode": "dark",
+          "codeTheme": "codex",
+          "accent": "#ff526a",
+          "contrast": 76,
+          "ink": "#fff0f2",
+          "surface": "#120d12",
+          "opaqueWindows": true,
+          "semanticColors": {
+            "diffAdded": "#68c79b",
+            "diffRemoved": "#ff526a",
+            "skill": "#ff8495"
+          }
+        }
+      },
+      "verification": {
+        "recommended": [
+          { "name": "session-surface", "any": ["main.main-surface"] },
+          { "name": "composer-surface", "any": [".composer-surface-chrome"] }
+        ]
+      }
+    }
+  }
+}

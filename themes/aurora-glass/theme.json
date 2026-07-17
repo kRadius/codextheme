@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "aurora-glass",
+  "displayName": "Aurora Glass / 极光玻璃",
+  "version": "1.0.0",
+  "images": {
+    "hero": "assets/hero.jpg",
+    "session-bg": "assets/session.jpg"
+  },
+  "copy": {
+    "brandTitle": "AURORA GLASS",
+    "brandSubtitle": "codextheme.tech",
+    "signature": "03 / CYAN",
+    "tagline": "让灵感像极光一样穿过玻璃",
+    "projectPrefix": "AURORA / ",
+    "projectLabel": "选择一个任务开始",
+    "ribbon": "◇"
+  },
+  "targets": {
+    "codex": {
+      "css": "../shared/codex.css",
+      "options": {
+        "rendererProfile": "codex-theme-v1",
+        "baseTheme": {
+          "mode": "dark",
+          "codeTheme": "codex",
+          "accent": "#55e5d7",
+          "contrast": 68,
+          "ink": "#e8fffc",
+          "surface": "#0b1518",
+          "opaqueWindows": true,
+          "semanticColors": {
+            "diffAdded": "#55e5b2",
+            "diffRemoved": "#ff7d91",
+            "skill": "#63dce8"
+          }
+        }
+      },
+      "verification": {
+        "recommended": [
+          { "name": "session-surface", "any": ["main.main-surface"] },
+          { "name": "composer-surface", "any": [".composer-surface-chrome"] }
+        ]
+      }
+    }
+  }
+}
