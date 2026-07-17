@@ -1,0 +1,54 @@
+{
+  "name": "@codextheme/runtime",
+  "version": "0.1.0",
+  "description": "Auditable Codex Desktop theme runtime derived from CodeDrobe Core 0.3.0.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kRadius/codextheme.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/kRadius/codextheme#readme",
+  "bugs": {
+    "url": "https://github.com/kRadius/codextheme/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.mjs"
+    },
+    "./adapters": {
+      "types": "./types/adapters.d.ts",
+      "default": "./src/adapters/index.mjs"
+    },
+    "./theme": {
+      "types": "./types/theme.d.ts",
+      "default": "./src/theme/index.mjs"
+    }
+  },
+  "types": "./types/index.d.ts",
+  "files": [
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "README_zh.md",
+    "src",
+    "types"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "typecheck": "tsc -p tests/types/tsconfig.json",
+    "pack:check": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=22.4"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
+}

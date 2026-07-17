@@ -1,57 +1,23 @@
 {
-  "name": "@codedrobe/core",
-  "version": "0.3.0",
-  "description": "Cross-platform CodeDrobe runtime, CLI, app adapters, and .codedrobe-theme tooling.",
+  "name": "codextheme",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One-command themes for Codex Desktop.",
   "type": "module",
-  "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/CodeDrobe/core.git"
-  },
-  "homepage": "https://github.com/CodeDrobe/core#readme",
-  "bugs": {
-    "url": "https://github.com/CodeDrobe/core/issues"
-  },
-  "bin": {
-    "codedrobe": "bin/codedrobe.mjs"
-  },
-  "exports": {
-    ".": {
-      "types": "./types/index.d.ts",
-      "default": "./src/index.mjs"
-    },
-    "./adapters": {
-      "types": "./types/adapters.d.ts",
-      "default": "./src/adapters/index.mjs"
-    },
-    "./theme": {
-      "types": "./types/theme.d.ts",
-      "default": "./src/theme/index.mjs"
-    }
-  },
-  "types": "./types/index.d.ts",
-  "files": [
-    "LICENSE",
-    "NOTICE",
-    "README.md",
-    "bin",
-    "src",
-    "types",
-    "README_zh.md"
+  "packageManager": "npm@11.4.2",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
-    "test": "node --test && npm run typecheck",
-    "typecheck": "tsc -p tests/types/tsconfig.json",
-    "pack:check": "npm pack --dry-run"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.2"
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "themes:build": "node themes/scripts/generate-art.mjs && node themes/scripts/pack.mjs",
+    "site:build": "npm run build -w @codextheme/site",
+    "build": "npm run themes:build && npm run site:build",
+    "check": "npm run typecheck && npm test && npm run build && node scripts/check-packages.mjs"
   },
   "engines": {
     "node": ">=22.4"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
   }
 }

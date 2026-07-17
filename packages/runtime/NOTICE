@@ -10,5 +10,5 @@ with those companies.
 CodexTheme modifications
 Copyright 2026 CodexTheme contributors
 
-CodexTheme renames and packages the derived runtime, removes the upstream
-standalone update surface, and adds a separate CLI, curated themes, and site.
+This derived package is published as @codextheme/runtime and removes the
+upstream standalone CLI and automatic update surface.

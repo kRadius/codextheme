@@ -9,13 +9,13 @@ import {
   watchTheme,
   type LegacyThemePackage,
   type ThemePackage,
-} from "@codedrobe/core";
+} from "@codextheme/runtime";
 import {
   convertLegacyThemePackage as convertLegacyFromThemeEntry,
   resolveThemeTarget,
   type ThemeLintWarning,
-} from "@codedrobe/core/theme";
-import { listAdapters, type AppAdapter } from "@codedrobe/core/adapters";
+} from "@codextheme/runtime/theme";
+import { listAdapters, type AppAdapter } from "@codextheme/runtime/adapters";
 
 const adapter: AppAdapter = getAdapter("codex");
 const adapters: AppAdapter[] = listAdapters();
