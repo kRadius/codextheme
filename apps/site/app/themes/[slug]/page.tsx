@@ -51,7 +51,7 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
             <h2 id="apply-title">一条命令应用</h2>
             <p>复制后打开 Terminal，粘贴并回车。命令固定到我们可审计的 @codextheme/cli 0.1.1，不会静默跟随 latest。</p>
             <div className="command-box">{theme.command}</div>
-            <div className="copy-row"><CopyCommand command={theme.command} /></div>
+            <div className="copy-row"><CopyCommand command={theme.command} themeSlug={theme.slug} /></div>
           </div>
           <aside className="apply-side"><h3>安装边界</h3><ul><li>macOS 与 Node.js 22.4+</li><li>不修改 Codex.app 或官方签名</li><li>需要重开时会先征求确认</li><li>运行 restore 可恢复官方外观</li></ul><Link className="text-link" href="/security">查看完整安全说明 →</Link></aside>
         </section>}
