@@ -74,11 +74,14 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   for (const slug of availableSlugs) {
     assert.match(homeHtml, new RegExp(slug));
   }
-  assert.match(homeHtml, /把 Codex 变成你的工作世界/);
+  assert.match(homeHtml, /Codex themes that turn your workspace into a world/);
   assert.match(homeHtml, /Cathedral Nocturne/);
-  assert.match(homeHtml, /提交主题/);
+  assert.match(homeHtml, /Browse all themes/);
+  assert.match(homeHtml, /Submit a theme/);
+  assert.match(homeHtml, /Three complete worlds/);
   assert.match(homeHtml, /github\.com\/kRadius\/codextheme\/issues\/new/);
   assert.match(homeHtml, /mailto:codextheme@codextheme\.tech/);
+  assert.doesNotMatch(homeHtml, /把 Codex|全部主题|提交主题|安装帮助|已可安装/);
   assert.doesNotMatch(homeHtml, /主题槽位|制作中|真实截图待补齐|midnight-circuit|crimson-eclipse|aurora-glass|搜索主题|上传图片|为什么只有三个|mini-shell|preview-ui|composer-mock/);
 
   for (const slug of availableSlugs) {
