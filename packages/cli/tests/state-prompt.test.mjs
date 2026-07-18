@@ -25,6 +25,40 @@ test("state writes only the approved schema with private permissions", async (t)
   assert.equal((await fs.stat(state.filename)).mode & 0o777, 0o600);
 });
 
+test("state schema two stores only catalog or private local references", async (t) => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-state-v2-"));
+  t.after(() => fs.rm(home, { recursive: true, force: true }));
+  const store = createStateStore({ home });
+
+  await store.write({
+    schemaVersion: 2,
+    source: "private",
+    cacheKey: "a".repeat(64),
+    appliedAt: "2026-07-19T12:00:00.000Z",
+    privateId: "must-not-persist",
+    url: "https://must-not-persist.test",
+  });
+  assert.deepEqual(await store.read(), {
+    schemaVersion: 2,
+    source: "private",
+    cacheKey: "a".repeat(64),
+    appliedAt: "2026-07-19T12:00:00.000Z",
+  });
+
+  await store.write({
+    schemaVersion: 2,
+    source: "catalog",
+    themeSlug: "cathedral-nocturne",
+    appliedAt: "2026-07-19T12:01:00.000Z",
+  });
+  assert.deepEqual(await store.read(), {
+    schemaVersion: 2,
+    source: "catalog",
+    themeSlug: "cathedral-nocturne",
+    appliedAt: "2026-07-19T12:01:00.000Z",
+  });
+});
+
 test("restart prompt refuses non-TTY and accepts only normalized y", async () => {
   assert.equal(await confirmRestart({ input: { isTTY: false }, output: { isTTY: true } }), false);
 

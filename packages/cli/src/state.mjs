@@ -2,21 +2,45 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+const SAFE_CACHE_KEY = /^[a-f0-9]{64}$/;
+
+function invalidState() {
+  return Object.assign(new Error("Invalid CodexTheme state."), { code: "E_USAGE" });
+}
+
 function cleanState(value) {
-  if (
-    value?.schemaVersion !== 1
-    || typeof value.themeSlug !== "string"
-    || !value.themeSlug
-    || typeof value.appliedAt !== "string"
-    || !value.appliedAt
-  ) {
-    throw Object.assign(new Error("Invalid CodexTheme state."), { code: "E_USAGE" });
+  if (typeof value?.appliedAt !== "string" || !value.appliedAt) throw invalidState();
+
+  if (value.schemaVersion === 1) {
+    if (typeof value.themeSlug !== "string" || !value.themeSlug) throw invalidState();
+    return {
+      schemaVersion: 1,
+      themeSlug: value.themeSlug,
+      appliedAt: value.appliedAt,
+    };
   }
-  return {
-    schemaVersion: 1,
-    themeSlug: value.themeSlug,
-    appliedAt: value.appliedAt,
-  };
+
+  if (value.schemaVersion === 2 && value.source === "catalog") {
+    if (typeof value.themeSlug !== "string" || !value.themeSlug) throw invalidState();
+    return {
+      schemaVersion: 2,
+      source: "catalog",
+      themeSlug: value.themeSlug,
+      appliedAt: value.appliedAt,
+    };
+  }
+
+  if (value.schemaVersion === 2 && value.source === "private") {
+    if (typeof value.cacheKey !== "string" || !SAFE_CACHE_KEY.test(value.cacheKey)) throw invalidState();
+    return {
+      schemaVersion: 2,
+      source: "private",
+      cacheKey: value.cacheKey,
+      appliedAt: value.appliedAt,
+    };
+  }
+
+  throw invalidState();
 }
 
 export function createStateStore({ home = os.homedir(), fsApi = fs } = {}) {

@@ -32,11 +32,9 @@ async function requireRestartConsent(promptRestart) {
   }
 }
 
-export async function applyTheme({ slug, runtime, stateStore, promptRestart, now = () => new Date() }) {
-  let theme;
+async function applyResolvedTheme({ theme, nextState, runtime, stateStore, promptRestart, now }) {
   let detection;
   try {
-    theme = await runtime.loadTheme(slug);
     detection = await runtime.detect();
   } catch (error) {
     throw mappedError(error);
@@ -73,14 +71,61 @@ export async function applyTheme({ slug, runtime, stateStore, promptRestart, now
   }
 
   const appliedAt = now().toISOString();
-  await stateStore.write({ schemaVersion: 1, themeSlug: slug, appliedAt });
+  await stateStore.write({ ...nextState, appliedAt });
   return { theme, result, appliedAt };
+}
+
+export async function applyTheme({ slug, runtime, stateStore, promptRestart, now = () => new Date() }) {
+  let theme;
+  try {
+    theme = await runtime.loadTheme(slug);
+  } catch (error) {
+    throw mappedError(error);
+  }
+  return applyResolvedTheme({
+    theme,
+    nextState: { schemaVersion: 2, source: "catalog", themeSlug: slug },
+    runtime,
+    stateStore,
+    promptRestart,
+    now,
+  });
+}
+
+export async function applyPrivateTheme({ bundle, cacheKey, runtime, stateStore, promptRestart, now = () => new Date() }) {
+  let theme;
+  try {
+    theme = await runtime.loadThemeBundle(bundle);
+  } catch (error) {
+    throw mappedError(error);
+  }
+  return applyResolvedTheme({
+    theme,
+    nextState: { schemaVersion: 2, source: "private", cacheKey },
+    runtime,
+    stateStore,
+    promptRestart,
+    now,
+  });
 }
 
 export async function reapplyTheme(options) {
   const state = await options.stateStore.read();
   if (!state) throw new CliError("E_USAGE", "没有可重新应用的活动主题，请先从主题页复制 apply 命令。");
-  return applyTheme({ ...options, slug: state.themeSlug });
+  if (state.schemaVersion === 1 || state.source === "catalog") {
+    return applyTheme({ ...options, slug: state.themeSlug });
+  }
+  if (state.schemaVersion !== 2 || state.source !== "private" || !options.cache) {
+    throw new CliError("E_USAGE", "活动主题状态无效，请重新创建或应用主题。");
+  }
+  let bundle;
+  try {
+    bundle = JSON.parse(await options.cache.read(state.cacheKey));
+  } catch (error) {
+    if (String(error?.code ?? "").startsWith("E_")) throw error;
+    throw new CliError("E_PRIVATE_CACHE", "无法安全读取本地私有主题缓存。");
+  }
+  return applyPrivateTheme({ ...options, bundle, cacheKey: state.cacheKey });
 }
 
 const RENDERER_ABSENT_CODES = new Set([

@@ -1,17 +1,20 @@
 import { CATALOG, getCatalogEntry } from "./catalog.mjs";
-import { applyTheme, CliError, reapplyTheme, restoreTheme } from "./lifecycle.mjs";
+import { createPrivateCache } from "./cache.mjs";
+import { applyPrivateTheme, applyTheme, CliError, reapplyTheme, restoreTheme } from "./lifecycle.mjs";
+import { privateThemeSource } from "./private-source.mjs";
 import { confirmRestart } from "./prompt.mjs";
 import { runtime as productionRuntime } from "./runtime.mjs";
 import { createStateStore } from "./state.mjs";
 
-export const VERSION = "0.1.1";
-const REAPPLY = "npx --yes @codextheme/cli@0.1.1 reapply";
-const RESTORE = "npx --yes @codextheme/cli@0.1.1 restore";
+export const VERSION = "0.2.0";
+const REAPPLY = "npx --yes @codextheme/cli@0.2.0 reapply";
+const RESTORE = "npx --yes @codextheme/cli@0.2.0 restore";
 
 const HELP = `CodexTheme ${VERSION}
 
 用法：
   codextheme apply <theme>
+  codextheme apply-private <private-id>
   codextheme reapply
   codextheme restore
 
@@ -32,6 +35,11 @@ function safePublicError(error) {
     "E_DOM_INCOMPATIBLE",
     "E_CORE_VERIFY",
     "E_RESTORE_FAILED",
+    "E_PRIVATE_NOT_FOUND",
+    "E_PRIVATE_EXPIRED",
+    "E_PRIVATE_DOWNLOAD",
+    "E_PRIVATE_INVALID",
+    "E_PRIVATE_CACHE",
   ]);
   if (allowed.has(error?.code)) return { code: error.code, message: error.message, exitCode: 1 };
   return { code: "E_DOM_INCOMPATIBLE", message: "CodexTheme 未能完成本次操作。", exitCode: 1 };
@@ -42,6 +50,9 @@ function validateCommand(argv) {
     const theme = getCatalogEntry(argv[1]);
     if (!theme) throw usage("未知主题。请从 codextheme.tech 复制完整命令。");
     return { command: "apply", slug: theme.slug };
+  }
+  if (argv.length === 2 && argv[0] === "apply-private") {
+    return { command: "apply-private", privateId: argv[1] };
   }
   if (argv.length === 1 && argv[0] === "reapply") return { command: "reapply" };
   if (argv.length === 1 && argv[0] === "restore") return { command: "restore" };
@@ -64,19 +75,27 @@ export async function run(argv, dependencies = {}) {
   try {
     const parsed = validateCommand(argv);
     if ((dependencies.platform ?? process.platform) !== "darwin") {
-      throw new CliError("E_PLATFORM", "0.1.1 首发版仅支持 macOS 上的 Codex Desktop。");
+      throw new CliError("E_PLATFORM", "0.2.0 版本仅支持 macOS 上的 Codex Desktop。");
     }
     const services = {
       runtime: dependencies.runtime ?? productionRuntime,
       stateStore: dependencies.stateStore ?? createStateStore(),
       promptRestart: dependencies.promptRestart ?? (() => confirmRestart()),
       now: dependencies.now ?? (() => new Date()),
+      cache: dependencies.privateCache ?? createPrivateCache(),
     };
+    const privateSource = dependencies.privateSource ?? privateThemeSource;
 
     if (parsed.command === "apply") {
       const result = await applyTheme({ ...services, slug: parsed.slug });
       const name = result.theme.theme?.displayName?.split(" / ")[0] ?? getCatalogEntry(parsed.slug).name;
       stdout.write(`✓ ${name} 主题已应用并通过验证\n重开 Codex 后运行：${REAPPLY}\n恢复官方外观：${RESTORE}\n`);
+    } else if (parsed.command === "apply-private") {
+      const downloaded = await privateSource.download(parsed.privateId);
+      const cacheKey = await services.cache.write(downloaded.serialized);
+      const result = await applyPrivateTheme({ ...services, bundle: downloaded.bundle, cacheKey });
+      const name = result.theme.theme?.displayName ?? "Private Custom Skin";
+      stdout.write(`✓ ${name} 已应用并通过验证\n重开 Codex 后运行：${REAPPLY}\n恢复官方外观：${RESTORE}\n`);
     } else if (parsed.command === "reapply") {
       const result = await reapplyTheme(services);
       const name = result.theme.theme?.displayName?.split(" / ")[0] ?? "当前";
