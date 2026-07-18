@@ -141,3 +141,19 @@ test("security, help, robots, and sitemap routes render", async () => {
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /This theme page does not exist/);
 });
+
+test("private skin routes fail closed before storage access", async () => {
+  const malformed = await fetch(`${origin}/api/private-skins`, {
+    method: "POST",
+    body: new FormData(),
+  });
+  assert.equal(malformed.status, 400);
+  assert.deepEqual(await malformed.json(), { error: "invalid_upload" });
+
+  const invalidId = await fetch(`${origin}/api/private-skins/not-an-id`);
+  assert.equal(invalidId.status, 404);
+  assert.equal(invalidId.headers.get("cache-control"), "no-store");
+
+  const cleanup = await fetch(`${origin}/api/private-skins/cleanup`);
+  assert.equal(cleanup.status, 401);
+});

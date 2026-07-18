@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/private-skins/cleanup",
+      "schedule": "17 3 * * *"
+    }
+  ]
+}
