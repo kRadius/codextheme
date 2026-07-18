@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packages = [
   { name: "@codextheme/runtime", version: "0.1.0", directory: "packages/runtime" },
-  { name: "@codextheme/cli", version: "0.1.0", directory: "packages/cli" },
+  { name: "@codextheme/cli", version: "0.1.1", directory: "packages/cli" },
 ];
 const requiredFiles = new Set(["LICENSE", "NOTICE", "README.md", "package.json"]);
 const forbiddenScripts = new Set(["preinstall", "install", "postinstall"]);
@@ -62,11 +62,14 @@ function checkPackFiles(expected, pack) {
     const themes = files.filter((filename) => filename.startsWith("themes/") && filename.endsWith(".codextheme-theme"));
     const expectedThemes = [
       "themes/aurora-glass.codextheme-theme",
+      "themes/cathedral-nocturne.codextheme-theme",
       "themes/crimson-eclipse.codextheme-theme",
+      "themes/crimson-procession.codextheme-theme",
       "themes/midnight-circuit.codextheme-theme",
+      "themes/silver-reliquary.codextheme-theme",
     ];
     if (JSON.stringify(themes.sort()) !== JSON.stringify(expectedThemes)) {
-      fail(`CLI must ship exactly the three available themes; received ${themes.join(", ") || "none"}.`);
+      fail(`CLI must ship exactly the six backward-compatible themes; received ${themes.join(", ") || "none"}.`);
     }
     const inheritedNames = files.filter((filename) => filename.endsWith(".codedrobe-theme"));
     if (inheritedNames.length) fail(`CLI artifact filenames must use the codextheme-owned extension; received ${inheritedNames.join(", ")}.`);

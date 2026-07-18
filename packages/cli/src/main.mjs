@@ -4,9 +4,9 @@ import { confirmRestart } from "./prompt.mjs";
 import { runtime as productionRuntime } from "./runtime.mjs";
 import { createStateStore } from "./state.mjs";
 
-export const VERSION = "0.1.0";
-const REAPPLY = "npx --yes @codextheme/cli@0.1.0 reapply";
-const RESTORE = "npx --yes @codextheme/cli@0.1.0 restore";
+export const VERSION = "0.1.1";
+const REAPPLY = "npx --yes @codextheme/cli@0.1.1 reapply";
+const RESTORE = "npx --yes @codextheme/cli@0.1.1 restore";
 
 const HELP = `CodexTheme ${VERSION}
 
@@ -15,7 +15,7 @@ const HELP = `CodexTheme ${VERSION}
   codextheme reapply
   codextheme restore
 
-首发主题：${Object.keys(CATALOG).join(", ")}
+可用主题：${Object.keys(CATALOG).join(", ")}
 `;
 
 function usage(message) {
@@ -64,7 +64,7 @@ export async function run(argv, dependencies = {}) {
   try {
     const parsed = validateCommand(argv);
     if ((dependencies.platform ?? process.platform) !== "darwin") {
-      throw new CliError("E_PLATFORM", "0.1.0 首发版仅支持 macOS 上的 Codex Desktop。");
+      throw new CliError("E_PLATFORM", "0.1.1 首发版仅支持 macOS 上的 Codex Desktop。");
     }
     const services = {
       runtime: dependencies.runtime ?? productionRuntime,

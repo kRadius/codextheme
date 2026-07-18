@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "cathedral-nocturne",
+  "displayName": "Cathedral Nocturne / 黑金圣堂",
+  "version": "1.0.0",
+  "images": {
+    "hero": "assets/hero.jpg",
+    "session-bg": "assets/session.jpg"
+  },
+  "copy": {
+    "brandTitle": "CATHEDRAL NOCTURNE",
+    "brandSubtitle": "codextheme.tech",
+    "signature": "01 / SACRED GOLD",
+    "tagline": "Build in a quieter, grander world.",
+    "projectPrefix": "NAVE / ",
+    "projectLabel": "Select a project",
+    "ribbon": "◆"
+  },
+  "targets": {
+    "codex": {
+      "css": "../shared/codex.css",
+      "options": {
+        "rendererProfile": "codex-theme-v1",
+        "baseTheme": {
+          "mode": "dark",
+          "codeTheme": "codex",
+          "accent": "#c7a45a",
+          "contrast": 74,
+          "ink": "#f3eee3",
+          "surface": "#15120e",
+          "opaqueWindows": true,
+          "semanticColors": {
+            "diffAdded": "#79c79c",
+            "diffRemoved": "#df6b72",
+            "skill": "#d5b96f"
+          }
+        }
+      },
+      "verification": {
+        "recommended": [
+          { "name": "session-surface", "any": ["main.main-surface"] },
+          { "name": "composer-surface", "any": [".composer-surface-chrome"] }
+        ]
+      }
+    }
+  }
+}

@@ -13,13 +13,13 @@ export const metadata: Metadata = {
     locale: "zh_CN",
     siteName: "CodexTheme",
     title: "CodexTheme — Codex Desktop 主题仓库",
-    description: "浏览真实 Codex 主题效果，一条命令应用，可验证、可恢复。",
+    description: "浏览 Codex 主题效果预览，一条命令应用，可验证、可恢复。",
     images: [{ url: "/og.png", width: 1200, height: 630, alt: "CodexTheme — Codex Desktop 主题仓库" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "CodexTheme — Codex Desktop 主题仓库",
-    description: "浏览真实 Codex 主题效果，一条命令应用，可验证、可恢复。",
+    description: "浏览 Codex 主题效果预览，一条命令应用，可验证、可恢复。",
     images: ["/og.png"],
   },
 };

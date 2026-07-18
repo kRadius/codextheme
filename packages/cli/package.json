@@ -1,6 +1,6 @@
 {
   "name": "@codextheme/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "One-command curated themes for Codex Desktop on macOS.",
   "type": "module",
   "license": "Apache-2.0",
