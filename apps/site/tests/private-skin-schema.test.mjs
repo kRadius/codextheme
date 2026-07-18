@@ -7,6 +7,12 @@ import {
   parsePrivateSkinId,
 } from "../app/lib/private-skin-schema.mjs";
 import { derivePalette } from "../app/lib/private-skin-palette.mjs";
+import { buildPrivateSkinPackage } from "../app/lib/private-skin-package.mjs";
+import {
+  lintThemePackage,
+  resolveThemeTarget,
+  validateThemePackage,
+} from "@codextheme/runtime";
 
 test("settings clamp to the four editor controls", () => {
   assert.deepEqual(normalizePrivateSkinSettings({
@@ -60,4 +66,20 @@ test("palette remains dark and readable", () => {
   assert.match(palette.surface, /^#[0-9a-f]{6}$/);
   assert.match(palette.ink, /^#[0-9a-f]{6}$/);
   assert.ok(palette.contrast >= 60);
+});
+
+test("generated packages contain only local images and safe Codex CSS", () => {
+  const serialized = buildPrivateSkinPackage({
+    id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    exportedAt: "2026-07-19T00:00:00.000Z",
+    image: Buffer.from("safe-image"),
+    settings: normalizePrivateSkinSettings({}),
+    palette: derivePalette({ red: 120, green: 80, blue: 200 }),
+  });
+  const bundle = validateThemePackage(JSON.parse(serialized));
+  assert.deepEqual(lintThemePackage(bundle), []);
+  const target = resolveThemeTarget(bundle, "codex");
+  assert.deepEqual(Object.keys(target.imageDataUrls).sort(), ["hero", "session-bg"]);
+  assert.doesNotMatch(target.css, /@import|url\(\s*["']?https?:/i);
+  assert.match(target.css, /background-position: 50% 50%/);
 });
