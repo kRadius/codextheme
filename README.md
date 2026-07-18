@@ -1,20 +1,20 @@
 # CodexTheme
 
-One-command, reversible themes for Codex Desktop on macOS. The traffic site lives at [codextheme.tech](https://codextheme.tech).
+Create, preview, and apply reversible Codex Desktop skins on macOS. The public studio and theme gallery live at [codextheme.tech](https://codextheme.tech).
 
 ```bash
-npx --yes @codextheme/cli@0.1.0 apply midnight-circuit
+npx --yes @codextheme/cli@0.2.0 apply cathedral-nocturne
 ```
 
 ## Available themes
 
 | Theme | Slug | Scope |
 | --- | --- | --- |
-| Midnight Circuit / 午夜回路 | `midnight-circuit` | Home + session background |
-| Crimson Eclipse / 绯红蚀影 | `crimson-eclipse` | Home + session background |
-| Aurora Glass / 极光玻璃 | `aurora-glass` | Home + session background |
+| Cathedral Nocturne | `cathedral-nocturne` | Home + session background |
+| Crimson Procession | `crimson-procession` | Home + session background |
+| Silver Reliquary | `silver-reliquary` | Home + session background |
 
-Each available theme is built from original geometric artwork in this repository. The website also reserves six coming-soon theme slots; those entries expose no install command until their assets, real Codex captures, package, and verification are complete. Version 0.1.0 does not support uploads or remote theme downloads.
+The homepage also includes a private custom skin studio. It processes an uploaded image in the browser, previews it in a Codex shell, lets the user adjust visibility, darkness, blur, zoom, and position, then creates a temporary one-command skin. No account is required.
 
 ## User flow
 
@@ -27,13 +27,13 @@ Requirements: macOS, Node.js 22.4 or newer, and Codex Desktop.
 Themes apply to the current Codex process. After reopening Codex, run:
 
 ```bash
-npx --yes @codextheme/cli@0.1.0 reapply
+npx --yes @codextheme/cli@0.2.0 reapply
 ```
 
 Restore the official appearance with:
 
 ```bash
-npx --yes @codextheme/cli@0.1.0 restore
+npx --yes @codextheme/cli@0.2.0 restore
 ```
 
 ## Trust boundary
@@ -41,8 +41,8 @@ npx --yes @codextheme/cli@0.1.0 restore
 - No `sudo`, admin permission, install script, postinstall hook, or application-bundle rewrite.
 - Runtime injection binds Chromium DevTools Protocol to `127.0.0.1` and does not modify `.app`, `app.asar`, or the official signature.
 - Theme packages contain data, CSS, and local images; themes cannot execute JavaScript or load remote CSS resources.
-- The fixed CLI version bundles the exact three available `.codextheme-theme` packages and depends on the exact runtime version.
-- Local state contains only schema version, available theme slug, and application timestamp.
+- Catalog packages are bundled in the fixed CLI release. Private packages are downloaded only from `https://codextheme.tech`, integrity-checked, schema-validated, safety-linted, and cached with owner-only permissions.
+- Temporary private links expire after 24 hours. Local state stores only a catalog slug or a content hash for the cached private package; it never stores the private link or ID.
 - `restore` is part of the same public, fixed-version CLI.
 
 ## Source and license

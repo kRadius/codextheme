@@ -16,7 +16,7 @@
     "previewHome": "themes/cathedral-nocturne/previews/home-v012.png",
     "previewSession": "themes/cathedral-nocturne/previews/session-v012.png",
     "source": "themes/cathedral-nocturne/theme.json",
-    "command": "npx --yes @codextheme/cli@0.1.1 apply cathedral-nocturne"
+    "command": "npx --yes @codextheme/cli@0.2.0 apply cathedral-nocturne"
   },
   {
     "slug": "crimson-procession",
@@ -35,7 +35,7 @@
     "previewHome": "themes/crimson-procession/previews/home-v012.png",
     "previewSession": "themes/crimson-procession/previews/session-v012.png",
     "source": "themes/crimson-procession/theme.json",
-    "command": "npx --yes @codextheme/cli@0.1.1 apply crimson-procession"
+    "command": "npx --yes @codextheme/cli@0.2.0 apply crimson-procession"
   },
   {
     "slug": "silver-reliquary",
@@ -54,6 +54,6 @@
     "previewHome": "themes/silver-reliquary/previews/home-v012.png",
     "previewSession": "themes/silver-reliquary/previews/session-v012.png",
     "source": "themes/silver-reliquary/theme.json",
-    "command": "npx --yes @codextheme/cli@0.1.1 apply silver-reliquary"
+    "command": "npx --yes @codextheme/cli@0.2.0 apply silver-reliquary"
   }
 ]
