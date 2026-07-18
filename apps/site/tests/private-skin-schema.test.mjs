@@ -13,6 +13,10 @@ import {
   resolveThemeTarget,
   validateThemePackage,
 } from "@codextheme/runtime";
+import {
+  buildPrivateSkinForm,
+  validateSourceFile,
+} from "../app/lib/browser-image.mjs";
 
 test("settings clamp to the four editor controls", () => {
   assert.deepEqual(normalizePrivateSkinSettings({
@@ -82,4 +86,25 @@ test("generated packages contain only local images and safe Codex CSS", () => {
   assert.deepEqual(Object.keys(target.imageDataUrls).sort(), ["hero", "session-bg"]);
   assert.doesNotMatch(target.css, /@import|url\(\s*["']?https?:/i);
   assert.match(target.css, /background-position: 50% 50%/);
+});
+
+test("browser upload accepts only bounded raster sources", () => {
+  assert.deepEqual(validateSourceFile({ type: "image/jpeg", size: 200_000 }), { ok: true });
+  assert.deepEqual(validateSourceFile({ type: "image/svg+xml", size: 200_000 }), {
+    ok: false,
+    error: "Choose a JPEG, PNG, or WebP image.",
+  });
+  assert.deepEqual(validateSourceFile({ type: "image/png", size: 10_000_001 }), {
+    ok: false,
+    error: "Choose an image smaller than 10 MB.",
+  });
+});
+
+test("upload request omits filename, palette, and source metadata", () => {
+  const body = buildPrivateSkinForm({
+    image: new Blob(["x"], { type: "image/webp" }),
+    settings: { visibility: 90, unknown: "discard" },
+  });
+  assert.deepEqual([...body.keys()], ["image", "settings"]);
+  assert.deepEqual(JSON.parse(String(body.get("settings"))), normalizePrivateSkinSettings({ visibility: 90 }));
 });
