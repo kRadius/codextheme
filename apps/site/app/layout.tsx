@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { GoogleAnalytics } from "./components/GoogleAnalytics";
 import "./globals.css";
 
-const siteTitle = "Codex Skins & Themes for Codex Desktop | CodexTheme";
-const siteDescription = "Discover immersive Codex skins and themes with real Home and Session previews, then install a pinned release with one command.";
+const siteTitle = "Custom Codex Skin & Theme Generator | CodexTheme";
+const siteDescription = "Create a custom Codex skin from any image, preview Home and Session instantly, then apply the private Codex Desktop theme with one command.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://codextheme.tech"),
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: "CodexTheme",
     title: siteTitle,
     description: siteDescription,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CodexTheme — skins and themes for Codex Desktop" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CodexTheme custom Codex skin and theme generator" }],
   },
   twitter: {
     card: "summary_large_image",

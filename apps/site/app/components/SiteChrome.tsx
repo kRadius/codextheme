@@ -9,9 +9,9 @@ export function SiteHeader() {
     <header className="site-header">
       <Link className="brand" href="/"><span className="brand-mark" />codextheme.tech</Link>
       <nav className="site-nav" aria-label="Main navigation">
-        <Link href="/#themes">All themes</Link>
+        <Link href="/#create">Create a skin</Link>
+        <Link href="/#themes">Gallery</Link>
         <Link href="/help">Install help</Link>
-        <a href={SUBMIT_THEME_URL} rel="noreferrer">Submit a theme</a>
         <a className="nav-github" href={REPOSITORY_URL} rel="noreferrer">GitHub ↗</a>
       </nav>
     </header>

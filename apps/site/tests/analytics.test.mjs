@@ -31,3 +31,17 @@ test("install copy tracking never interferes when analytics is blocked", async (
   assert.ok(analytics, "the analytics module should exist");
   assert.equal(analytics.trackInstallCopy("cathedral-nocturne", {}), false);
 });
+
+test("studio tracking accepts only coarse events and normalized errors", async () => {
+  const analytics = await loadAnalytics();
+  const calls = [];
+  const target = { gtag: (...args) => calls.push(args) };
+
+  assert.equal(analytics.trackStudioEvent("custom_preview_ready", undefined, target), true);
+  assert.equal(analytics.trackStudioEvent("custom_create_error", "invalid_upload", target), true);
+  assert.equal(analytics.trackStudioEvent("filename.jpg", "private-id", target), false);
+  assert.deepEqual(calls, [
+    ["event", "custom_preview_ready", {}],
+    ["event", "custom_create_error", { error_category: "invalid_upload" }],
+  ]);
+});

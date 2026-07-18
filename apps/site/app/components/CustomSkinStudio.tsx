@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CodexMockup } from "./CodexMockup";
 import { buildPrivateSkinForm, processBrowserImage, validateSourceFile } from "../lib/browser-image.mjs";
 import { DEFAULT_PRIVATE_SKIN_SETTINGS, normalizePrivateSkinSettings } from "../lib/private-skin-schema.mjs";
+import { trackStudioEvent } from "../lib/analytics.mjs";
 
 const SAMPLE = "/themes/crimson-eclipse/hero.jpg";
 const SAMPLE_PALETTE = { accent: "#d95764", surface: "#170d10", ink: "#f4f1eb" };
@@ -35,8 +36,10 @@ export function CustomSkinStudio() {
     if (!validation.ok) {
       setStatus("error");
       setMessage(validation.error ?? "This image cannot be used.");
+      trackStudioEvent("custom_create_error", file.size > 10_000_000 ? "upload_too_large" : "invalid_upload");
       return;
     }
+    trackStudioEvent("custom_upload_selected");
     setMessage("Preparing your preview…");
     try {
       const processed = await processBrowserImage(file);
@@ -48,9 +51,11 @@ export function CustomSkinStudio() {
       setResult(null);
       setStatus("editing");
       setMessage("");
+      trackStudioEvent("custom_preview_ready");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "This image could not be prepared.");
+      trackStudioEvent("custom_create_error", "invalid_upload");
     }
   }
 
@@ -75,9 +80,11 @@ export function CustomSkinStudio() {
       }
       setResult({ command: body.command, expiresAt: body.expiresAt });
       setStatus("ready");
+      trackStudioEvent("custom_create_success");
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "The private skin could not be created.");
+      trackStudioEvent("custom_create_error", "service_unavailable");
     }
   }
 
@@ -86,6 +93,7 @@ export function CustomSkinStudio() {
     try {
       await navigator.clipboard.writeText(result.command);
       setMessage("Command copied. Paste it into Terminal and press Return.");
+      trackStudioEvent("custom_command_copy");
     } catch {
       setMessage("Select the command below and copy it manually.");
     }
@@ -100,7 +108,7 @@ export function CustomSkinStudio() {
       <div className="studio-copy">
         <p className="eyebrow"><span /> CUSTOM CODEX SKIN GENERATOR</p>
         <h1 id="studio-title">Turn any image into a Codex skin.</h1>
-        <p className="studio-lead">Upload an image, see it inside a real Codex-shaped preview, and apply the finished skin with one command.</p>
+        <p className="studio-lead">Upload an image, see it inside a real Codex-shaped preview, and apply the finished skin with one command. This Codex theme generator keeps the preview local until you create it.</p>
         <div className="studio-trust"><span>No account</span><span>Private temporary upload</span><span>24-hour link</span></div>
 
         <div
