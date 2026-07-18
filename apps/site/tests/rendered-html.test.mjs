@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { once } from "node:events";
 import { access } from "node:fs/promises";
-import test from "node:test";
+import { createServer } from "node:http";
+import { fileURLToPath } from "node:url";
+import next from "next";
+import test, { after, before } from "node:test";
 
 const routes = [
   "../app/page.tsx",
@@ -9,15 +13,32 @@ const routes = [
   "../app/help/page.tsx",
 ];
 
-async function render(pathname = "/") {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${pathname}`);
-  const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(
-    new Request(`http://localhost${pathname}`, { headers: { accept: "text/html" } }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
-    { waitUntil() {}, passThroughOnException() {} },
-  );
+const siteRoot = fileURLToPath(new URL("../", import.meta.url));
+const app = next({ dev: false, dir: siteRoot });
+let origin;
+let server;
+
+before(async () => {
+  await app.prepare();
+  const handler = app.getRequestHandler();
+  server = createServer((request, response) => handler(request, response));
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  origin = `http://127.0.0.1:${address.port}`;
+});
+
+after(async () => {
+  if (server) {
+    await new Promise((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
+  await app.close();
+});
+
+function render(pathname = "/") {
+  return fetch(`${origin}${pathname}`, { headers: { accept: "text/html" } });
 }
 
 test("all traffic MVP routes have source entries", async () => {
