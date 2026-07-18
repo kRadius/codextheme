@@ -8,7 +8,7 @@ const websiteStructuredData = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "CodexTheme",
-  alternateName: "Codex Themes",
+  alternateName: "Codex Skins & Themes",
   url: "https://codextheme.tech/",
 };
 
@@ -25,9 +25,9 @@ export default function Home() {
         />
         <section className="flagship-hero section-wrap">
           <div className="flagship-copy">
-            <p className="eyebrow"><span /> CODEX DESKTOP / THEME REPOSITORY</p>
-            <h1>Codex themes that turn your workspace into a world.</h1>
-            <p className="flagship-lead">Browse real Codex Desktop previews, choose a complete visual world, and install a pinned release with one command. Start with three original Gothic themes, with more on the way.</p>
+            <p className="eyebrow"><span /> CODEX DESKTOP / SKINS &amp; THEMES</p>
+            <h1>Codex skins that turn your workspace into a world.</h1>
+            <p className="flagship-lead">Immersive skins go beyond a color preset: explore real Codex Desktop previews, choose a complete visual world, and install it with one command. Browse original themes now, with more on the way.</p>
             <div className="flagship-actions">
               <Link className="primary-link" href={`/themes/${flagship.slug}`}>Explore {flagship.name} <span aria-hidden="true">→</span></Link>
               <a className="text-link" href="#themes">Browse all themes ↓</a>

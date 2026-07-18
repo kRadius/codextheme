@@ -70,7 +70,8 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   assert.equal(home.status, 200);
   const homeHtml = await home.text();
   assert.match(homeHtml, /<html lang="en">/);
-  assert.match(homeHtml, /<title>Codex Themes for Codex Desktop \| CodexTheme<\/title>/);
+  assert.match(homeHtml, /<title>Codex Skins &amp; Themes for Codex Desktop \| CodexTheme<\/title>/);
+  assert.match(homeHtml, /Discover immersive Codex skins and themes with real Home and Session previews/);
   assert.match(homeHtml, /<link rel="canonical" href="https:\/\/codextheme\.tech"/);
   assert.match(homeHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"/);
 
@@ -81,14 +82,16 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "CodexTheme",
-    alternateName: "Codex Themes",
+    alternateName: "Codex Skins & Themes",
     url: "https://codextheme.tech/",
   });
   assert.match(homeHtml, /G-YB7Y6G2FRP/);
   for (const slug of availableSlugs) {
     assert.match(homeHtml, new RegExp(slug));
   }
-  assert.match(homeHtml, /Codex themes that turn your workspace into a world/);
+  assert.match(homeHtml, /CODEX DESKTOP \/ SKINS &amp; THEMES/);
+  assert.match(homeHtml, /Codex skins that turn your workspace into a world/);
+  assert.match(homeHtml, /Immersive skins go beyond a color preset/);
   assert.match(homeHtml, /Cathedral Nocturne/);
   assert.match(homeHtml, /Browse all themes/);
   assert.match(homeHtml, /Submit a theme/);
