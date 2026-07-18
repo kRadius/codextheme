@@ -11,3 +11,8 @@
 The import preserves the upstream Git history, LICENSE, and NOTICE. The first CodexTheme refactor moves the runtime into a workspace, renames the package and release identity, removes the standalone CodeDrobe CLI/update notifier, and adds a separate CodexTheme CLI and curated themes.
 
 The `upstream` remote is read-only reference material. Changes are never merged automatically. Each selected upstream change must be reviewed, tested, attributed, and committed explicitly.
+
+## Selected upstream fixes
+
+- `47b36d062cddd2d3cd69d3079be00c31566947d1` — terminate the restored
+  `[desktop]` table body so the following TOML table header remains valid.
