@@ -6,7 +6,7 @@ One-command, reversible themes for Codex Desktop on macOS. The traffic site live
 npx --yes @codextheme/cli@0.1.0 apply midnight-circuit
 ```
 
-## Launch themes
+## Available themes
 
 | Theme | Slug | Scope |
 | --- | --- | --- |
@@ -14,13 +14,13 @@ npx --yes @codextheme/cli@0.1.0 apply midnight-circuit
 | Crimson Eclipse / 绯红蚀影 | `crimson-eclipse` | Home + session background |
 | Aurora Glass / 极光玻璃 | `aurora-glass` | Home + session background |
 
-Each theme is built from original geometric artwork in this repository. Version 0.1.0 does not support uploads or remote theme downloads.
+Each available theme is built from original geometric artwork in this repository. The website also reserves six coming-soon theme slots; those entries expose no install command until their assets, real Codex captures, package, and verification are complete. Version 0.1.0 does not support uploads or remote theme downloads.
 
 ## User flow
 
 Requirements: macOS, Node.js 22.4 or newer, and Codex Desktop.
 
-1. Open a curated theme page on codextheme.tech.
+1. Open an available theme page on codextheme.tech.
 2. Copy its single fixed-version command and paste it into Terminal.
 3. If the current Codex process must reopen, the CLI warns about unsent input and continues only after an explicit `y`.
 
@@ -41,8 +41,8 @@ npx --yes @codextheme/cli@0.1.0 restore
 - No `sudo`, admin permission, install script, postinstall hook, or application-bundle rewrite.
 - Runtime injection binds Chromium DevTools Protocol to `127.0.0.1` and does not modify `.app`, `app.asar`, or the official signature.
 - Theme packages contain data, CSS, and local images; themes cannot execute JavaScript or load remote CSS resources.
-- The fixed CLI version bundles the exact three theme packages and depends on the exact runtime version.
-- Local state contains only schema version, curated theme slug, and application timestamp.
+- The fixed CLI version bundles the exact three available `.codextheme-theme` packages and depends on the exact runtime version.
+- Local state contains only schema version, available theme slug, and application timestamp.
 - `restore` is part of the same public, fixed-version CLI.
 
 ## Source and license

@@ -4,22 +4,22 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://codextheme.tech"),
   title: {
-    default: "CodexTheme — 一条命令，为 Codex 换主题",
+    default: "CodexTheme — Codex Desktop 主题仓库",
     template: "%s · CodexTheme",
   },
-  description: "精选 Codex Desktop 主题。一条固定版本命令应用，可验证、可恢复、不修改 Codex 安装包。",
+  description: "持续增长的 Codex Desktop 主题仓库。看真实效果，复制一条固定版本命令应用。",
   openGraph: {
     type: "website",
     locale: "zh_CN",
     siteName: "CodexTheme",
-    title: "CodexTheme — 一条命令，为 Codex 换主题",
-    description: "精选 Codex Desktop 主题。一条命令应用，可验证、可恢复。",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CodexTheme — 一条命令，为 Codex 换主题" }],
+    title: "CodexTheme — Codex Desktop 主题仓库",
+    description: "浏览真实 Codex 主题效果，一条命令应用，可验证、可恢复。",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CodexTheme — Codex Desktop 主题仓库" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "CodexTheme — 一条命令，为 Codex 换主题",
-    description: "精选 Codex Desktop 主题。一条命令应用，可验证、可恢复。",
+    title: "CodexTheme — Codex Desktop 主题仓库",
+    description: "浏览真实 Codex 主题效果，一条命令应用，可验证、可恢复。",
     images: ["/og.png"],
   },
 };

@@ -59,15 +59,17 @@ function checkPackFiles(expected, pack) {
     if (!files.includes(required)) fail(`${expected.name} tarball is missing ${required}.`);
   }
   if (expected.name === "@codextheme/cli") {
-    const themes = files.filter((filename) => filename.startsWith("themes/") && filename.endsWith(".codedrobe-theme"));
+    const themes = files.filter((filename) => filename.startsWith("themes/") && filename.endsWith(".codextheme-theme"));
     const expectedThemes = [
-      "themes/aurora-glass.codedrobe-theme",
-      "themes/crimson-eclipse.codedrobe-theme",
-      "themes/midnight-circuit.codedrobe-theme",
+      "themes/aurora-glass.codextheme-theme",
+      "themes/crimson-eclipse.codextheme-theme",
+      "themes/midnight-circuit.codextheme-theme",
     ];
     if (JSON.stringify(themes.sort()) !== JSON.stringify(expectedThemes)) {
-      fail(`CLI must ship exactly the three curated themes; received ${themes.join(", ") || "none"}.`);
+      fail(`CLI must ship exactly the three available themes; received ${themes.join(", ") || "none"}.`);
     }
+    const inheritedNames = files.filter((filename) => filename.endsWith(".codedrobe-theme"));
+    if (inheritedNames.length) fail(`CLI artifact filenames must use the codextheme-owned extension; received ${inheritedNames.join(", ")}.`);
   }
   return files;
 }

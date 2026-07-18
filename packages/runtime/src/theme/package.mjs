@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 export const THEME_FORMAT = "codedrobe-theme";
-export const THEME_EXTENSION = ".codedrobe-theme";
+export const THEME_EXTENSION = ".codextheme-theme";
 export const THEME_SCHEMA_VERSION = 1;
 export const MAX_THEME_PACKAGE_BYTES = 30 * 1024 * 1024;
 export const MAX_THEME_IMAGES = 32;

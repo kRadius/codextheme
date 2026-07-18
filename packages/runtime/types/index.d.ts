@@ -401,7 +401,7 @@ export class CdpSession {
 
 export const VERSION: string;
 export const THEME_FORMAT: "codedrobe-theme";
-export const THEME_EXTENSION: ".codedrobe-theme";
+export const THEME_EXTENSION: ".codextheme-theme";
 export const THEME_SCHEMA_VERSION: 1;
 export const MAX_THEME_PACKAGE_BYTES: number;
 export const MAX_THEME_IMAGES: number;

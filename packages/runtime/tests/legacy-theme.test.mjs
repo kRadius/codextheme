@@ -47,7 +47,7 @@ test("writes a converted package and keeps overwrite protection", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-legacy-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const input = path.join(directory, "legacy.codex-theme");
-  const output = path.join(directory, "legacy.codedrobe-theme");
+  const output = path.join(directory, "legacy.codextheme-theme");
   await fs.writeFile(input, JSON.stringify(legacyTheme()), "utf8");
   await convertLegacyThemeFile(input, output);
   const converted = await readThemePackage(output);
