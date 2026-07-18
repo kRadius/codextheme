@@ -56,6 +56,7 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   assert.equal(home.status, 200);
   const homeHtml = await home.text();
   assert.match(homeHtml, /<title>CodexTheme/);
+  assert.match(homeHtml, /G-YB7Y6G2FRP/);
   for (const slug of availableSlugs) {
     assert.match(homeHtml, new RegExp(slug));
   }
@@ -71,6 +72,7 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
+    assert.match(html, new RegExp(`data-theme-slug="${slug}"`));
     assert.match(html, new RegExp(`@codextheme\\/cli@0\\.1\\.1 apply ${slug}`));
     assert.match(html, /HOME \/ VERIFIED THEME PREVIEW/);
     assert.match(html, /SESSION \/ VERIFIED THEME PREVIEW/);

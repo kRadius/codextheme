@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "./components/GoogleAnalytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,5 +26,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="zh-CN"><body>{children}</body></html>;
+  return <html lang="zh-CN"><body>{children}<GoogleAnalytics /></body></html>;
 }
