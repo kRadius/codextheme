@@ -22,7 +22,7 @@ import {
 } from "@codextheme/runtime";
 
 const adapter = getAdapter("codex");
-const theme = await readThemePackage("/absolute/theme.codedrobe-theme");
+const theme = await readThemePackage("/absolute/theme.codextheme-theme");
 const target = resolveThemeTarget(theme, adapter.id);
 
 await applySkin({ adapter, target });
@@ -33,7 +33,7 @@ Type declarations are included for the root API and the `@codextheme/runtime/ada
 
 ## Safety model
 
-- Themes are data-only `.codedrobe-theme` JSON packages containing CSS and embedded image assets; theme packages cannot execute JavaScript.
+- Themes are data-only `.codextheme-theme` JSON packages containing CSS and embedded image assets; theme packages cannot execute JavaScript.
 - Injection uses a loopback Chromium DevTools Protocol connection and does not modify the Codex application bundle or `app.asar`.
 - Restore support is part of the runtime API.
 - This package has no install scripts, postinstall hooks, update notifier, or standalone executable.

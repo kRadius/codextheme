@@ -16,9 +16,9 @@ const exportedAt = "2026-07-18T00:00:00.000Z";
 
 await fs.mkdir(outputRoot, { recursive: true });
 
-for (const entry of catalog) {
+for (const entry of catalog.filter((theme) => theme.status === "available")) {
   const manifest = path.join(repo, entry.source);
-  const output = path.join(outputRoot, `${entry.slug}.codedrobe-theme`);
+  const output = path.join(outputRoot, `${entry.slug}.codextheme-theme`);
   await writeThemePackage(manifest, output, { force: true, exportedAt });
   const bundle = await readThemePackage(output);
   const warnings = lintThemePackage(bundle);
@@ -32,4 +32,4 @@ for (const entry of catalog) {
   }
 }
 
-console.log(`Packed and verified ${catalog.length} Codex themes.`);
+console.log(`Packed and verified ${catalog.filter((theme) => theme.status === "available").length} available Codex themes.`);

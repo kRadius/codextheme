@@ -22,7 +22,7 @@ import {
 } from "@codextheme/runtime";
 
 const adapter = getAdapter("codex");
-const theme = await readThemePackage("/absolute/theme.codedrobe-theme");
+const theme = await readThemePackage("/absolute/theme.codextheme-theme");
 const target = resolveThemeTarget(theme, adapter.id);
 
 await applySkin({ adapter, target });
@@ -33,7 +33,7 @@ await restoreSkin({ adapter });
 
 ## 安全边界
 
-- `.codedrobe-theme` 是只包含 CSS 与内嵌图片资源的数据包，主题包不能执行 JavaScript。
+- `.codextheme-theme` 是只包含 CSS 与内嵌图片资源的数据包，主题包不能执行 JavaScript。
 - 注入通过本机回环地址上的 Chromium DevTools Protocol 完成，不修改 Codex 应用包或 `app.asar`。
 - 运行时提供可恢复能力。
 - 本包没有安装脚本、postinstall、自动更新提示或独立可执行文件。

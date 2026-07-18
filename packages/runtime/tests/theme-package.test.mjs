@@ -15,6 +15,10 @@ import {
 
 const exampleManifest = new URL("../examples/dream/theme.json", import.meta.url);
 
+test("publishes the codextheme-owned artifact extension", () => {
+  assert.equal(THEME_EXTENSION, ".codextheme-theme");
+});
+
 test("builds one portable theme for multiple app targets", async () => {
   const { bundle, serialized } = await buildThemePackage(exampleManifest.pathname);
   assert.equal(bundle.format, "codedrobe-theme");
@@ -28,7 +32,7 @@ test("builds one portable theme for multiple app targets", async () => {
   assert.ok(serialized.endsWith("\n"));
 });
 
-test("writes, reads, and resolves a .codedrobe-theme package", async () => {
+test("writes, reads, and resolves a .codextheme-theme package", async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-theme-"));
   const output = path.join(directory, `dream${THEME_EXTENSION}`);
   await writeThemePackage(exampleManifest.pathname, output);

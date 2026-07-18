@@ -13,5 +13,5 @@ export function getCatalogEntry(slug) {
 export function themeFilename(slug) {
   const entry = getCatalogEntry(slug);
   if (!entry) return null;
-  return fileURLToPath(new URL(`../themes/${entry.slug}.codedrobe-theme`, import.meta.url));
+  return fileURLToPath(new URL(`../themes/${entry.slug}.codextheme-theme`, import.meta.url));
 }

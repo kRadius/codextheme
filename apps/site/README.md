@@ -1,6 +1,6 @@
 # codextheme.tech
 
-The traffic-first public gallery for three curated Codex Desktop themes. Built with Next.js and deployed from the public CodexTheme monorepo.
+The public Codex Desktop theme repository. The site currently renders nine structured theme slots: three available themes and six coming-soon entries with honest preview placeholders. Built with Next.js and deployed from the public CodexTheme monorepo.
 
 ## Vercel
 
