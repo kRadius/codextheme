@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter, SiteHeader, SUPPORT_EMAIL } from "../components/SiteChrome";
 
-export const metadata: Metadata = { title: "使用帮助", description: "CodexTheme 应用、重新应用和恢复说明。", alternates: { canonical: "/help" } };
+export const metadata: Metadata = { title: "Install Help", description: "How to apply, reapply, and restore CodexTheme themes safely.", alternates: { canonical: "/help" } };
 
-export default function HelpPage() { return <div className="site-shell"><SiteHeader /><main className="subpage section-wrap"><article className="article-page"><Link className="back-link" href="/">← 返回首页</Link><p className="eyebrow"><span /> QUICK HELP</p><h1>使用帮助</h1><p className="article-lead">首发版刻意只保留最短路径。遇到问题时，先确认 macOS、Node.js 22.4+ 和 Codex Desktop 都已就绪。</p>
-  <section className="article-block"><h2>第一次应用</h2><p>进入标记“已可安装”的主题详情页，只复制页面唯一的一条 apply 命令，在 Terminal 粘贴并回车。制作中的主题不会提前生成命令。不要从聊天记录或第三方帖子复制被改写过的命令。</p></section>
-  <section className="article-block"><h2>重开 Codex 后重新应用</h2><code className="inline-code">npx --yes @codextheme/cli@0.1.1 reapply</code><p>reapply 读取本地保存的主题 slug 和 CLI 内置主题包，不需要访问 codextheme.tech。</p></section>
-  <section className="article-block"><h2>恢复官方外观</h2><code className="inline-code">npx --yes @codextheme/cli@0.1.1 restore</code><p>restore 可以重复运行。完整恢复或确认没有活动注入后，本地状态会被删除。</p></section>
-  <section className="article-block"><h2>为什么会要求重新打开？</h2><p>有些主题同时调整 Codex 的基础外观配置。为了让 renderer 与基础外观一致，需要重新打开当前进程；CLI 不会替你做决定，只有输入 y 才执行。</p></section>
-  <section className="article-block"><h2>仍然失败？</h2><p>不要使用 sudo，也不要修改 Codex 应用包。先运行 restore；安装或兼容问题，请联系 <a className="article-link" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>，并只提供错误码与 Codex 版本，不要发送对话内容、token 或个人路径。</p></section>
+export default function HelpPage() { return <div className="site-shell"><SiteHeader /><main className="subpage section-wrap"><article className="article-page"><Link className="back-link" href="/">← Back to the home page</Link><p className="eyebrow"><span /> QUICK HELP</p><h1>Install help</h1><p className="article-lead">The launch version keeps the path deliberately short. Before troubleshooting, make sure macOS, Node.js 22.4+, and Codex Desktop are ready.</p>
+  <section className="article-block"><h2>Apply a theme for the first time</h2><p>Open a theme marked Ready to install, copy its single apply command, paste it into Terminal, and press Return. Do not use commands copied from edited chat logs or third-party posts.</p></section>
+  <section className="article-block"><h2>Reapply after reopening Codex</h2><code className="inline-code">npx --yes @codextheme/cli@0.1.1 reapply</code><p>reapply reads the saved theme slug and the theme bundle built into the CLI. It does not need to access codextheme.tech.</p></section>
+  <section className="article-block"><h2>Restore the official appearance</h2><code className="inline-code">npx --yes @codextheme/cli@0.1.1 restore</code><p>restore is safe to run more than once. Local state is removed after a complete restore or after confirming that no active injection remains.</p></section>
+  <section className="article-block"><h2>Why does the CLI ask to reopen Codex?</h2><p>Some themes also adjust Codex appearance settings. Reopening keeps the renderer and those settings in sync. The CLI never makes that choice for you; it continues only after you enter y.</p></section>
+  <section className="article-block"><h2>Still not working?</h2><p>Do not use sudo or modify the Codex application bundle. Run restore first. For installation or compatibility help, contact <a className="article-link" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> with only the error code and Codex version. Never send conversations, tokens, or personal paths.</p></section>
   </article></main><SiteFooter /></div>; }

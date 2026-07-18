@@ -46,6 +46,20 @@ const availableSlugs = [
   "crimson-procession",
   "silver-reliquary",
 ];
+const availableThemeCopy = {
+  "cathedral-nocturne": {
+    name: "Cathedral Nocturne",
+    description: "A monumental obsidian cathedral shaped by restrained antique-gold light.",
+  },
+  "crimson-procession": {
+    name: "Crimson Procession",
+    description: "A rain-darkened gothic cloister crosses the path of a controlled crimson moon.",
+  },
+  "silver-reliquary": {
+    name: "Silver Reliquary",
+    description: "Moonlight settles across a ruined silver reliquary and its quiet stone arches.",
+  },
+};
 
 test("all flagship routes have source entries", async () => {
   await Promise.all(routes.map((route) => access(new URL(route, import.meta.url))));
@@ -91,17 +105,22 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
     assert.match(html, new RegExp(`data-theme-slug="${slug}"`));
     assert.match(html, new RegExp(`@codextheme\\/cli@0\\.1\\.1 apply ${slug}`));
+    assert.match(html, new RegExp(availableThemeCopy[slug].name));
+    assert.match(html, new RegExp(availableThemeCopy[slug].description.replaceAll(".", "\\.")));
+    assert.match(html, /Ready to install/);
+    assert.match(html, /Apply with one command/);
+    assert.match(html, /Copy command/);
     assert.match(html, /HOME \/ VERIFIED THEME PREVIEW/);
     assert.match(html, /SESSION \/ VERIFIED THEME PREVIEW/);
-    assert.doesNotMatch(html, /真实截图待补齐|制作中/);
+    assert.doesNotMatch(html, /真实截图待补齐|制作中|返回全部主题|一条命令应用|安装边界/);
     assert.doesNotMatch(html, /安装 Skill|\.pkg|curl \| bash|@latest/);
   }
 });
 
 test("security, help, robots, and sitemap routes render", async () => {
   for (const [pathname, expected] of [
-    ["/security", /不修改 Codex 安装包/],
-    ["/help", /reapply/],
+    ["/security", /Codex\.app stays untouched/],
+    ["/help", /Apply a theme for the first time/],
     ["/robots.txt", /User-Agent/],
     ["/sitemap.xml", /themes\/cathedral-nocturne/],
   ]) {
@@ -111,6 +130,11 @@ test("security, help, robots, and sitemap routes render", async () => {
     assert.match(html, expected);
     if (["/help", "/security"].includes(pathname)) {
       assert.match(html, /mailto:codextheme@codextheme\.tech/);
+      assert.doesNotMatch(html, /返回首页|使用帮助|安全边界/);
     }
   }
+
+  const missing = await render("/themes/not-a-real-theme");
+  assert.equal(missing.status, 404);
+  assert.match(await missing.text(), /This theme page does not exist/);
 });
