@@ -46,6 +46,20 @@ const availableSlugs = [
   "crimson-procession",
   "silver-reliquary",
 ];
+const availableThemeCopy = {
+  "cathedral-nocturne": {
+    name: "Cathedral Nocturne",
+    description: "A monumental obsidian cathedral shaped by restrained antique-gold light.",
+  },
+  "crimson-procession": {
+    name: "Crimson Procession",
+    description: "A rain-darkened gothic cloister crosses the path of a controlled crimson moon.",
+  },
+  "silver-reliquary": {
+    name: "Silver Reliquary",
+    description: "Moonlight settles across a ruined silver reliquary and its quiet stone arches.",
+  },
+};
 
 test("all flagship routes have source entries", async () => {
   await Promise.all(routes.map((route) => access(new URL(route, import.meta.url))));
@@ -55,16 +69,33 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   const home = await render("/");
   assert.equal(home.status, 200);
   const homeHtml = await home.text();
-  assert.match(homeHtml, /<title>CodexTheme/);
+  assert.match(homeHtml, /<html lang="en">/);
+  assert.match(homeHtml, /<title>Codex Themes for Codex Desktop \| CodexTheme<\/title>/);
+  assert.match(homeHtml, /<link rel="canonical" href="https:\/\/codextheme\.tech"/);
+  assert.match(homeHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"/);
+
+  const jsonLdBlocks = [...homeHtml.matchAll(
+    /<script type="application\/ld\+json">(.*?)<\/script>/gs,
+  )].map((match) => JSON.parse(match[1]));
+  assert.deepEqual(jsonLdBlocks.find((entry) => entry["@type"] === "WebSite"), {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "CodexTheme",
+    alternateName: "Codex Themes",
+    url: "https://codextheme.tech/",
+  });
   assert.match(homeHtml, /G-YB7Y6G2FRP/);
   for (const slug of availableSlugs) {
     assert.match(homeHtml, new RegExp(slug));
   }
-  assert.match(homeHtml, /把 Codex 变成你的工作世界/);
+  assert.match(homeHtml, /Codex themes that turn your workspace into a world/);
   assert.match(homeHtml, /Cathedral Nocturne/);
-  assert.match(homeHtml, /提交主题/);
+  assert.match(homeHtml, /Browse all themes/);
+  assert.match(homeHtml, /Submit a theme/);
+  assert.match(homeHtml, /Three complete worlds/);
   assert.match(homeHtml, /github\.com\/kRadius\/codextheme\/issues\/new/);
   assert.match(homeHtml, /mailto:codextheme@codextheme\.tech/);
+  assert.doesNotMatch(homeHtml, /把 Codex|全部主题|提交主题|安装帮助|已可安装/);
   assert.doesNotMatch(homeHtml, /主题槽位|制作中|真实截图待补齐|midnight-circuit|crimson-eclipse|aurora-glass|搜索主题|上传图片|为什么只有三个|mini-shell|preview-ui|composer-mock/);
 
   for (const slug of availableSlugs) {
@@ -74,17 +105,22 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
     assert.match(html, new RegExp(`data-theme-slug="${slug}"`));
     assert.match(html, new RegExp(`@codextheme\\/cli@0\\.1\\.1 apply ${slug}`));
+    assert.match(html, new RegExp(availableThemeCopy[slug].name));
+    assert.match(html, new RegExp(availableThemeCopy[slug].description.replaceAll(".", "\\.")));
+    assert.match(html, /Ready to install/);
+    assert.match(html, /Apply with one command/);
+    assert.match(html, /Copy command/);
     assert.match(html, /HOME \/ VERIFIED THEME PREVIEW/);
     assert.match(html, /SESSION \/ VERIFIED THEME PREVIEW/);
-    assert.doesNotMatch(html, /真实截图待补齐|制作中/);
+    assert.doesNotMatch(html, /真实截图待补齐|制作中|返回全部主题|一条命令应用|安装边界/);
     assert.doesNotMatch(html, /安装 Skill|\.pkg|curl \| bash|@latest/);
   }
 });
 
 test("security, help, robots, and sitemap routes render", async () => {
   for (const [pathname, expected] of [
-    ["/security", /不修改 Codex 安装包/],
-    ["/help", /reapply/],
+    ["/security", /Codex\.app stays untouched/],
+    ["/help", /Apply a theme for the first time/],
     ["/robots.txt", /User-Agent/],
     ["/sitemap.xml", /themes\/cathedral-nocturne/],
   ]) {
@@ -94,6 +130,11 @@ test("security, help, robots, and sitemap routes render", async () => {
     assert.match(html, expected);
     if (["/help", "/security"].includes(pathname)) {
       assert.match(html, /mailto:codextheme@codextheme\.tech/);
+      assert.doesNotMatch(html, /返回首页|使用帮助|安全边界/);
     }
   }
+
+  const missing = await render("/themes/not-a-real-theme");
+  assert.equal(missing.status, 404);
+  assert.match(await missing.text(), /This theme page does not exist/);
 });

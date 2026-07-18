@@ -8,8 +8,8 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: "home" | "se
 
   return (
     <figure className="detail-preview" style={{ "--accent": theme.accent, "--theme-surface": theme.surface } as React.CSSProperties}>
-      <figcaption><span>{caption}</span><b>{mode === "home" ? "首页" : "对话"}</b></figcaption>
-      <Image src={source ?? ""} alt={`${theme.nameZh} Codex ${label} 主题效果预览`} width={1600} height={1000} sizes="(max-width: 1268px) calc(100vw - 48px), 1220px" />
+      <figcaption><span>{caption}</span><b>{mode === "home" ? "Home" : "Session"}</b></figcaption>
+      <Image src={source ?? ""} alt={`${theme.name} Codex ${label} theme preview`} width={1600} height={1000} sizes="(max-width: 1268px) calc(100vw - 48px), 1220px" />
     </figure>
   );
 }

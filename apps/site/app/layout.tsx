@@ -2,29 +2,33 @@ import type { Metadata } from "next";
 import { GoogleAnalytics } from "./components/GoogleAnalytics";
 import "./globals.css";
 
+const siteDescription = "Browse original Codex themes with real Home and Session previews, then install a pinned release with one command.";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://codextheme.tech"),
   title: {
-    default: "CodexTheme — Codex Desktop 主题仓库",
-    template: "%s · CodexTheme",
+    default: "Codex Themes for Codex Desktop | CodexTheme",
+    template: "%s | CodexTheme",
   },
-  description: "持续增长的 Codex Desktop 主题仓库。看真实效果，复制一条固定版本命令应用。",
+  description: siteDescription,
+  alternates: { canonical: "/" },
+  icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }] },
   openGraph: {
     type: "website",
-    locale: "zh_CN",
+    locale: "en_US",
     siteName: "CodexTheme",
-    title: "CodexTheme — Codex Desktop 主题仓库",
-    description: "浏览 Codex 主题效果预览，一条命令应用，可验证、可恢复。",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CodexTheme — Codex Desktop 主题仓库" }],
+    title: "Codex Themes for Codex Desktop | CodexTheme",
+    description: siteDescription,
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CodexTheme — themes for Codex Desktop" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "CodexTheme — Codex Desktop 主题仓库",
-    description: "浏览 Codex 主题效果预览，一条命令应用，可验证、可恢复。",
+    title: "Codex Themes for Codex Desktop | CodexTheme",
+    description: siteDescription,
     images: ["/og.png"],
   },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="zh-CN"><body>{children}<GoogleAnalytics /></body></html>;
+  return <html lang="en"><body>{children}<GoogleAnalytics /></body></html>;
 }
