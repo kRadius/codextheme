@@ -55,7 +55,21 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   const home = await render("/");
   assert.equal(home.status, 200);
   const homeHtml = await home.text();
-  assert.match(homeHtml, /<title>CodexTheme/);
+  assert.match(homeHtml, /<html lang="en">/);
+  assert.match(homeHtml, /<title>Codex Themes for Codex Desktop \| CodexTheme<\/title>/);
+  assert.match(homeHtml, /<link rel="canonical" href="https:\/\/codextheme\.tech"/);
+  assert.match(homeHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"/);
+
+  const jsonLdBlocks = [...homeHtml.matchAll(
+    /<script type="application\/ld\+json">(.*?)<\/script>/gs,
+  )].map((match) => JSON.parse(match[1]));
+  assert.deepEqual(jsonLdBlocks.find((entry) => entry["@type"] === "WebSite"), {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "CodexTheme",
+    alternateName: "Codex Themes",
+    url: "https://codextheme.tech/",
+  });
   assert.match(homeHtml, /G-YB7Y6G2FRP/);
   for (const slug of availableSlugs) {
     assert.match(homeHtml, new RegExp(slug));

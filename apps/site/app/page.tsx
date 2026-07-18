@@ -4,6 +4,14 @@ import { ThemeCard } from "./components/ThemeCard";
 import { SiteFooter, SiteHeader, SUBMIT_THEME_URL } from "./components/SiteChrome";
 import { availableThemes } from "./lib/themes";
 
+const websiteStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "CodexTheme",
+  alternateName: "Codex Themes",
+  url: "https://codextheme.tech/",
+};
+
 export default function Home() {
   const flagship = availableThemes[0];
 
@@ -11,6 +19,10 @@ export default function Home() {
     <div className="site-shell">
       <SiteHeader />
       <main>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
+        />
         <section className="flagship-hero section-wrap">
           <div className="flagship-copy">
             <p className="eyebrow"><span /> CODEX DESKTOP / THEME REPOSITORY</p>
