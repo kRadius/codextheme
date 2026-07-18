@@ -77,7 +77,7 @@ async function waitForCompatibility(session, expression, timeoutMs = 5000) {
 export async function probeApp({ adapter, targetTheme = null, port, timeoutMs = 5000 }) {
   const targets = await waitForTargets(adapter, port, timeoutMs);
   const expression = buildProbeExpression(adapter, targetTheme?.verification ?? null);
-  return withSessions(targets, (session) => waitForCompatibility(session, expression, Math.min(timeoutMs, 5000)));
+  return withSessions(targets, (session) => waitForCompatibility(session, expression, timeoutMs));
 }
 
 export async function snapshotDom({
@@ -98,7 +98,7 @@ export async function applyTheme({ adapter, targetTheme, port, timeoutMs = 30000
   const preflightExpression = buildProbeExpression(adapter, targetTheme.verification);
   const preflight = await withSessions(
     targets,
-    (session) => waitForCompatibility(session, preflightExpression, Math.min(timeoutMs, 5000)),
+    (session) => waitForCompatibility(session, preflightExpression, timeoutMs),
   );
   ensureCompatible(adapter, preflight);
   const expression = buildApplyExpression({ adapter, targetTheme });
