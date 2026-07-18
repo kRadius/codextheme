@@ -4,6 +4,9 @@ export const CATALOG = Object.freeze({
   "midnight-circuit": Object.freeze({ slug: "midnight-circuit", name: "Midnight Circuit" }),
   "crimson-eclipse": Object.freeze({ slug: "crimson-eclipse", name: "Crimson Eclipse" }),
   "aurora-glass": Object.freeze({ slug: "aurora-glass", name: "Aurora Glass" }),
+  "cathedral-nocturne": Object.freeze({ slug: "cathedral-nocturne", name: "Cathedral Nocturne" }),
+  "crimson-procession": Object.freeze({ slug: "crimson-procession", name: "Crimson Procession" }),
+  "silver-reliquary": Object.freeze({ slug: "silver-reliquary", name: "Silver Reliquary" }),
 });
 
 export function getCatalogEntry(slug) {

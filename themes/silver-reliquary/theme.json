@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "silver-reliquary",
+  "displayName": "Silver Reliquary / 苍银圣所",
+  "version": "1.0.0",
+  "images": {
+    "hero": "assets/hero.jpg",
+    "session-bg": "assets/session.jpg"
+  },
+  "copy": {
+    "brandTitle": "SILVER RELIQUARY",
+    "brandSubtitle": "codextheme.tech",
+    "signature": "03 / MOONLIT SILVER",
+    "tagline": "Clarity beneath the moon.",
+    "projectPrefix": "RELIQUARY / ",
+    "projectLabel": "Select a project",
+    "ribbon": "◆"
+  },
+  "targets": {
+    "codex": {
+      "css": "../shared/codex.css",
+      "options": {
+        "rendererProfile": "codex-theme-v1",
+        "baseTheme": {
+          "mode": "dark",
+          "codeTheme": "codex",
+          "accent": "#9fb8c9",
+          "contrast": 74,
+          "ink": "#eef3f5",
+          "surface": "#11171b",
+          "opaqueWindows": true,
+          "semanticColors": {
+            "diffAdded": "#75caa7",
+            "diffRemoved": "#dd747b",
+            "skill": "#b8cbd7"
+          }
+        }
+      },
+      "verification": {
+        "recommended": [
+          { "name": "session-surface", "any": ["main.main-surface"] },
+          { "name": "composer-surface", "any": [".composer-surface-chrome"] }
+        ]
+      }
+    }
+  }
+}

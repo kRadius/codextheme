@@ -54,9 +54,16 @@ function harness({ state = null } = {}) {
 }
 
 test("apply, reapply, and restore accept only their exact argv shapes", async () => {
-  const apply = harness();
-  assert.equal(await run(["apply", "midnight-circuit"], apply.deps), 0);
-  assert.deepEqual(apply.calls[0], ["loadTheme", "midnight-circuit"]);
+  for (const slug of [
+    "cathedral-nocturne",
+    "crimson-procession",
+    "silver-reliquary",
+    "midnight-circuit",
+  ]) {
+    const apply = harness();
+    assert.equal(await run(["apply", slug], apply.deps), 0);
+    assert.deepEqual(apply.calls[0], ["loadTheme", slug]);
+  }
 
   const reapply = harness({
     state: { schemaVersion: 1, themeSlug: "midnight-circuit", appliedAt: "2026-07-18T10:00:00.000Z" },
@@ -72,10 +79,10 @@ test("apply, reapply, and restore accept only their exact argv shapes", async ()
 
 test("successful apply prints pinned reapply and restore commands", async () => {
   const app = harness();
-  assert.equal(await run(["apply", "midnight-circuit"], app.deps), 0);
+  assert.equal(await run(["apply", "cathedral-nocturne"], app.deps), 0);
   assert.match(app.stdout.text(), /主题已应用并通过验证/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.1\.0 reapply/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.1\.0 restore/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.1\.1 reapply/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.1\.1 restore/);
 });
 
 test("unknown slugs and malformed argv return E_USAGE without runtime calls", async () => {
@@ -97,6 +104,6 @@ test("unsupported platforms fail before a theme is loaded", async () => {
 test("version is available without constructing runtime state", async () => {
   const app = harness();
   assert.equal(await run(["--version"], app.deps), 0);
-  assert.equal(app.stdout.text(), "0.1.0\n");
+  assert.equal(app.stdout.text(), "0.1.1\n");
   assert.equal(app.calls.length, 0);
 });
