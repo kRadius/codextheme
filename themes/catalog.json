@@ -13,8 +13,8 @@
     "author": "CodexTheme Studio",
     "compatibility": "Codex Desktop / macOS",
     "updatedAt": "2026-07-18",
-    "previewHome": "themes/cathedral-nocturne/previews/home.png",
-    "previewSession": "themes/cathedral-nocturne/previews/session.png",
+    "previewHome": "themes/cathedral-nocturne/previews/home-v012.png",
+    "previewSession": "themes/cathedral-nocturne/previews/session-v012.png",
     "source": "themes/cathedral-nocturne/theme.json",
     "command": "npx --yes @codextheme/cli@0.1.1 apply cathedral-nocturne"
   },
@@ -32,8 +32,8 @@
     "author": "CodexTheme Studio",
     "compatibility": "Codex Desktop / macOS",
     "updatedAt": "2026-07-18",
-    "previewHome": "themes/crimson-procession/previews/home.png",
-    "previewSession": "themes/crimson-procession/previews/session.png",
+    "previewHome": "themes/crimson-procession/previews/home-v012.png",
+    "previewSession": "themes/crimson-procession/previews/session-v012.png",
     "source": "themes/crimson-procession/theme.json",
     "command": "npx --yes @codextheme/cli@0.1.1 apply crimson-procession"
   },
@@ -51,8 +51,8 @@
     "author": "CodexTheme Studio",
     "compatibility": "Codex Desktop / macOS",
     "updatedAt": "2026-07-18",
-    "previewHome": "themes/silver-reliquary/previews/home.png",
-    "previewSession": "themes/silver-reliquary/previews/session.png",
+    "previewHome": "themes/silver-reliquary/previews/home-v012.png",
+    "previewSession": "themes/silver-reliquary/previews/session-v012.png",
     "source": "themes/silver-reliquary/theme.json",
     "command": "npx --yes @codextheme/cli@0.1.1 apply silver-reliquary"
   }

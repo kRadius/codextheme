@@ -10,9 +10,10 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "npm run test --workspaces --if-present",
+    "test": "node --test themes/tests/*.test.mjs && npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "themes:build": "node themes/scripts/generate-art.mjs && node themes/scripts/pack.mjs",
+    "previews:build": "node themes/scripts/generate-previews.mjs",
     "site:build": "npm run build -w @codextheme/site",
     "build": "npm run themes:build && npm run site:build",
     "check": "npm run typecheck && npm test && npm run build && node scripts/check-packages.mjs"

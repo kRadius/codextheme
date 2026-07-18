@@ -107,3 +107,10 @@ test("version is available without constructing runtime state", async () => {
   assert.equal(app.stdout.text(), "0.1.1\n");
   assert.equal(app.calls.length, 0);
 });
+
+test("help labels the complete backward-compatible catalog accurately", async () => {
+  const app = harness();
+  assert.equal(await run(["--help"], app.deps), 0);
+  assert.match(app.stdout.text(), /可用主题：/);
+  assert.doesNotMatch(app.stdout.text(), /首发主题：/);
+});

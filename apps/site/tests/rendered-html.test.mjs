@@ -72,8 +72,8 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     const html = await response.text();
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
     assert.match(html, new RegExp(`@codextheme\\/cli@0\\.1\\.1 apply ${slug}`));
-    assert.match(html, /HOME \/ REAL CODEX CAPTURE/);
-    assert.match(html, /SESSION \/ REAL CODEX CAPTURE/);
+    assert.match(html, /HOME \/ VERIFIED THEME PREVIEW/);
+    assert.match(html, /SESSION \/ VERIFIED THEME PREVIEW/);
     assert.doesNotMatch(html, /真实截图待补齐|制作中/);
     assert.doesNotMatch(html, /安装 Skill|\.pkg|curl \| bash|@latest/);
   }

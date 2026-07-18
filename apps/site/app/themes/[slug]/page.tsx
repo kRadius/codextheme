@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyCommand } from "../../components/CopyCommand";
-import { SiteFooter, SiteHeader, SUBMIT_THEME_URL } from "../../components/SiteChrome";
+import { SiteFooter, SiteHeader } from "../../components/SiteChrome";
 import { ThemePreview } from "../../components/ThemePreview";
 import { findTheme, themes } from "../../lib/themes";
 
@@ -13,10 +13,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const theme = findTheme((await params).slug);
   if (!theme) return {};
-  const suffix = theme.status === "available" ? "可安装 Codex 主题" : "Codex 主题计划";
   return {
     title: `${theme.nameZh} / ${theme.name}`,
-    description: `${theme.descriptionZh} ${suffix}。`,
+    description: `${theme.descriptionZh} 可安装 Codex 主题。`,
     alternates: { canonical: `/themes/${theme.slug}` },
   };
 }
@@ -25,7 +24,6 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
   const theme = findTheme((await params).slug);
   if (!theme) notFound();
   const index = themes.findIndex((item) => item.slug === theme.slug) + 1;
-  const available = theme.status === "available";
 
   return (
     <div className="site-shell" style={{ "--accent": theme.accent } as React.CSSProperties}>
@@ -39,7 +37,7 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
             <p className="detail-en">{theme.name}</p>
           </div>
           <div className="detail-summary">
-            <span className={`status-badge ${available ? "is-available" : "is-coming"}`}>{available ? "已可安装" : "制作中"}</span>
+            <span className="status-badge is-available">已可安装</span>
             <p>{theme.descriptionZh}</p>
             <dl><div><dt>作者</dt><dd>{theme.author}</dd></div><div><dt>兼容</dt><dd>{theme.compatibility}</dd></div><div><dt>更新</dt><dd>{theme.updatedAt}</dd></div></dl>
           </div>
@@ -47,23 +45,16 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
 
         <div className="preview-stack"><ThemePreview theme={theme} mode="home" /><ThemePreview theme={theme} mode="session" /></div>
 
-        {available && theme.command ? (
-          <section className="apply-panel" aria-labelledby="apply-title">
-            <div>
-              <p className="eyebrow"><span /> AVAILABLE NOW</p>
-              <h2 id="apply-title">一条命令应用</h2>
-              <p>复制后打开 Terminal，粘贴并回车。命令固定到可审计的 0.1.0，不会静默跟随 latest。</p>
-              <div className="command-box">{theme.command}</div>
-              <div className="copy-row"><CopyCommand command={theme.command} /></div>
-            </div>
-            <aside className="apply-side"><h3>安装边界</h3><ul><li>macOS 与 Node.js 22.4+</li><li>不修改 Codex.app 或官方签名</li><li>需要重开时会先征求确认</li><li>运行 restore 可恢复官方外观</li></ul><Link className="text-link" href="/security">查看完整安全说明 →</Link></aside>
-          </section>
-        ) : (
-          <section className="coming-panel">
-            <div><p className="eyebrow"><span /> COMING SOON</p><h2>完成验证后开放安装</h2><p>主题槽位和详情结构已经建立。背景、真实截图、主题包和真机验证补齐之前，这里不会生成一条看似可用的命令。</p></div>
-            <a className="primary-link" href={SUBMIT_THEME_URL} rel="noreferrer">参与这个主题 <span aria-hidden="true">↗</span></a>
-          </section>
-        )}
+        {theme.command && <section className="apply-panel" aria-labelledby="apply-title">
+          <div>
+            <p className="eyebrow"><span /> AVAILABLE NOW</p>
+            <h2 id="apply-title">一条命令应用</h2>
+            <p>复制后打开 Terminal，粘贴并回车。命令固定到我们可审计的 @codextheme/cli 0.1.1，不会静默跟随 latest。</p>
+            <div className="command-box">{theme.command}</div>
+            <div className="copy-row"><CopyCommand command={theme.command} /></div>
+          </div>
+          <aside className="apply-side"><h3>安装边界</h3><ul><li>macOS 与 Node.js 22.4+</li><li>不修改 Codex.app 或官方签名</li><li>需要重开时会先征求确认</li><li>运行 restore 可恢复官方外观</li></ul><Link className="text-link" href="/security">查看完整安全说明 →</Link></aside>
+        </section>}
       </main>
       <SiteFooter />
     </div>

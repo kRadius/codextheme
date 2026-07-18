@@ -47,6 +47,21 @@ button { font: inherit; }
 .repo-stats dt { font: 900 20px/1 "Arial Narrow", "Avenir Next Condensed", sans-serif; }
 .repo-stats dd { margin: 0; color: var(--muted); font: 700 9px/1 Menlo, Consolas, monospace; }
 
+.flagship-hero { min-height: 690px; display: grid; grid-template-columns: .67fr 1.33fr; gap: 42px; align-items: center; padding-block: 50px 68px; }
+.flagship-copy h1 { margin: 0; font-family: "Arial Narrow", "Avenir Next Condensed", "PingFang SC", sans-serif; font-size: clamp(55px, 6.2vw, 80px); line-height: .9; letter-spacing: -.06em; font-weight: 900; }
+.flagship-lead { max-width: 420px; margin: 26px 0 0; color: var(--muted); font-size: 13px; line-height: 1.75; }
+.flagship-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; margin-top: 28px; }
+.flagship-capture { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--ink); background: #120f0c; box-shadow: 8px 8px 0 var(--ink); }
+.flagship-capture::after { content: ""; position: absolute; z-index: 1; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.42), transparent 22%, transparent 64%, rgba(0,0,0,.72)); }
+.flagship-capture > img { object-fit: cover; transition: transform .5s cubic-bezier(.2,.65,.3,1); }
+.flagship-capture:hover > img { transform: scale(1.012); }
+.capture-label, .capture-caption { position: absolute; z-index: 2; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: center; color: white; }
+.capture-label { top: 17px; font: 750 8px/1 Menlo, Consolas, monospace; letter-spacing: .04em; }
+.capture-label b { padding: 7px 9px; background: rgba(10,10,10,.68); border: 1px solid rgba(255,255,255,.42); font-weight: 800; }
+.capture-caption { bottom: 18px; align-items: end; }
+.capture-caption span { font: 700 9px/1 Menlo, Consolas, monospace; }
+.capture-caption strong { font-size: 22px; letter-spacing: -.04em; }
+
 .gallery-section { padding-block: 64px 86px; border-top: 1px solid var(--ink); }
 .gallery-head { display: grid; grid-template-columns: 1fr .72fr; gap: 60px; align-items: end; margin-bottom: 30px; }
 .gallery-head h2, .install-title h2, .contribute h2 { margin: 0; font-family: "Arial Narrow", "Avenir Next Condensed", "PingFang SC", sans-serif; font-size: clamp(35px, 4vw, 52px); line-height: .95; letter-spacing: -.045em; }
@@ -117,7 +132,7 @@ button { font: inherit; }
 .detail-preview { margin: 0; border: 1px solid var(--ink); background: var(--proof); }
 .detail-preview figcaption { height: 39px; display: flex; align-items: center; justify-content: space-between; padding: 0 13px; border-bottom: 1px solid var(--ink); font: 750 8px/1 Menlo, Consolas, monospace; }
 .detail-preview figcaption b { color: var(--muted); font-weight: 700; }
-.detail-preview > img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.detail-preview > img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
 .detail-preview-empty { position: relative; min-height: 490px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; background: var(--theme-surface); color: var(--proof); text-align: center; }
 .detail-preview-empty::before { content: ""; position: absolute; width: 380px; height: 380px; right: -110px; top: -150px; border: 1px solid var(--accent); border-radius: 50%; opacity: .38; }
 .detail-preview-empty i { width: 34px; height: 34px; margin-bottom: 20px; border: 8px solid var(--accent); border-radius: 50%; }
@@ -144,11 +159,13 @@ button { font: inherit; }
 .article-block { padding: 25px 0; border-top: 1px solid var(--line); }
 .article-block h2 { margin: 0 0 10px; font-size: 18px; }
 .article-block p { color: var(--muted); font-size: 12px; line-height: 1.75; }
+.article-link { color: var(--blue); border-bottom: 1px solid currentColor; font-weight: 750; }
 .not-found { min-height: 70vh; display: grid; place-items: center; text-align: center; }
 
 @media (max-width: 980px) {
   .theme-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .repo-hero { column-gap: 38px; }
+  .flagship-hero { grid-template-columns: .75fr 1.25fr; gap: 28px; min-height: 600px; }
   .gallery-head, .detail-head { gap: 35px; }
   .install-strip { grid-template-columns: 1fr; align-items: start; }
   .install-strip .text-link { justify-self: start; }
@@ -159,8 +176,11 @@ button { font: inherit; }
   .site-header { height: 62px; }
   .site-nav { gap: 14px; }
   .site-nav a:nth-child(2), .site-nav a:nth-child(3) { display: none; }
-  .repo-hero, .gallery-head, .contribute, .detail-head, .apply-panel, .coming-panel { grid-template-columns: 1fr; }
+  .repo-hero, .flagship-hero, .gallery-head, .contribute, .detail-head, .apply-panel, .coming-panel { grid-template-columns: 1fr; }
   .repo-hero { min-height: 0; gap: 24px; padding-block: 48px 36px; }
+  .flagship-hero { min-height: 0; gap: 34px; padding-block: 48px 58px; }
+  .flagship-copy h1 { font-size: 55px; }
+  .flagship-capture { box-shadow: 5px 5px 0 var(--ink); }
   .repo-hero-main h1 { font-size: 55px; }
   .repo-hero-side { padding: 0; }
   .repo-stats { margin-top: 8px; overflow-x: auto; }

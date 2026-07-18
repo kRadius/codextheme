@@ -253,9 +253,9 @@ git commit -m "feat: bundle gothic themes in cli 0.1.1"
 - Create: `apps/site/public/themes/silver-reliquary/previews/session.png`
 - Modify: `docs/qa/2026-07-18-macos-smoke.md`
 
-- [ ] **Step 1: Apply Cathedral Nocturne from the local package**
+- [ ] **Step 1: Apply Cathedral Nocturne from our local npm workspace package**
 
-Use the local CLI/runtime path, not the unpublished npm command. Verify the renderer reports the required session and composer selectors.
+Run the workspace entry for `@codextheme/cli@0.1.1`, using the same CLI, runtime, and bundled theme files that will ship to npm. Do not use the global/upstream `codedrobe` CLI as a substitute, and do not restart the Codex instance that hosts this task. Verify the renderer reports the required session and composer selectors.
 
 - [ ] **Step 2: Inspect Home and Session behavior**
 
@@ -394,6 +394,8 @@ npm pack --dry-run -w @codextheme/cli
 
 Expected: version 0.1.1 and all six theme packages are listed; no source screenshots, private files, or `.superpowers` files are included.
 
+Install that tarball into a temporary directory and verify `codextheme --version`, help output, all three new slugs, and package contents through the installed `@codextheme/cli`. An upstream `codedrobe` command is not acceptable release evidence.
+
 - [ ] **Step 4: Publish CLI 0.1.1**
 
 After confirming npm authentication and that 0.1.1 does not already exist, run:
@@ -402,7 +404,7 @@ After confirming npm authentication and that 0.1.1 does not already exist, run:
 npm publish -w @codextheme/cli --access public
 ```
 
-Verify each public command with `npx --yes @codextheme/cli@0.1.1 --version` before the website deployment.
+Verify each public command through the npm-hosted package, beginning with `npx --yes @codextheme/cli@0.1.1 --version`, before the website deployment. Do not use a globally installed `codedrobe` executable anywhere in this verification.
 
 - [ ] **Step 5: Integrate and push the release branch**
 

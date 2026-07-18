@@ -1,45 +1,47 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ThemeCard } from "./components/ThemeCard";
 import { SiteFooter, SiteHeader, SUBMIT_THEME_URL } from "./components/SiteChrome";
-import { availableThemes, themes } from "./lib/themes";
+import { availableThemes } from "./lib/themes";
 
 export default function Home() {
-  const comingCount = themes.length - availableThemes.length;
+  const flagship = availableThemes[0];
 
   return (
     <div className="site-shell">
       <SiteHeader />
       <main>
-        <section className="repo-hero section-wrap">
-          <div className="repo-hero-main">
+        <section className="flagship-hero section-wrap">
+          <div className="flagship-copy">
             <p className="eyebrow"><span /> CODEX DESKTOP / THEME REPOSITORY</p>
-            <h1>为 Codex 找一套新界面。</h1>
+            <h1>把 Codex 变成你的工作世界。</h1>
+            <p className="flagship-lead">Codex 效果预览、原创完整场景、一条固定版本命令。先从三套哥特世界开始，随后持续增加新的主题选择。</p>
+            <div className="flagship-actions">
+              <Link className="primary-link" href={`/themes/${flagship.slug}`}>查看黑金圣堂 <span aria-hidden="true">→</span></Link>
+              <a className="text-link" href="#themes">浏览全部主题 ↓</a>
+            </div>
           </div>
-          <div className="repo-hero-side">
-            <p>浏览主题、查看真实效果，再复制一条固定版本命令。仓库结构已经就绪，内容会持续补齐。</p>
-            <a className="primary-link" href="#themes">浏览全部主题 <span aria-hidden="true">↓</span></a>
-          </div>
-          <dl className="repo-stats" aria-label="主题仓库状态">
-            <div><dt>{themes.length}</dt><dd>个主题槽位</dd></div>
-            <div><dt>{availableThemes.length}</dt><dd>套已可安装</dd></div>
-            <div><dt>{comingCount}</dt><dd>套正在制作</dd></div>
-          </dl>
+          <Link className="flagship-capture" href={`/themes/${flagship.slug}`} aria-label="查看黑金圣堂主题">
+            <div className="capture-label"><span>01 / GOTHIC WORLDS</span><b>Codex 效果预览</b></div>
+            <Image src={flagship.homePreview ?? ""} alt="黑金圣堂 Codex Home 主题效果预览" fill priority sizes="(max-width: 720px) calc(100vw - 28px), (max-width: 1268px) calc(100vw - 48px), 1220px" />
+            <div className="capture-caption"><span>Cathedral Nocturne</span><strong>黑金圣堂</strong></div>
+          </Link>
         </section>
 
         <section className="gallery-section section-wrap" id="themes">
           <header className="gallery-head">
-            <div><p className="eyebrow"><span /> THEME GALLERY</p><h2>9 个主题槽位，<br />从真实效果开始补齐。</h2></div>
-            <p>空白位置不会用壁纸或假界面代替。只有实际应用到 Codex 后的 Home 与 Session 截图，才会进入预览。</p>
+            <div><p className="eyebrow"><span /> THEME GALLERY</p><h2>三个完整世界，<br />不是三张换色壁纸。</h2></div>
+            <p>每套主题都有独立场景、配色与 Home / Session 效果。这里会逐步成为持续增长的 Codex Desktop 主题仓库。</p>
           </header>
           <div className="theme-grid">
-            {themes.map((theme, index) => <ThemeCard theme={theme} index={index} key={theme.slug} />)}
+            {availableThemes.map((theme, index) => <ThemeCard theme={theme} index={index} key={theme.slug} />)}
           </div>
         </section>
 
         <section className="install-strip section-wrap" aria-labelledby="install-title">
           <div className="install-title"><p className="eyebrow"><span /> SHORTEST PATH</p><h2 id="install-title">选中之后，30 秒装上。</h2></div>
           <ol>
-            <li><b>01</b><span>查看真实 Home / Session</span></li>
+            <li><b>01</b><span>查看 Home / Session 预览</span></li>
             <li><b>02</b><span>复制固定版本命令</span></li>
             <li><b>03</b><span>在 Terminal 粘贴运行</span></li>
           </ol>

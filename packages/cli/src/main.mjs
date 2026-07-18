@@ -15,7 +15,7 @@ const HELP = `CodexTheme ${VERSION}
   codextheme reapply
   codextheme restore
 
-首发主题：${Object.keys(CATALOG).join(", ")}
+可用主题：${Object.keys(CATALOG).join(", ")}
 `;
 
 function usage(message) {
