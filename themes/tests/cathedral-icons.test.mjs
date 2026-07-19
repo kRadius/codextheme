@@ -16,6 +16,7 @@ const themeRoot = path.join(repoRoot, "themes");
 const ICON_IDS = [
   "icon-new-chat",
   "icon-pull-requests",
+  "icon-sites",
   "icon-scheduled",
   "icon-plugins",
   "icon-project-folder",
@@ -27,6 +28,8 @@ const ICON_IDS = [
   "icon-send",
 ];
 
+assert.equal(ICON_IDS.length, 12);
+assert.equal(new Set(ICON_IDS).size, 12);
 assert.deepEqual(CATHEDRAL_ICON_IDS, ICON_IDS);
 
 test("Cathedral glyph masters render as the closed transparent PNG set", async () => {

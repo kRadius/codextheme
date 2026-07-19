@@ -6,6 +6,7 @@ import sharp from "sharp";
 export const CATHEDRAL_ICON_IDS = Object.freeze([
   "icon-new-chat",
   "icon-pull-requests",
+  "icon-sites",
   "icon-scheduled",
   "icon-plugins",
   "icon-project-folder",

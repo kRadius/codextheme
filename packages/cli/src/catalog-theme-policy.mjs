@@ -4,6 +4,7 @@ const newChatSelector = 'aside.app-shell-left-panel [role="navigation"] > div.re
 export const CATHEDRAL_ICON_ANCHORS = Object.freeze([
   { id: "icon-new-chat", contexts: ["home", "session"], selector: newChatSelector, expected: 1 },
   { id: "icon-pull-requests", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(1) svg`, expected: 1 },
+  { id: "icon-sites", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(2) svg`, expected: 1 },
   { id: "icon-scheduled", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(3) svg`, expected: 1 },
   { id: "icon-plugins", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(4) svg`, expected: 1 },
   {

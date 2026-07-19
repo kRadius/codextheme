@@ -14,11 +14,12 @@ test("Cathedral icon anchors are closed, structural, and classify drift safely",
   });
 
   const { CATHEDRAL_ICON_ANCHORS, classifyCathedralIconCounts } = contract;
-  assert.equal(CATHEDRAL_ICON_ANCHORS.length, 11);
-  assert.equal(new Set(CATHEDRAL_ICON_ANCHORS.map(({ id }) => id)).size, 11);
+  assert.equal(CATHEDRAL_ICON_ANCHORS.length, 12);
+  assert.equal(new Set(CATHEDRAL_ICON_ANCHORS.map(({ id }) => id)).size, 12);
   const byId = Object.fromEntries(CATHEDRAL_ICON_ANCHORS.map((anchor) => [anchor.id, anchor]));
   assert.match(byId["icon-new-chat"].selector, /> div\.relative\.z-10 /);
   assert.match(byId["icon-pull-requests"].selector, /button:nth-child\(1\) svg$/);
+  assert.match(byId["icon-sites"].selector, /button:nth-child\(2\) svg$/);
   assert.match(byId["icon-scheduled"].selector, /button:nth-child\(3\) svg$/);
   assert.match(byId["icon-plugins"].selector, /button:nth-child\(4\) svg$/);
   assert.doesNotMatch(byId["icon-pull-requests"].selector, /nth-child\(2\)/);

@@ -112,6 +112,17 @@ html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-s
   opacity: 0 !important;
 }
 
+html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-shell-left-panel [role="navigation"] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(2) svg {
+  background-image: var(--codedrobe-image-icon-sites);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-shell-left-panel [role="navigation"] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(2) svg > * {
+  opacity: 0 !important;
+}
+
 html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-shell-left-panel [role="navigation"] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(3) svg {
   background-image: var(--codedrobe-image-icon-scheduled);
   background-position: center;
