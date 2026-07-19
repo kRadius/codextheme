@@ -91,7 +91,7 @@ export async function run(argv, dependencies = {}) {
   try {
     const parsed = validateCommand(argv);
     if ((dependencies.platform ?? process.platform) !== "darwin") {
-      throw new CliError("E_PLATFORM", "0.2.0 版本仅支持 macOS 上的 Codex Desktop。");
+      throw new CliError("E_PLATFORM", `${VERSION} 版本仅支持 macOS 上的 Codex Desktop。`);
     }
     const services = {
       runtime: dependencies.runtime ?? productionRuntime,

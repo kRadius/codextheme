@@ -141,6 +141,8 @@ test("unsupported platforms fail before a theme is loaded", async () => {
   const app = harness();
   assert.equal(await run(["apply", "midnight-circuit"], { ...app.deps, platform: "linux" }), 1);
   assert.match(app.stderr.text(), /E_PLATFORM/);
+  assert.match(app.stderr.text(), /0\.2\.1/);
+  assert.doesNotMatch(app.stderr.text(), /0\.2\.0/);
   assert.equal(app.calls.length, 0);
 });
 
