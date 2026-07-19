@@ -8,6 +8,7 @@
 }
 
 :root.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] {
+  --codextheme-accent: #c7a45a;
   --color-token-list-hover-background: color-mix(in srgb, var(--codextheme-surface) 84%, var(--codextheme-accent) 16%) !important;
   --color-token-list-active-selection-background: color-mix(in srgb, var(--codextheme-surface) 76%, var(--codextheme-accent) 24%) !important;
 }

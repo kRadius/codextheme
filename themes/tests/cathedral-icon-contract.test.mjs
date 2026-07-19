@@ -86,6 +86,7 @@ test("Cathedral list interactions use gold hover and selected surfaces", async (
   const rootStart = css.indexOf(`${root} {`);
   assert.notEqual(rootStart, -1);
   const rootBlock = css.slice(rootStart, css.indexOf("}", rootStart) + 1);
+  assert.match(rootBlock, /--codextheme-accent:\s*#c7a45a/);
   assert.match(rootBlock, /--color-token-list-hover-background:\s*color-mix\(in srgb, var\(--codextheme-surface\) 84%, var\(--codextheme-accent\) 16%\)\s*!important/);
   assert.match(rootBlock, /--color-token-list-active-selection-background:\s*color-mix\(in srgb, var\(--codextheme-surface\) 76%, var\(--codextheme-accent\) 24%\)\s*!important/);
 
