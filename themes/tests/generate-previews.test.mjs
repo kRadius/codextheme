@@ -26,7 +26,10 @@ test("Cathedral preview icons reuse the complete packaged PNG set deterministica
     manifest,
   });
 
-  assert.equal(Object.keys(icons).length, 11);
+  assert.equal(Object.keys(icons).length, 12);
+  assert.match(helpers.previewIconImage(icons, "icon-sites", { x: 100, y: 120, size: 32 }), /<image /);
+  const generatorSource = await readFile(path.join(repoRoot, "themes/scripts/generate-previews.mjs"), "utf8");
+  assert.match(generatorSource, /navIcon\(246, accent, "line", iconData, "icon-sites"\)/);
   for (const dataUrl of Object.values(icons)) assert.match(dataUrl, /^data:image\/png;base64,/);
   const first = helpers.previewIconImage(icons, "icon-explore", { x: 100, y: 120, size: 32 });
   const second = helpers.previewIconImage(icons, "icon-explore", { x: 100, y: 120, size: 32 });

@@ -79,17 +79,18 @@ function chrome(theme, body, backgroundData, mode, iconData) {
 
       ${navIcon(160, accent, "line", iconData, "icon-new-chat")}<text x="70" y="160" fill="#eeeae2" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">New chat</text>
       ${navIcon(203, accent, "line", iconData, "icon-pull-requests")}<text x="70" y="203" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Pull requests</text>
-      ${navIcon(246, accent, "dot", iconData, "icon-scheduled")}<text x="70" y="246" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Scheduled</text>
-      ${navIcon(289, accent, "line", iconData, "icon-plugins")}<text x="70" y="289" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Plugins</text>
+      ${navIcon(246, accent, "line", iconData, "icon-sites")}<text x="70" y="246" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Sites</text>
+      ${navIcon(289, accent, "dot", iconData, "icon-scheduled")}<text x="70" y="289" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Scheduled</text>
+      ${navIcon(332, accent, "line", iconData, "icon-plugins")}<text x="70" y="332" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Plugins</text>
 
-      <text x="38" y="350" fill="#fff" fill-opacity=".46" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" letter-spacing="1.3">PROJECTS</text>
-      <rect x="29" y="372" width="246" height="46" rx="11" fill="${accent}" fill-opacity=".12" stroke="${accent}" stroke-opacity=".44"/>
-      ${previewIconImage(iconData, "icon-project-folder", { x: 43, y: 380, size: 34 }) || `<path d="M45 389 h10 l4 4 h14 v13 H45 Z" fill="none" stroke="${accent}" stroke-width="1.5"/>`}
-      <text x="82" y="401" fill="#f2eee5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">${escapeXml(project)}</text>
+      <text x="38" y="393" fill="#fff" fill-opacity=".46" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" letter-spacing="1.3">PROJECTS</text>
+      <rect x="29" y="415" width="246" height="46" rx="11" fill="${accent}" fill-opacity=".12" stroke="${accent}" stroke-opacity=".44"/>
+      ${previewIconImage(iconData, "icon-project-folder", { x: 43, y: 423, size: 34 }) || `<path d="M45 432 h10 l4 4 h14 v13 H45 Z" fill="none" stroke="${accent}" stroke-width="1.5"/>`}
+      <text x="82" y="444" fill="#f2eee5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">${escapeXml(project)}</text>
 
-      <text x="38" y="472" fill="#fff" fill-opacity=".46" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" letter-spacing="1.3">CHATS</text>
-      <text x="38" y="508" fill="#fff" fill-opacity=".35" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">Theme preview</text>
-      <text x="38" y="544" fill="#fff" fill-opacity=".24" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">No private history</text>
+      <text x="38" y="515" fill="#fff" fill-opacity=".46" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" letter-spacing="1.3">CHATS</text>
+      <text x="38" y="551" fill="#fff" fill-opacity=".35" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">Theme preview</text>
+      <text x="38" y="587" fill="#fff" fill-opacity=".24" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">No private history</text>
 
       <line x1="36" y1="921" x2="277" y2="921" stroke="#fff" stroke-opacity=".1"/>
       <circle cx="48" cy="951" r="10" fill="none" stroke="${accent}" stroke-width="1.5"/>
