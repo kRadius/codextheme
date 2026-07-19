@@ -110,13 +110,15 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
+    assert.equal((html.match(/data-copy-terminal/g) ?? []).length, 1);
     assert.match(html, new RegExp(`data-theme-slug="${slug}"`));
     assert.match(html, new RegExp(`@codextheme\\/cli@0\\.2\\.0 apply ${slug}`));
     assert.match(html, new RegExp(availableThemeCopy[slug].name));
     assert.match(html, new RegExp(availableThemeCopy[slug].description.replaceAll(".", "\\.")));
     assert.match(html, /Ready to install/);
     assert.match(html, /Apply with one command/);
-    assert.match(html, /Copy command/);
+    assert.match(html, /Copy &amp; apply with Codex/);
+    assert.match(html, /Copy Terminal command/);
     assert.match(html, /HOME \/ VERIFIED THEME PREVIEW/);
     assert.match(html, /SESSION \/ VERIFIED THEME PREVIEW/);
     assert.doesNotMatch(html, /真实截图待补齐|制作中|返回全部主题|一条命令应用|安装边界/);

@@ -1,19 +1,29 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { trackInstallCopy } from "../lib/analytics.mjs";
+import { buildInstallCopy } from "../lib/install-copy.mjs";
 
 export function CopyCommand({ command, themeSlug }: { command: string; themeSlug: string }) {
-  const [label, setLabel] = useState("Copy command");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [message, setMessage] = useState("");
 
-  async function copy() {
-    await navigator.clipboard.writeText(command);
-    trackInstallCopy(themeSlug);
-    setLabel("Copied — paste it into Terminal");
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setLabel("Copy command"), 2500);
+  async function copy(mode: "agent" | "terminal") {
+    try {
+      await navigator.clipboard.writeText(buildInstallCopy(command, mode));
+      trackInstallCopy(themeSlug);
+      setMessage(mode === "agent"
+        ? "Copied — paste into a local Codex task."
+        : "Terminal command copied.");
+    } catch {
+      setMessage("Clipboard unavailable. Select the command above and copy it manually.");
+    }
   }
 
-  return <button className="copy-button" type="button" data-copy-command data-command={command} data-theme-slug={themeSlug} onClick={copy}>{label}<span aria-hidden="true">⌘C</span></button>;
+  return <div className="install-copy-wrap">
+    <div className="install-copy-actions">
+      <button className="copy-button" type="button" data-copy-command data-command={command} data-theme-slug={themeSlug} onClick={() => void copy("agent")}>Copy &amp; apply with Codex<span aria-hidden="true">⌘C</span></button>
+      <button className="terminal-copy" type="button" data-copy-terminal onClick={() => void copy("terminal")}>Copy Terminal command</button>
+    </div>
+    {message && <p className="install-copy-status" role="status">{message}</p>}
+  </div>;
 }

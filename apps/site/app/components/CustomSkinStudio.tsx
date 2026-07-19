@@ -5,6 +5,7 @@ import { CodexMockup } from "./CodexMockup";
 import { buildPrivateSkinForm, processBrowserImage, validateSourceFile } from "../lib/browser-image.mjs";
 import { DEFAULT_PRIVATE_SKIN_SETTINGS, normalizePrivateSkinSettings } from "../lib/private-skin-schema.mjs";
 import { trackStudioEvent } from "../lib/analytics.mjs";
+import { buildInstallCopy } from "../lib/install-copy.mjs";
 
 const SAMPLE = "/themes/crimson-eclipse/hero.jpg";
 const SAMPLE_PALETTE = { accent: "#d95764", surface: "#170d10", ink: "#f4f1eb" };
@@ -88,14 +89,16 @@ export function CustomSkinStudio() {
     }
   }
 
-  async function copyCommand() {
+  async function copyInstall(mode: "agent" | "terminal") {
     if (!result) return;
     try {
-      await navigator.clipboard.writeText(result.command);
-      setMessage("Command copied. Paste it into Terminal and press Return.");
+      await navigator.clipboard.writeText(buildInstallCopy(result.command, mode));
+      setMessage(mode === "agent"
+        ? "Copied — paste into a local Codex task."
+        : "Terminal command copied.");
       trackStudioEvent("custom_command_copy");
     } catch {
-      setMessage("Select the command below and copy it manually.");
+      setMessage("Clipboard unavailable. Select the command above and copy it manually.");
     }
   }
 
@@ -140,7 +143,11 @@ export function CustomSkinStudio() {
         {result && <div className="studio-result" aria-live="polite">
           <p>PRIVATE SKIN READY · LINK EXPIRES {new Date(result.expiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
           <code>{result.command}</code>
-          <button className="copy-button" type="button" onClick={() => void copyCommand()}>Copy apply command <span>⌘C</span></button>
+          <div className="install-copy-actions">
+            <button className="copy-button" type="button" onClick={() => void copyInstall("agent")}>Copy &amp; apply with Codex <span>⌘C</span></button>
+            <button className="terminal-copy" type="button" onClick={() => void copyInstall("terminal")}>Copy Terminal command</button>
+          </div>
+          <p className="studio-private-note">This skin stays out of the public gallery. Pasting it into an Agent sends the temporary ID to that provider; use Terminal to keep the ID out of an Agent conversation.</p>
         </div>}
         {message && <p className={`studio-message ${status === "error" ? "is-error" : ""}`} role={status === "error" ? "alert" : "status"}>{message}</p>}
       </div>
