@@ -228,6 +228,17 @@ test("recipes produce distinct complete surface systems", () => {
   ]);
   assert.equal(tokens[2].positionX, 35);
   assert.equal(tokens[2].positionY, 65);
+  assert.deepEqual(tokens.map((value) => ({
+    recipe: value.recipe,
+    iconSurfaceAlpha: value.iconSurfaceAlpha,
+    iconBorderAlpha: value.iconBorderAlpha,
+    iconGlowAlpha: value.iconGlowAlpha,
+    iconGlyphOnAccent: value.iconGlyphOnAccent,
+  })), [
+    { recipe: "cinematic", iconSurfaceAlpha: 92, iconBorderAlpha: 58, iconGlowAlpha: 42, iconGlyphOnAccent: true },
+    { recipe: "glass", iconSurfaceAlpha: 24, iconBorderAlpha: 44, iconGlowAlpha: 24, iconGlyphOnAccent: false },
+    { recipe: "focus", iconSurfaceAlpha: 12, iconBorderAlpha: 26, iconGlowAlpha: 0, iconGlyphOnAccent: false },
+  ]);
 });
 
 test("recipe defaults treat non-finite luminance as neutral", () => {
@@ -359,6 +370,10 @@ test("skin tokens expose only the closed semantic contract", () => {
     composerBlur: 28,
     borderAlpha: 30,
     radius: 16,
+    iconSurfaceAlpha: 24,
+    iconBorderAlpha: 44,
+    iconGlowAlpha: 24,
+    iconGlyphOnAccent: false,
     saturation: 108,
     imageContrast: 102,
     shadow: "0 18px 42px rgba(0,0,0,.30)",
