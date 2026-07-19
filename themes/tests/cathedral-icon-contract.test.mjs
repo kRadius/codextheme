@@ -22,6 +22,9 @@ test("Cathedral icon anchors are closed, structural, and classify drift safely",
   assert.match(byId["icon-scheduled"].selector, /button:nth-child\(3\) svg$/);
   assert.match(byId["icon-plugins"].selector, /button:nth-child\(4\) svg$/);
   assert.doesNotMatch(byId["icon-pull-requests"].selector, /nth-child\(2\)/);
+  for (const id of ["icon-explore", "icon-build", "icon-review", "icon-fix"]) {
+    assert.deepEqual([byId[id].min, byId[id].max], [0, 1]);
+  }
   const addAnchor = CATHEDRAL_ICON_ANCHORS.find(({ id }) => id === "icon-add");
   assert.match(addAnchor.selector, /button\.aspect-square > svg$/);
   assert.doesNotMatch(addAnchor.selector, /:first-child/);
