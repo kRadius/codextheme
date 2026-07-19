@@ -86,6 +86,12 @@ test("generated packages contain only local images and safe Codex CSS", () => {
   assert.deepEqual(Object.keys(target.imageDataUrls).sort(), ["hero", "session-bg"]);
   assert.doesNotMatch(target.css, /@import|url\(\s*["']?https?:/i);
   assert.match(target.css, /background-position: 50% 50%/);
+  const homeWindow = target.css.match(/body:has\(\.dream-home\)::before\s*\{([^}]*)\}/s);
+  const homeSurface = target.css.match(/\.dream-home\s*\{([^}]*)\}/s);
+  assert.ok(homeWindow, "Home must select its image on the fixed window layer.");
+  assert.ok(homeSurface, "Home must retain its route-specific surface rule.");
+  assert.match(homeWindow[1], /var\(--codedrobe-image-hero\)/);
+  assert.doesNotMatch(homeSurface[1], /var\(--codedrobe-image-hero\)/);
 });
 
 test("browser upload accepts only bounded raster sources", () => {

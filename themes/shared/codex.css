@@ -26,6 +26,12 @@ html.codedrobe-codex-skin body::before {
   filter: saturate(.92) contrast(1.04);
 }
 
+html.codedrobe-codex-skin body:has(.dream-home)::before {
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, var(--codextheme-surface) 94%, transparent), transparent 68%),
+    var(--codedrobe-image-hero);
+}
+
 html.codedrobe-codex-skin body > * {
   position: relative;
   z-index: 1;
@@ -70,9 +76,7 @@ html.codedrobe-codex-skin :is(button, a, input, textarea, [tabindex]):focus-visi
 html.codedrobe-codex-skin .dream-home {
   position: relative;
   isolation: isolate;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--codextheme-surface) 94%, transparent), transparent 68%),
-    var(--codedrobe-image-hero) center / cover no-repeat !important;
+  background: transparent !important;
 }
 
 html.codedrobe-codex-skin .dream-home::after {
