@@ -65,7 +65,7 @@ export function validateWorkerInvocation(argv, pendingPath) {
   return parentPid;
 }
 
-async function applyJob({ job, lifecycle, cache, runtime, stateStore, now }) {
+async function applyJob({ job, lifecycle, cache, runtime, stateStore, now, onApplyStart }) {
   const shared = {
     runtime,
     stateStore,
@@ -73,9 +73,11 @@ async function applyJob({ job, lifecycle, cache, runtime, stateStore, now }) {
     now,
   };
   if (job.action.source === "catalog") {
+    onApplyStart();
     return lifecycle.applyTheme({ ...shared, slug: job.action.themeSlug });
   }
   const bundle = JSON.parse(await cache.read(job.action.cacheKey));
+  onApplyStart();
   return lifecycle.applyPrivateTheme({
     ...shared,
     bundle,
@@ -95,11 +97,20 @@ export async function runHandoffJob({
   now = () => new Date(),
 }) {
   let exitCode = 1;
+  let applyStarted = false;
   try {
     const job = await store.readPending();
     await waitForParentExit(job.parentPid);
     await settleAfterParentExit();
-    await applyJob({ job, lifecycle, cache, runtime, stateStore, now });
+    await applyJob({
+      job,
+      lifecycle,
+      cache,
+      runtime,
+      stateStore,
+      now,
+      onApplyStart: () => { applyStarted = true; },
+    });
     await store.writeResult({
       schemaVersion: 1,
       status: "success",
@@ -109,11 +120,13 @@ export async function runHandoffJob({
     await notify("success").catch(() => {});
     exitCode = 0;
   } catch (error) {
-    let recovered = false;
-    try {
-      const recovery = await runtime.recover();
-      recovered = recovery?.recovered === true;
-    } catch { /* The sanitized result below records failed recovery. */ }
+    let recovered = !applyStarted;
+    if (applyStarted) {
+      try {
+        const recovery = await runtime.recover();
+        recovered = recovery?.recovered === true;
+      } catch { /* The sanitized result below records failed recovery. */ }
+    }
     const failure = publicFailure(error);
     try {
       await store.writeResult({

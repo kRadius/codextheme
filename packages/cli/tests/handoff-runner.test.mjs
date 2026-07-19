@@ -166,3 +166,27 @@ test("worker invocation accepts only the exact pending path and parent pid", () 
     );
   }
 });
+
+test("handoff runner does not recover when foreground coordination fails before apply", async () => {
+  const app = harness({
+    schemaVersion: 1,
+    createdAt: "2026-07-19T08:00:00.000Z",
+    parentPid: 4321,
+    action: { source: "catalog", themeSlug: "cathedral-nocturne" },
+  });
+  app.waitForParentExit = async () => {
+    throw Object.assign(new Error("still running"), { code: "E_HANDOFF_FAILED" });
+  };
+  const runtime = {
+    async recover() { app.calls.push(["runtime.recover"]); return { recovered: true }; },
+  };
+
+  assert.equal(await runHandoffJob({
+    ...app,
+    runtime,
+    lifecycle: { async applyTheme() { throw new Error("must not apply"); } },
+    cache: {},
+  }), 1);
+  assert.equal(app.calls.some(([name]) => name === "runtime.recover"), false);
+  assert.equal(app.results[0].recovered, true);
+});
