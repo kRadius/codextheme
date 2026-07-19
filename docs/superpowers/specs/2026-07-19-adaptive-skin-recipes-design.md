@@ -127,6 +127,7 @@ The public token roles are:
 - artwork: `visibility`, `overlay`, `blur`, `saturation`, `contrast`;
 - chrome opacity: `sidebarAlpha`, `mainAlpha`, `headerAlpha`, `composerAlpha`, `codeAlpha`, `selectionAlpha`;
 - chrome effects: `sidebarBlur`, `mainBlur`, `headerBlur`, `composerBlur`, `borderAlpha`, `shadow`, `radius`.
+- icon material: `iconSurfaceAlpha`, `iconBorderAlpha`, `iconGlowAlpha`, and `iconGlyphOnAccent`.
 
 The four blur roles remain separate because the recipe hierarchy depends on them: the sidebar, work surface, header, and composer should not collapse into one generic glass treatment. Before tokens reach the preview or generated package, the accent is adjusted only when necessary so it keeps at least a 4.5:1 contrast ratio against the derived surface.
 
@@ -141,7 +142,9 @@ The generated CSS maps those roles only to the stable compatibility selectors al
 - focus-visible controls;
 - `.dream-home` and the fixed window background layer.
 
-The feature will not replace icons, fonts, navigation labels, component order, or Codex-owned interaction behavior. Missing recommended selectors remain non-fatal under the existing verification contract.
+Native Codex icon shapes remain intact. The recipe changes their material treatment instead: navigation icons inherit the adaptive accent, while Home action icons receive a non-layout-shifting circular surface, border, and glow. Cinematic uses the strongest filled treatment, Glass uses a translucent ring, and Focus uses a restrained low-glow treatment. The browser mockup uses the same icon-material tokens as the generated package. The implementation must not select icons by localized labels, inject replacement SVG, change hit targets, or add padding that shifts native layout.
+
+The feature will not replace icon shapes, fonts, navigation labels, component order, or Codex-owned interaction behavior. Missing recommended selectors remain non-fatal under the existing verification contract.
 
 ## 7. Settings and Reset Behavior
 
@@ -253,7 +256,7 @@ The release is not complete if a side-by-side screenshot of the official appeara
 
 - AI-generated CSS or remote image classification;
 - arbitrary user CSS;
-- font, icon, copy, or layout replacement;
+- font, icon-shape, copy, or layout replacement;
 - public upload gallery, accounts, or saved projects;
 - manual color editing and multi-layer composition;
 - object detection, face detection, or automatic focal-point detection;
