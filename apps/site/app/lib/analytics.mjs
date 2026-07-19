@@ -16,3 +16,27 @@ export function trackInstallCopy(themeSlug, target = globalThis) {
   });
   return true;
 }
+
+const STUDIO_EVENTS = new Set([
+  "custom_upload_selected",
+  "custom_preview_ready",
+  "custom_create_success",
+  "custom_command_copy",
+  "custom_create_error",
+]);
+const ERROR_CATEGORIES = new Set([
+  "invalid_upload",
+  "image_too_small",
+  "upload_too_large",
+  "network",
+  "service_unavailable",
+]);
+
+export function trackStudioEvent(name, errorCategory, target = globalThis) {
+  if (!STUDIO_EVENTS.has(name) || typeof target?.gtag !== "function") return false;
+  const parameters = name === "custom_create_error" && ERROR_CATEGORIES.has(errorCategory)
+    ? { error_category: errorCategory }
+    : {};
+  target.gtag("event", name, parameters);
+  return true;
+}

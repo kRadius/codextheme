@@ -21,6 +21,10 @@ function harness({ state = null } = {}) {
       calls.push(["loadTheme", slug]);
       return { theme: { id: slug, displayName: "Midnight Circuit / 午夜回路" } };
     },
+    async loadThemeBundle(bundle) {
+      calls.push(["loadThemeBundle", bundle.theme.id]);
+      return { theme: bundle.theme };
+    },
     async detect() {
       calls.push(["detect"]);
       return { installed: true, running: false, ready: false };
@@ -49,6 +53,22 @@ function harness({ state = null } = {}) {
       stateStore,
       promptRestart: async () => false,
       now: () => new Date("2026-07-18T12:00:00.000Z"),
+      privateSource: {
+        async download(id) {
+          calls.push(["private.download", id]);
+          return {
+            serialized: JSON.stringify({ theme: { id: "private-test", displayName: "Private Custom Skin" } }),
+            bundle: { theme: { id: "private-test", displayName: "Private Custom Skin" } },
+          };
+        },
+      },
+      privateCache: {
+        async write() { calls.push(["privateCache.write"]); return "d".repeat(64); },
+        async read(key) {
+          calls.push(["privateCache.read", key]);
+          return JSON.stringify({ theme: { id: "private-test", displayName: "Private Custom Skin" } });
+        },
+      },
     },
   };
 }
@@ -81,8 +101,8 @@ test("successful apply prints pinned reapply and restore commands", async () => 
   const app = harness();
   assert.equal(await run(["apply", "cathedral-nocturne"], app.deps), 0);
   assert.match(app.stdout.text(), /主题已应用并通过验证/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.1\.1 reapply/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.1\.1 restore/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.0 reapply/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.0 restore/);
 });
 
 test("unknown slugs and malformed argv return E_USAGE without runtime calls", async () => {
@@ -104,8 +124,22 @@ test("unsupported platforms fail before a theme is loaded", async () => {
 test("version is available without constructing runtime state", async () => {
   const app = harness();
   assert.equal(await run(["--version"], app.deps), 0);
-  assert.equal(app.stdout.text(), "0.1.1\n");
+  assert.equal(app.stdout.text(), "0.2.0\n");
   assert.equal(app.calls.length, 0);
+});
+
+test("apply-private downloads and caches before touching Codex", async () => {
+  const app = harness();
+  const privateId = "n0z6o000.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  assert.equal(await run(["apply-private", privateId], app.deps), 0);
+  assert.deepEqual(app.calls.slice(0, 4), [
+    ["private.download", privateId],
+    ["privateCache.write"],
+    ["loadThemeBundle", "private-test"],
+    ["detect"],
+  ]);
+  assert.match(app.stdout.text(), /Private Custom Skin/);
+  assert.doesNotMatch(app.stdout.text(), new RegExp(privateId));
 });
 
 test("help labels the complete backward-compatible catalog accurately", async () => {

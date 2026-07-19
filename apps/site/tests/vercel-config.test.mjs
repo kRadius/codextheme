@@ -11,6 +11,9 @@ const nextConfigSource = await readFile(
   "utf8",
 );
 const gitignoreSource = await readFile(new URL(".gitignore", siteRoot), "utf8");
+const vercelConfig = JSON.parse(
+  await readFile(new URL("../../vercel.json", siteRoot), "utf8"),
+);
 
 test("site uses the native Next.js commands Vercel detects", () => {
   assert.equal(packageJson.scripts.dev, "next dev");
@@ -58,4 +61,10 @@ test("site pins the monorepo root and uses its single package lock", async () =>
 
 test("site ignores TypeScript incremental build state", () => {
   assert.match(gitignoreSource, /^\*\.tsbuildinfo$/m);
+});
+
+test("Vercel runs one daily private-skin cleanup", () => {
+  assert.deepEqual(vercelConfig.crons, [
+    { path: "/api/private-skins/cleanup", schedule: "17 3 * * *" },
+  ]);
 });

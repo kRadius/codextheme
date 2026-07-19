@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyTheme, reapplyTheme, restoreTheme } from "../src/lifecycle.mjs";
+import { applyPrivateTheme, applyTheme, reapplyTheme, restoreTheme } from "../src/lifecycle.mjs";
 
 const timestamp = "2026-07-18T12:00:00.000Z";
 
@@ -11,6 +11,10 @@ function harness({ detect, apply, restore, state } = {}) {
     async loadTheme(slug) {
       calls.push(["loadTheme", slug]);
       return { theme: { id: slug, displayName: slug } };
+    },
+    async loadThemeBundle(bundle) {
+      calls.push(["loadThemeBundle", bundle.theme.id]);
+      return { theme: bundle.theme };
     },
     async detect() {
       calls.push(["detect"]);
@@ -51,7 +55,8 @@ test("closed and CDP-ready Codex apply without an eager restart", async () => {
     await applyTheme(applyOptions(app));
     assert.deepEqual(app.calls.find(([name]) => name === "apply"), ["apply", false]);
     assert.deepEqual(app.getState(), {
-      schemaVersion: 1,
+      schemaVersion: 2,
+      source: "catalog",
       themeSlug: "midnight-circuit",
       appliedAt: timestamp,
     });
@@ -103,6 +108,45 @@ test("reapply uses only the locally stored bundled slug", async () => {
   });
   assert.deepEqual(app.calls[0], ["loadTheme", "aurora-glass"]);
   assert.equal(app.calls.some(([name]) => name === "fetch"), false);
+});
+
+test("private apply writes only a local cache reference after verification", async () => {
+  const app = harness();
+  const bundle = { theme: { id: "private-test", displayName: "Private Custom Skin" } };
+  await applyPrivateTheme({
+    bundle,
+    cacheKey: "b".repeat(64),
+    runtime: app.runtime,
+    stateStore: app.stateStore,
+    promptRestart: async () => false,
+    now: () => new Date(timestamp),
+  });
+  assert.deepEqual(app.calls[0], ["loadThemeBundle", "private-test"]);
+  assert.deepEqual(app.getState(), {
+    schemaVersion: 2,
+    source: "private",
+    cacheKey: "b".repeat(64),
+    appliedAt: timestamp,
+  });
+});
+
+test("private reapply reads only the local cache and never downloads", async () => {
+  const cacheKey = "c".repeat(64);
+  const app = harness({ state: { schemaVersion: 2, source: "private", cacheKey, appliedAt: timestamp } });
+  const cache = {
+    async read(key) {
+      app.calls.push(["cache.read", key]);
+      return JSON.stringify({ theme: { id: "private-cached", displayName: "Private Custom Skin" } });
+    },
+  };
+  await reapplyTheme({
+    runtime: app.runtime,
+    stateStore: app.stateStore,
+    cache,
+    promptRestart: async () => false,
+    now: () => new Date(timestamp),
+  });
+  assert.deepEqual(app.calls.slice(0, 2), [["cache.read", cacheKey], ["loadThemeBundle", "private-cached"]]);
 });
 
 test("complete and already-absent restore remove state", async () => {

@@ -49,7 +49,7 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
           <div>
             <p className="eyebrow"><span /> AVAILABLE NOW</p>
             <h2 id="apply-title">Apply with one command</h2>
-            <p>Copy the command, open Terminal, paste it, and press Return. It is pinned to the auditable @codextheme/cli 0.1.1 release and never follows latest silently.</p>
+            <p>Copy the command, open Terminal, paste it, and press Return. It is pinned to the auditable @codextheme/cli 0.2.0 release and never follows latest silently.</p>
             <div className="command-box">{theme.command}</div>
             <div className="copy-row"><CopyCommand command={theme.command} themeSlug={theme.slug} /></div>
           </div>

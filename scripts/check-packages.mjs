@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packages = [
   { name: "@codextheme/runtime", version: "0.1.0", directory: "packages/runtime" },
-  { name: "@codextheme/cli", version: "0.1.1", directory: "packages/cli" },
+  { name: "@codextheme/cli", version: "0.2.0", directory: "packages/cli" },
 ];
 const requiredFiles = new Set(["LICENSE", "NOTICE", "README.md", "package.json"]);
 const forbiddenScripts = new Set(["preinstall", "install", "postinstall"]);
@@ -59,6 +59,9 @@ function checkPackFiles(expected, pack) {
     if (!files.includes(required)) fail(`${expected.name} tarball is missing ${required}.`);
   }
   if (expected.name === "@codextheme/cli") {
+    for (const required of ["src/private-source.mjs", "src/cache.mjs"]) {
+      if (!files.includes(required)) fail(`CLI tarball is missing ${required}.`);
+    }
     const themes = files.filter((filename) => filename.startsWith("themes/") && filename.endsWith(".codextheme-theme"));
     const expectedThemes = [
       "themes/aurora-glass.codextheme-theme",

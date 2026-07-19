@@ -1,25 +1,26 @@
 # @codextheme/cli
 
-Fixed-version, one-command curated themes for Codex Desktop on macOS.
+Fixed-version, one-command curated and private custom skins for Codex Desktop on macOS.
+
+Apply a catalog skin:
 
 ```sh
-npx --yes @codextheme/cli@0.1.1 apply cathedral-nocturne
+npx --yes @codextheme/cli@0.2.0 apply cathedral-nocturne
 ```
 
-Version 0.1.1 bundles three new original Gothic Worlds themes and keeps the three 0.1.0 theme slugs for backward compatibility. It does not download themes, run install scripts, use `sudo`, or modify the Codex application bundle.
-
-After restarting Codex, reapply the active theme with:
+The custom skin studio at [codextheme.tech](https://codextheme.tech) creates an expiring private command:
 
 ```sh
-npx --yes @codextheme/cli@0.1.1 reapply
+npx --yes @codextheme/cli@0.2.0 apply-private <private-id>
 ```
 
-Restore the official appearance with:
+Private packages are downloaded only from the fixed `https://codextheme.tech` origin, bounded, integrity-checked, schema-validated, safety-linted, and cached locally with owner-only permissions. The temporary server link expires after 24 hours; `reapply` uses the validated local cache and works after that link expires.
 
 ```sh
-npx --yes @codextheme/cli@0.1.1 restore
+npx --yes @codextheme/cli@0.2.0 reapply
+npx --yes @codextheme/cli@0.2.0 restore
 ```
 
-Requirements: macOS, Node.js 22.4+, and Codex Desktop. A running Codex process is never closed or reopened without an explicit `y` confirmation.
+The CLI has no install scripts, does not use `sudo`, and does not modify the Codex application bundle. Requirements: macOS, Node.js 22.4+, and Codex Desktop. A running Codex process is never closed or reopened without an explicit `y` confirmation.
 
 CodexTheme is an independent project and is not affiliated with or endorsed by OpenAI.

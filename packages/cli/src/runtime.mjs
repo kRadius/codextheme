@@ -8,21 +8,32 @@ import {
   readThemePackage,
   resolveThemeTarget,
   restoreSkin,
+  validateThemePackage,
 } from "@codextheme/runtime";
 import { themeFilename } from "./catalog.mjs";
 
 const adapter = getAdapter("codex");
+
+function resolveSafeTheme(bundle) {
+  try {
+    validateThemePackage(bundle);
+    if (lintThemePackage(bundle).length) throw new Error("lint");
+    return resolveThemeTarget(bundle, adapter.id);
+  } catch {
+    throw Object.assign(new Error("Theme failed safety validation."), { code: "E_DOM_INCOMPATIBLE" });
+  }
+}
 
 export const runtime = {
   async loadTheme(slug) {
     const filename = themeFilename(slug);
     if (!filename) throw Object.assign(new Error("Unknown theme."), { code: "E_USAGE" });
     const bundle = await readThemePackage(filename);
-    const warnings = lintThemePackage(bundle);
-    if (warnings.length) {
-      throw Object.assign(new Error("Bundled theme failed safety lint."), { code: "E_DOM_INCOMPATIBLE" });
-    }
-    return resolveThemeTarget(bundle, adapter.id);
+    return resolveSafeTheme(bundle);
+  },
+
+  async loadThemeBundle(bundle) {
+    return resolveSafeTheme(bundle);
   },
 
   async detect() {

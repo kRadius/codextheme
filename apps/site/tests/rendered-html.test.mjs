@@ -70,8 +70,8 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   assert.equal(home.status, 200);
   const homeHtml = await home.text();
   assert.match(homeHtml, /<html lang="en">/);
-  assert.match(homeHtml, /<title>Codex Skins &amp; Themes for Codex Desktop \| CodexTheme<\/title>/);
-  assert.match(homeHtml, /Discover immersive Codex skins and themes with real Home and Session previews/);
+  assert.match(homeHtml, /<title>Custom Codex Skin &amp; Theme Generator \| CodexTheme<\/title>/);
+  assert.match(homeHtml, /Create a custom Codex skin from any image/);
   assert.match(homeHtml, /<link rel="canonical" href="https:\/\/codextheme\.tech"/);
   assert.match(homeHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"/);
 
@@ -89,17 +89,21 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   for (const slug of availableSlugs) {
     assert.match(homeHtml, new RegExp(slug));
   }
-  assert.match(homeHtml, /CODEX DESKTOP \/ SKINS &amp; THEMES/);
-  assert.match(homeHtml, /Codex skins that turn your workspace into a world/);
-  assert.match(homeHtml, /Immersive skins go beyond a color preset/);
+  assert.match(homeHtml, /CUSTOM CODEX SKIN GENERATOR/);
+  assert.match(homeHtml, /Turn any image into a Codex skin/);
+  assert.match(homeHtml, /custom Codex skin/i);
+  assert.match(homeHtml, /Codex theme generator/i);
+  assert.match(homeHtml, /No account/);
+  assert.match(homeHtml, /Private temporary upload/);
+  assert.match(homeHtml, /Need inspiration\?<br\/>Start with a ready-made skin/);
   assert.match(homeHtml, /Cathedral Nocturne/);
-  assert.match(homeHtml, /Browse all themes/);
+  assert.match(homeHtml, /Create a skin/);
   assert.match(homeHtml, /Submit a theme/);
-  assert.match(homeHtml, /Three complete worlds/);
+  assert.doesNotMatch(homeHtml, /apply-private [a-z0-9]+\.[A-Za-z0-9_-]+/);
   assert.match(homeHtml, /github\.com\/kRadius\/codextheme\/issues\/new/);
   assert.match(homeHtml, /mailto:codextheme@codextheme\.tech/);
   assert.doesNotMatch(homeHtml, /把 Codex|全部主题|提交主题|安装帮助|已可安装/);
-  assert.doesNotMatch(homeHtml, /主题槽位|制作中|真实截图待补齐|midnight-circuit|crimson-eclipse|aurora-glass|搜索主题|上传图片|为什么只有三个|mini-shell|preview-ui|composer-mock/);
+  assert.doesNotMatch(homeHtml, /主题槽位|制作中|真实截图待补齐|midnight-circuit|aurora-glass|搜索主题|上传图片|为什么只有三个|mini-shell|preview-ui|composer-mock/);
 
   for (const slug of availableSlugs) {
     const response = await render(`/themes/${slug}`);
@@ -107,7 +111,7 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     const html = await response.text();
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
     assert.match(html, new RegExp(`data-theme-slug="${slug}"`));
-    assert.match(html, new RegExp(`@codextheme\\/cli@0\\.1\\.1 apply ${slug}`));
+    assert.match(html, new RegExp(`@codextheme\\/cli@0\\.2\\.0 apply ${slug}`));
     assert.match(html, new RegExp(availableThemeCopy[slug].name));
     assert.match(html, new RegExp(availableThemeCopy[slug].description.replaceAll(".", "\\.")));
     assert.match(html, /Ready to install/);
@@ -140,4 +144,20 @@ test("security, help, robots, and sitemap routes render", async () => {
   const missing = await render("/themes/not-a-real-theme");
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /This theme page does not exist/);
+});
+
+test("private skin routes fail closed before storage access", async () => {
+  const malformed = await fetch(`${origin}/api/private-skins`, {
+    method: "POST",
+    body: new FormData(),
+  });
+  assert.equal(malformed.status, 400);
+  assert.deepEqual(await malformed.json(), { error: "invalid_upload" });
+
+  const invalidId = await fetch(`${origin}/api/private-skins/not-an-id`);
+  assert.equal(invalidId.status, 404);
+  assert.equal(invalidId.headers.get("cache-control"), "no-store");
+
+  const cleanup = await fetch(`${origin}/api/private-skins/cleanup`);
+  assert.equal(cleanup.status, 401);
 });

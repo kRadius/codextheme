@@ -1,0 +1,34 @@
+name: Publish CLI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-cli
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Use an npm version with trusted publishing support
+        run: npm install --global npm@11.5.1
+      - run: npm ci
+      - run: npm run check
+      - name: Refuse to overwrite an immutable npm version
+        run: |
+          if npm view @codextheme/cli@0.2.0 version >/dev/null 2>&1; then
+            echo "@codextheme/cli@0.2.0 already exists"
+            exit 1
+          fi
+      - run: npm publish --workspace @codextheme/cli --access public --provenance
