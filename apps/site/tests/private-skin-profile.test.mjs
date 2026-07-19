@@ -202,6 +202,16 @@ test("recipes produce distinct complete surface systems", () => {
   for (const key of ["sidebarAlpha", "mainAlpha", "composerAlpha", "selectionAlpha"]) {
     assert.equal(new Set(tokens.map((value) => value[key])).size, 3);
   }
+  assert.deepEqual(tokens.map(({
+    sidebarBlur,
+    mainBlur,
+    headerBlur,
+    composerBlur,
+  }) => ({ sidebarBlur, mainBlur, headerBlur, composerBlur })), [
+    { sidebarBlur: 20, mainBlur: 8, headerBlur: 18, composerBlur: 22 },
+    { sidebarBlur: 26, mainBlur: 14, headerBlur: 24, composerBlur: 28 },
+    { sidebarBlur: 10, mainBlur: 6, headerBlur: 10, composerBlur: 12 },
+  ]);
   assert.equal(tokens[2].positionX, 35);
   assert.equal(tokens[2].positionY, 65);
 });
@@ -307,7 +317,9 @@ test("skin tokens expose only the closed semantic contract", () => {
     composerAlpha: 76,
     codeAlpha: 78,
     selectionAlpha: 16,
-    panelBlur: 26,
+    sidebarBlur: 26,
+    mainBlur: 14,
+    headerBlur: 24,
     composerBlur: 28,
     borderAlpha: 30,
     radius: 16,

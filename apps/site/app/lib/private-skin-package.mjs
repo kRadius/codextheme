@@ -1,29 +1,27 @@
 import { MAX_PRIVATE_PACKAGE_BYTES, normalizePrivateSkinSettings } from "./private-skin-schema.mjs";
+import { deriveSkinTokens } from "./private-skin-profile.mjs";
 
-const HEX = /^#[0-9a-f]{6}$/;
-
-function requireHex(value, label) {
-  if (typeof value !== "string" || !HEX.test(value)) {
-    throw new TypeError(`${label} must be a lowercase six-digit hex color.`);
-  }
-  return value;
-}
-
-function buildCss(settings, palette) {
-  const visibility = (settings.visibility / 100).toFixed(2);
-  const overlay = (settings.overlay / 100).toFixed(2);
-  const zoom = (settings.zoom / 100).toFixed(2);
+function buildCss(tokens) {
+  const visibility = (tokens.visibility / 100).toFixed(2);
+  const overlay = (tokens.overlay / 100).toFixed(2);
+  const zoom = (tokens.zoom / 100).toFixed(2);
+  const saturation = (tokens.saturation / 100).toFixed(2);
+  const imageContrast = (tokens.imageContrast / 100).toFixed(2);
   return `:root.codedrobe-codex-skin {
   color-scheme: dark !important;
-  --codextheme-accent: ${palette.accent};
-  --codextheme-surface: ${palette.surface};
-  --codextheme-panel: color-mix(in srgb, ${palette.surface} 92%, white 8%);
-  --codextheme-line: color-mix(in srgb, ${palette.accent} 34%, transparent);
+  --codextheme-accent: ${tokens.accent};
+  --codextheme-accent-soft: ${tokens.accentSoft};
+  --codextheme-surface: ${tokens.surface};
+  --codextheme-surface-raised: ${tokens.surfaceRaised};
+  --codextheme-ink: ${tokens.ink};
+  --codextheme-muted-ink: ${tokens.mutedInk};
+  --codextheme-line: color-mix(in srgb, ${tokens.accent} ${tokens.borderAlpha}%, transparent);
+  --codextheme-radius: ${tokens.radius}px;
 }
 
 html.codedrobe-codex-skin body {
-  background: #07080d !important;
-  color: ${palette.ink} !important;
+  background: var(--codextheme-surface) !important;
+  color: var(--codextheme-ink) !important;
 }
 
 html.codedrobe-codex-skin body::before {
@@ -34,9 +32,9 @@ html.codedrobe-codex-skin body::before {
   pointer-events: none;
   opacity: ${visibility};
   background-image: linear-gradient(rgba(5, 6, 10, ${overlay}), rgba(5, 6, 10, ${overlay})), var(--codedrobe-image-session-bg);
-  background-position: ${settings.positionX}% ${settings.positionY}%;
+  background-position: ${tokens.positionX}% ${tokens.positionY}%;
   background-size: cover;
-  filter: blur(${settings.blur}px) saturate(.96) contrast(1.04);
+  filter: blur(${tokens.blur}px) saturate(${saturation}) contrast(${imageContrast});
   transform: scale(${zoom});
 }
 
@@ -50,32 +48,40 @@ html.codedrobe-codex-skin body > * {
 }
 
 html.codedrobe-codex-skin aside.app-shell-left-panel {
-  background: color-mix(in srgb, ${palette.surface} 84%, transparent) !important;
-  border-color: var(--codextheme-line) !important;
-  backdrop-filter: blur(18px) saturate(1.08) !important;
+  background: color-mix(in srgb, var(--codextheme-surface) ${tokens.sidebarAlpha}%, transparent) !important;
+  border-color: color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
+  backdrop-filter: blur(${tokens.sidebarBlur}px) saturate(1.08) !important;
 }
 
 html.codedrobe-codex-skin main.main-surface {
-  background: color-mix(in srgb, ${palette.surface} 38%, transparent) !important;
-  border-color: var(--codextheme-line) !important;
-  backdrop-filter: blur(14px) saturate(1.03) !important;
+  background: color-mix(in srgb, var(--codextheme-surface) ${tokens.mainAlpha}%, transparent) !important;
+  border-color: color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
+  backdrop-filter: blur(${tokens.mainBlur}px) saturate(1.03) !important;
 }
 
 html.codedrobe-codex-skin main.main-surface > header.app-header-tint {
-  background: color-mix(in srgb, ${palette.surface} 64%, transparent) !important;
-  border-bottom-color: var(--codextheme-line) !important;
-  backdrop-filter: blur(18px) !important;
+  background: color-mix(in srgb, var(--codextheme-surface-raised) ${tokens.headerAlpha}%, transparent) !important;
+  border-bottom-color: color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
+  backdrop-filter: blur(${tokens.headerBlur}px) !important;
 }
 
 html.codedrobe-codex-skin .composer-surface-chrome {
-  background: color-mix(in srgb, ${palette.surface} 92%, transparent) !important;
-  border: 1px solid var(--codextheme-line) !important;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, .28) !important;
-  backdrop-filter: blur(20px) saturate(1.08) !important;
+  background: color-mix(in srgb, var(--codextheme-surface-raised) ${tokens.composerAlpha}%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
+  border-radius: var(--codextheme-radius) !important;
+  box-shadow: ${tokens.shadow} !important;
+  backdrop-filter: blur(${tokens.composerBlur}px) saturate(1.08) !important;
+}
+
+html.codedrobe-codex-skin aside.app-shell-left-panel :is([aria-current="page"], [aria-selected="true"], [data-state="active"]) {
+  background: color-mix(in srgb, var(--codextheme-accent-soft) ${tokens.selectionAlpha}%, transparent) !important;
+  border-color: color-mix(in srgb, var(--codextheme-accent) 44%, transparent) !important;
+  border-radius: var(--codextheme-radius) !important;
+  box-shadow: inset 3px 0 0 var(--codextheme-accent) !important;
 }
 
 html.codedrobe-codex-skin :is(pre, code, [data-language]) {
-  background-color: color-mix(in srgb, ${palette.surface} 97%, black 3%) !important;
+  background-color: color-mix(in srgb, var(--codextheme-surface) ${tokens.codeAlpha}%, transparent) !important;
 }
 
 html.codedrobe-codex-skin :is(button, a, input, textarea, [tabindex]):focus-visible {
@@ -91,7 +97,7 @@ html.codedrobe-codex-skin .dream-home {
 
 #codedrobe-codex-skin-chrome {
   pointer-events: none;
-  color: ${palette.ink};
+  color: var(--codextheme-ink);
 }
 
 #codedrobe-codex-skin-chrome .dream-brand,
@@ -118,17 +124,16 @@ html.codedrobe-codex-skin .dream-home {
 `;
 }
 
-export function buildPrivateSkinPackage({ id, exportedAt, image, settings, palette }) {
+export function buildPrivateSkinPackage({ id, exportedAt, image, settings, profile }) {
   if (typeof id !== "string" || !id.includes(".")) throw new TypeError("id must be a private skin id.");
   if (typeof exportedAt !== "string" || !exportedAt) throw new TypeError("exportedAt is required.");
   if (!(image instanceof Uint8Array) || image.byteLength === 0) throw new TypeError("image is required.");
   const normalized = normalizePrivateSkinSettings(settings);
-  const safePalette = {
-    accent: requireHex(palette?.accent, "palette.accent"),
-    surface: requireHex(palette?.surface, "palette.surface"),
-    ink: requireHex(palette?.ink, "palette.ink"),
-    contrast: Math.round(Math.min(100, Math.max(0, Number(palette?.contrast) || 74))),
-  };
+  const tokens = deriveSkinTokens(profile, normalized);
+  const contrast = Math.round(Math.min(
+    100,
+    Math.max(60, Number.isFinite(profile?.contrast) ? profile.contrast : 74),
+  ));
   const base64 = Buffer.from(image).toString("base64");
   const randomPart = id.split(".")[1].slice(0, 20).toLowerCase();
   const bundle = {
@@ -151,16 +156,16 @@ export function buildPrivateSkinPackage({ id, exportedAt, image, settings, palet
     },
     targets: {
       codex: {
-        css: buildCss(normalized, safePalette),
+        css: buildCss(tokens),
         options: {
           rendererProfile: "codex-theme-v1",
           baseTheme: {
             mode: "dark",
             codeTheme: "codex",
-            accent: safePalette.accent,
-            contrast: safePalette.contrast,
-            ink: safePalette.ink,
-            surface: safePalette.surface,
+            accent: tokens.accent,
+            contrast,
+            ink: tokens.ink,
+            surface: tokens.surface,
             opaqueWindows: true,
           },
         },
