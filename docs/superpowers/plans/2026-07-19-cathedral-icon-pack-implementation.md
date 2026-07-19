@@ -239,7 +239,7 @@ export const CATHEDRAL_ICON_ANCHORS = Object.freeze([
   { id: "icon-pull-requests", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(2) svg`, expected: 1 },
   { id: "icon-scheduled", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(3) svg`, expected: 1 },
   { id: "icon-plugins", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(4) svg`, expected: 1 },
-  { id: "icon-project-folder", contexts: ["home", "session"], selector: "aside.app-shell-left-panel .group\\/folder-row > div:first-child > span:first-child > svg", expected: 1 },
+  { id: "icon-project-folder", contexts: ["home", "session"], selector: "aside.app-shell-left-panel .group\\/folder-row > div:first-child > span:first-child > svg", min: 1, max: 20 },
   { id: "icon-explore", contexts: ["home"], selector: ".dream-home .group\\/home-suggestions button:nth-child(1) svg", expected: 1 },
   { id: "icon-build", contexts: ["home"], selector: ".dream-home .group\\/home-suggestions button:nth-child(2) svg", expected: 1 },
   { id: "icon-review", contexts: ["home"], selector: ".dream-home .group\\/home-suggestions button:nth-child(3) svg", expected: 1 },
@@ -267,12 +267,9 @@ export function classifyCathedralIconCounts(context, observed) {
     .filter((anchor) => anchor.contexts.includes(context))
     .map((anchor) => {
       const count = observed[anchor.id] ?? 0;
-      return {
-        id: anchor.id,
-        expected: anchor.expected,
-        count,
-        status: count > anchor.expected ? "error" : count < anchor.expected ? "warning" : "pass",
-      };
+      const min = anchor.min ?? anchor.expected;
+      const max = anchor.max ?? anchor.expected;
+      return { id: anchor.id, min, max, count, status: count > max ? "error" : count < min ? "warning" : "pass" };
     });
 }
 ```

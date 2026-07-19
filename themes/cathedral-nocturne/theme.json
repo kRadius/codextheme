@@ -50,7 +50,26 @@
       "verification": {
         "recommended": [
           { "name": "session-surface", "any": ["main.main-surface"] },
-          { "name": "composer-surface", "any": [".composer-surface-chrome"] }
+          { "name": "composer-surface", "any": [".composer-surface-chrome"] },
+          { "name": "icon-new-chat", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(1) svg"] },
+          { "name": "icon-pull-requests", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(2) svg"] },
+          { "name": "icon-scheduled", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(3) svg"] },
+          { "name": "icon-plugins", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(4) svg"] },
+          { "name": "icon-project-folder", "any": ["aside.app-shell-left-panel .group\\/folder-row > div:first-child > span:first-child > svg"] },
+          { "name": "icon-add", "any": [".composer-surface-chrome .col-start-1 button.aspect-square > svg"] },
+          { "name": "icon-send", "any": [".composer-surface-chrome button.size-token-button-composer > svg"] }
+        ],
+        "contexts": [
+          {
+            "name": "home",
+            "when": { "any": [".dream-home"] },
+            "recommended": [
+              { "name": "icon-explore", "any": [".dream-home .group\\/home-suggestions button:nth-child(1) svg"] },
+              { "name": "icon-build", "any": [".dream-home .group\\/home-suggestions button:nth-child(2) svg"] },
+              { "name": "icon-review", "any": [".dream-home .group\\/home-suggestions button:nth-child(3) svg"] },
+              { "name": "icon-fix", "any": [".dream-home .group\\/home-suggestions button:nth-child(4) svg"] }
+            ]
+          }
         ]
       }
     }
