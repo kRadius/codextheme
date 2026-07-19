@@ -73,7 +73,10 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   assert.match(homeHtml, /<title>Custom Codex Skin &amp; Theme Generator \| CodexTheme<\/title>/);
   assert.match(homeHtml, /Create a custom Codex skin from any image/);
   assert.match(homeHtml, /<link rel="canonical" href="https:\/\/codextheme\.tech"/);
-  assert.match(homeHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"/);
+  assert.match(homeHtml, /<link rel="icon" href="\/brand-mark\.svg" type="image\/svg\+xml"/);
+  assert.match(homeHtml, /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png" sizes="180x180" type="image\/png"/);
+  const visibleBrandMarks = [...homeHtml.matchAll(/<img class="brand-mark" src="\/brand-mark\.svg" width="22" height="22" alt=""/g)];
+  assert.equal(visibleBrandMarks.length, 2);
 
   const jsonLdBlocks = [...homeHtml.matchAll(
     /<script type="application\/ld\+json">(.*?)<\/script>/gs,

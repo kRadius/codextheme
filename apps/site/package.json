@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "brand:build": "node scripts/generate-brand-assets.mjs",
-    "build": "npm run brand:build && next build",
+    "build": "next build",
     "start": "next start",
     "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",

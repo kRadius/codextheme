@@ -4,10 +4,19 @@ export const SUBMIT_THEME_URL = "https://github.com/kRadius/codextheme/issues/ne
 export const SUPPORT_EMAIL = "codextheme@codextheme.tech";
 const REPOSITORY_URL = "https://github.com/kRadius/codextheme";
 
+function BrandLink() {
+  return (
+    <Link className="brand" href="/">
+      <img className="brand-mark" src="/brand-mark.svg" width="22" height="22" alt="" />
+      codextheme.tech
+    </Link>
+  );
+}
+
 export function SiteHeader() {
   return (
     <header className="site-header">
-      <Link className="brand" href="/"><span className="brand-mark" />codextheme.tech</Link>
+      <BrandLink />
       <nav className="site-nav" aria-label="Main navigation">
         <Link href="/#create">Create a skin</Link>
         <Link href="/#themes">Gallery</Link>
@@ -21,7 +30,7 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <div><Link className="brand" href="/"><span className="brand-mark" />codextheme.tech</Link><p>A growing repository of themes for Codex Desktop.</p></div>
+      <div><BrandLink /><p>A growing repository of themes for Codex Desktop.</p></div>
       <nav className="footer-links" aria-label="Footer navigation"><Link href="/security">Security</Link><Link href="/help">Install help</Link><a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a><a href={SUBMIT_THEME_URL} rel="noreferrer">Submit a theme</a><a href={REPOSITORY_URL} rel="noreferrer">GitHub</a></nav>
       <span>Independent project · Apache-2.0 · Not affiliated with or endorsed by OpenAI</span>
     </footer>

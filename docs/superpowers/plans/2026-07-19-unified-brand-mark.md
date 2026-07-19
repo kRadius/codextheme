@@ -4,7 +4,7 @@
 
 **Goal:** Make the CodexTheme header, footer, browser favicon, and Apple Touch Icon use the selected blue-node C mark.
 
-**Architecture:** Keep `brand-mark.svg` as the sole editable visual source. A small Sharp script derives the 180x180 Apple PNG during the site build, while the visible React chrome and Next.js metadata both reference the canonical SVG URL.
+**Architecture:** Keep `brand-mark.svg` as the sole editable visual source. A small explicit Sharp command derives the committed 180x180 Apple PNG without changing Vercel's native `next build`, while the visible React chrome and Next.js metadata both reference the canonical SVG URL.
 
 **Tech Stack:** Next.js 16 metadata, React 19, TypeScript, SVG, Sharp, Node.js test runner
 
@@ -16,7 +16,7 @@
 - Create `apps/site/public/apple-touch-icon.png`: generated 180x180 raster derivative.
 - Create `apps/site/scripts/generate-brand-assets.mjs`: deterministic SVG-to-PNG generator.
 - Create `apps/site/tests/brand-assets.test.mjs`: color, geometry, and raster-dimension contract.
-- Modify `apps/site/package.json`: run the brand generator before every Next.js build.
+- Modify `apps/site/package.json`: expose a dedicated brand-asset generator while preserving the native Next.js build command.
 - Modify `apps/site/app/components/SiteChrome.tsx`: render one shared visible brand-link component.
 - Modify `apps/site/app/globals.css`: size and align the 22px mark.
 - Modify `apps/site/app/layout.tsx`: expose the canonical favicon and Apple Touch Icon.
@@ -104,7 +104,7 @@ Update `apps/site/package.json` scripts to contain:
 
 ```json
 "brand:build": "node scripts/generate-brand-assets.mjs",
-"build": "npm run brand:build && next build"
+"build": "next build"
 ```
 
 - [ ] **Step 5: Generate the Apple icon and rerun the focused test**
