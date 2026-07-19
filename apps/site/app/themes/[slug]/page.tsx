@@ -48,8 +48,8 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
         {theme.command && <section className="apply-panel" aria-labelledby="apply-title">
           <div>
             <p className="eyebrow"><span /> AVAILABLE NOW</p>
-            <h2 id="apply-title">Apply with one command</h2>
-            <p>Copy the command, open Terminal, paste it, and press Return. It is pinned to the auditable @codextheme/cli 0.2.0 release and never follows latest silently.</p>
+            <h2 id="apply-title">Apply with Codex</h2>
+            <p>Copy the guided install and paste it into a local Codex task. It tells the Agent to run the exact pinned @codextheme/cli 0.2.0 command in an interactive shell without substituting another package. Prefer the shell yourself? Use the Terminal fallback beside the main button.</p>
             <div className="command-box">{theme.command}</div>
             <div className="copy-row"><CopyCommand command={theme.command} themeSlug={theme.slug} /></div>
           </div>
