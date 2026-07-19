@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { runInNewContext } from "node:vm";
 import sharp from "sharp";
 import {
   createPrivateSkinService,
@@ -141,8 +142,10 @@ test("normalization returns a bounded 32 by 32 RGB sample without dominant stats
   assert.ok(normalized.sample.data.byteLength <= 4096);
   assert.deepEqual(Object.keys(normalized).sort(), ["buffer", "height", "sample", "width"]);
   assert.equal(Object.hasOwn(normalized, "dominant"), false);
+});
 
-  const orientedSource = await sharp({
+test("normalization validates minimum dimensions after EXIF orientation", async () => {
+  const orientedTooNarrow = await sharp({
     create: {
       width: 800,
       height: 500,
@@ -150,18 +153,54 @@ test("normalization returns a bounded 32 by 32 RGB sample without dominant stats
       background: { r: 35, g: 90, b: 180 },
     },
   }).withMetadata({ orientation: 6 }).jpeg().toBuffer();
-  const oriented = await normalizeUploadedImage(orientedSource);
-  assert.equal(oriented.width, 500);
-  assert.equal(oriented.height, 800);
+  await assert.rejects(
+    () => normalizeUploadedImage(orientedTooNarrow),
+    { code: "E_IMAGE_TOO_SMALL" },
+  );
+
+  const orientedValid = await sharp({
+    create: {
+      width: 500,
+      height: 800,
+      channels: 3,
+      background: { r: 35, g: 90, b: 180 },
+    },
+  }).withMetadata({ orientation: 6 }).jpeg().toBuffer();
+  const oriented = await normalizeUploadedImage(orientedValid);
+  assert.equal(oriented.width, 800);
+  assert.equal(oriented.height, 500);
   assert.deepEqual(
     { width: oriented.sample.width, height: oriented.sample.height, channels: oriented.sample.channels },
     { width: 32, height: 32, channels: 3 },
   );
 });
 
+test("create snapshots supported byte views from other realms and shared storage", async () => {
+  const shared = new SharedArrayBuffer(3);
+  new Uint8Array(shared).set([210, 70, 120]);
+  const samples = [
+    new Uint8ClampedArray([210, 70, 120]),
+    Buffer.alloc(3, 120),
+    runInNewContext("new Uint8Array([210, 70, 120])"),
+    new Uint8Array(shared),
+  ];
+  for (const data of samples) {
+    const app = harness({ sample: { data, width: 1, height: 1, channels: 3 } });
+    await app.service.create({ image: Buffer.from("source"), settings: {}, now });
+    assert.equal(app.blobs.size, 1);
+  }
+});
+
 test("create rejects unsafe processed samples before storage", async () => {
   const backing = new ArrayBuffer(1_000_000);
   const tiny = new Uint8Array(backing, 0, 3);
+  const disguisedFloat = new Float32Array([10, 20, 30]);
+  Object.defineProperty(disguisedFloat, Symbol.toStringTag, { value: "Uint8Array" });
+  const shadowedTiny = new Uint8Array(new ArrayBuffer(1_000_000), 0, 3);
+  Object.defineProperties(shadowedTiny, {
+    buffer: { value: new ArrayBuffer(3) },
+    byteLength: { value: 3 },
+  });
   const invalidSamples = [
     { data: [10, 20, 30], width: 1, height: 1, channels: 3 },
     { data: new Uint8Array(3), width: 1, height: 1, channels: 2 },
@@ -172,6 +211,10 @@ test("create rejects unsafe processed samples before storage", async () => {
     { data: new Uint8Array(11), width: 2, height: 2, channels: 3 },
     { data: new Uint8Array(1_000_000), width: 1, height: 1, channels: 3 },
     { data: tiny, width: 1, height: 1, channels: 3 },
+    { data: new Float32Array([10, 20, 30]), width: 1, height: 1, channels: 3 },
+    { data: new Uint16Array([10, 20, 30]), width: 1, height: 1, channels: 3 },
+    { data: disguisedFloat, width: 1, height: 1, channels: 3 },
+    { data: shadowedTiny, width: 1, height: 1, channels: 3 },
   ];
   for (const sample of invalidSamples) {
     const app = harness({ sample });

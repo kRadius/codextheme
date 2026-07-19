@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { types as utilTypes } from "node:util";
 import { del, get, list, put } from "@vercel/blob";
 import sharp from "sharp";
 import { buildPrivateSkinPackage } from "./private-skin-package.mjs";
@@ -15,6 +16,15 @@ import {
 } from "./private-skin-schema.mjs";
 
 const MAX_NORMALIZED_IMAGE_BYTES = 900_000;
+const TYPED_ARRAY_PROTOTYPE = Object.getPrototypeOf(Uint8Array.prototype);
+const GET_TYPED_ARRAY_BUFFER = Object.getOwnPropertyDescriptor(TYPED_ARRAY_PROTOTYPE, "buffer").get;
+const GET_TYPED_ARRAY_BYTE_LENGTH = Object.getOwnPropertyDescriptor(TYPED_ARRAY_PROTOTYPE, "byteLength").get;
+const GET_TYPED_ARRAY_BYTE_OFFSET = Object.getOwnPropertyDescriptor(TYPED_ARRAY_PROTOTYPE, "byteOffset").get;
+const GET_ARRAY_BUFFER_BYTE_LENGTH = Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, "byteLength").get;
+const GET_SHARED_ARRAY_BUFFER_BYTE_LENGTH = Object.getOwnPropertyDescriptor(
+  SharedArrayBuffer.prototype,
+  "byteLength",
+).get;
 
 function serviceError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -24,21 +34,42 @@ async function streamText(stream) {
   return new Response(stream).text();
 }
 
-function isValidPixelSample(sample) {
-  if (!(sample?.data instanceof Uint8Array)) return false;
-  if (sample.data.byteLength > 4096) return false;
-  const backing = sample.data.buffer;
-  const isArrayBuffer = backing instanceof ArrayBuffer;
-  const isSharedArrayBuffer = typeof SharedArrayBuffer === "function"
-    && backing instanceof SharedArrayBuffer;
-  if ((!isArrayBuffer && !isSharedArrayBuffer) || backing.byteLength > 4096) return false;
-  if (sample.channels !== 3 && sample.channels !== 4) return false;
-  if (!Number.isSafeInteger(sample.width) || sample.width <= 0) return false;
-  if (!Number.isSafeInteger(sample.height) || sample.height <= 0) return false;
+function snapshotPixelSample(sample) {
+  const data = sample?.data;
+  if (!ArrayBuffer.isView(data)) return null;
+  const isUint8Array = utilTypes.isUint8Array(data);
+  const isUint8ClampedArray = utilTypes.isUint8ClampedArray(data);
+  if (!isUint8Array && !isUint8ClampedArray) return null;
+  const expectedDataTag = isUint8Array ? "[object Uint8Array]" : "[object Uint8ClampedArray]";
+  if (Object.prototype.toString.call(data) !== expectedDataTag) return null;
+  const byteLength = GET_TYPED_ARRAY_BYTE_LENGTH.call(data);
+  if (byteLength > 4096) return null;
+  const backing = GET_TYPED_ARRAY_BUFFER.call(data);
+  const isArrayBuffer = utilTypes.isArrayBuffer(backing);
+  const isSharedArrayBuffer = utilTypes.isSharedArrayBuffer(backing);
+  if (!isArrayBuffer && !isSharedArrayBuffer) return null;
+  const expectedBackingTag = isArrayBuffer ? "[object ArrayBuffer]" : "[object SharedArrayBuffer]";
+  if (Object.prototype.toString.call(backing) !== expectedBackingTag) return null;
+  const backingByteLength = isArrayBuffer
+    ? GET_ARRAY_BUFFER_BYTE_LENGTH.call(backing)
+    : GET_SHARED_ARRAY_BUFFER_BYTE_LENGTH.call(backing);
+  if (backingByteLength > 4096) return null;
+  if (sample.channels !== 3 && sample.channels !== 4) return null;
+  if (!Number.isSafeInteger(sample.width) || sample.width <= 0) return null;
+  if (!Number.isSafeInteger(sample.height) || sample.height <= 0) return null;
   const pixelCount = sample.width * sample.height;
-  if (!Number.isSafeInteger(pixelCount) || pixelCount > 4096) return false;
+  if (!Number.isSafeInteger(pixelCount) || pixelCount > 4096) return null;
   const requiredLength = pixelCount * sample.channels;
-  return Number.isSafeInteger(requiredLength) && sample.data.byteLength >= requiredLength;
+  if (!Number.isSafeInteger(requiredLength) || byteLength < requiredLength) return null;
+  const byteOffset = GET_TYPED_ARRAY_BYTE_OFFSET.call(data);
+  const snapshot = new Uint8Array(byteLength);
+  snapshot.set(new Uint8Array(backing, byteOffset, byteLength));
+  return {
+    data: snapshot,
+    width: sample.width,
+    height: sample.height,
+    channels: sample.channels,
+  };
 }
 
 export const vercelPrivateBlob = {
@@ -79,7 +110,12 @@ export async function normalizeUploadedImage(source) {
   if (!new Set(["jpeg", "png", "webp"]).has(metadata.format)) {
     throw serviceError("E_INVALID_UPLOAD", "Only JPEG, PNG, and WebP images are accepted.");
   }
-  if (!metadata.width || !metadata.height || metadata.width < MIN_IMAGE_WIDTH || metadata.height < MIN_IMAGE_HEIGHT) {
+  const swapsDimensions = new Set([5, 6, 7, 8]).has(metadata.orientation);
+  const orientedWidth = metadata.autoOrient?.width
+    ?? (swapsDimensions ? metadata.height : metadata.width);
+  const orientedHeight = metadata.autoOrient?.height
+    ?? (swapsDimensions ? metadata.width : metadata.height);
+  if (!orientedWidth || !orientedHeight || orientedWidth < MIN_IMAGE_WIDTH || orientedHeight < MIN_IMAGE_HEIGHT) {
     throw serviceError("E_IMAGE_TOO_SMALL", "The image must be at least 800 by 500 pixels.");
   }
 
@@ -127,13 +163,14 @@ export function createPrivateSkinService({
       if (!(processed?.buffer instanceof Uint8Array) || processed.buffer.byteLength > MAX_NORMALIZED_IMAGE_BYTES) {
         throw serviceError("E_INVALID_UPLOAD", "The processed image is invalid.");
       }
-      if (!isValidPixelSample(processed.sample)) {
+      const sample = snapshotPixelSample(processed.sample);
+      if (!sample) {
         throw serviceError("E_INVALID_UPLOAD", "The processed image sample is invalid.");
       }
       const id = createPrivateSkinId({ now, randomBytes });
       const { expiresAt } = parsePrivateSkinId(id);
       const normalized = normalizePrivateSkinSettings(settings);
-      const profile = analyzeImagePixels(processed.sample);
+      const profile = analyzeImagePixels(sample);
       const serialized = buildPrivateSkinPackage({
         id,
         exportedAt: now.toISOString(),
