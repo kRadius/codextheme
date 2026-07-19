@@ -46,5 +46,9 @@ export function createStudioAsyncCoordinator() {
     isCurrentImage(revision) {
       return imageGate.isCurrent(revision);
     },
+    dispose() {
+      imageGate.invalidate();
+      createGate.invalidate();
+    },
   });
 }

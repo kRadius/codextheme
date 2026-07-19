@@ -69,3 +69,14 @@ test("recipe tracking records non-recommended closed styles without extra data",
     ["event", "custom_recipe_select", { recipe: "focus", recommended: "no" }],
   ]);
 });
+
+test("all analytics helpers fail closed when gtag throws", async () => {
+  const analytics = await loadAnalytics();
+  const target = { gtag: () => { throw new Error("analytics blocked"); } };
+
+  assert.doesNotThrow(() => {
+    assert.equal(analytics.trackInstallCopy("cathedral-nocturne", target), false);
+    assert.equal(analytics.trackStudioEvent("custom_preview_ready", undefined, target), false);
+    assert.equal(analytics.trackRecipeSelect("cinematic", true, target), false);
+  });
+});

@@ -65,3 +65,24 @@ test("a stale image failure cannot invalidate the current create request", () =>
   assert.equal(coordinator.isCurrentImage(currentImage), true);
   assert.equal(coordinator.isCurrentCreate(create), true);
 });
+
+test("dispose invalidates active image and create work before unmount", () => {
+  const coordinator = createStudioAsyncCoordinator();
+  const image = coordinator.beginImage();
+  const create = coordinator.beginCreate();
+
+  coordinator.dispose();
+
+  assert.equal(coordinator.isCurrentImage(image), false);
+  assert.equal(coordinator.isCurrentCreate(create), false);
+});
+
+test("the coordinator remains reusable after a Strict Mode cleanup cycle", () => {
+  const coordinator = createStudioAsyncCoordinator();
+  coordinator.dispose();
+
+  const image = coordinator.beginImage();
+
+  assert.equal(coordinator.isCurrentImage(image), true);
+  assert.equal(coordinator.failImage(image), true);
+});

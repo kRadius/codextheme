@@ -66,6 +66,7 @@ const RECIPES = Object.freeze([
 
 function RecipeCard({
   recipe,
+  imageUrl,
   profile,
   position,
   selected,
@@ -74,6 +75,7 @@ function RecipeCard({
   onSelect,
 }: {
   recipe: (typeof RECIPES)[number];
+  imageUrl: string;
   profile: ImageProfile;
   position: Pick<SkinSettings, "positionX" | "positionY">;
   selected: boolean;
@@ -84,6 +86,7 @@ function RecipeCard({
   const recipeSettings = deriveRecipeDefaults(profile, recipe.id, position);
   const tokens = deriveSkinTokens(profile, recipeSettings);
   const swatchStyle = {
+    "--recipe-image": `url(${JSON.stringify(imageUrl)})`,
     "--recipe-primary": profile.primary,
     "--recipe-highlight": profile.highlight,
     "--recipe-accent": tokens.accent,
@@ -92,6 +95,7 @@ function RecipeCard({
     "--recipe-surface-raised": tokens.surfaceRaised,
     "--recipe-visibility": tokens.visibility / 100,
     "--recipe-overlay": tokens.overlay / 100,
+    "--recipe-position": `${tokens.positionX}% ${tokens.positionY}%`,
     "--recipe-art-blur": `${tokens.blur}px`,
     "--recipe-art-zoom": tokens.zoom / 100,
     "--recipe-saturation": tokens.saturation / 100,
@@ -140,8 +144,42 @@ export function CustomSkinStudio() {
   const [result, setResult] = useState<Result | null>(null);
   const [asyncCoordinator] = useState(createStudioAsyncCoordinator);
   const input = useRef<HTMLInputElement>(null);
+  const committedImageUrl = useRef<string | null>(null);
+  const pendingImageUrl = useRef<string | null>(null);
+  const componentMounted = useRef(false);
 
-  useEffect(() => () => { if (image?.url.startsWith("blob:")) URL.revokeObjectURL(image.url); }, [image]);
+  useEffect(() => {
+    const nextUrl = image?.url ?? null;
+    const previousUrl = committedImageUrl.current;
+    committedImageUrl.current = nextUrl;
+    if (pendingImageUrl.current === nextUrl) pendingImageUrl.current = null;
+    if (previousUrl && previousUrl !== nextUrl && previousUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(previousUrl);
+    }
+  }, [image?.url]);
+
+  useEffect(() => {
+    componentMounted.current = true;
+    return () => {
+      componentMounted.current = false;
+      asyncCoordinator.dispose();
+      queueMicrotask(() => {
+        if (componentMounted.current) return;
+        const urls = new Set([committedImageUrl.current, pendingImageUrl.current]);
+        committedImageUrl.current = null;
+        pendingImageUrl.current = null;
+        for (const url of urls) {
+          if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [asyncCoordinator]);
+
+  function openFilePicker() {
+    if (!input.current) return;
+    input.current.value = "";
+    input.current.click();
+  }
 
   async function selectFile(file?: File) {
     if (!file) return;
@@ -166,10 +204,12 @@ export function CustomSkinStudio() {
         return;
       }
       const processedProfile = processed.profile as ImageProfile;
-      setImage((current) => {
-        if (current?.url.startsWith("blob:")) URL.revokeObjectURL(current.url);
-        return { ...processed, profile: processedProfile };
-      });
+      const previousPendingUrl = pendingImageUrl.current;
+      if (previousPendingUrl && previousPendingUrl !== processed.url && previousPendingUrl !== committedImageUrl.current && previousPendingUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previousPendingUrl);
+      }
+      pendingImageUrl.current = processed.url;
+      setImage({ ...processed, profile: processedProfile });
       setSettings(deriveRecipeDefaults(processedProfile, processedProfile.recommendedRecipe));
       setResult(null);
       setStatus("editing");
@@ -270,8 +310,12 @@ export function CustomSkinStudio() {
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => { event.preventDefault(); void selectFile(event.dataTransfer.files[0]); }}
         >
-          <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void selectFile(event.target.files?.[0])} />
-          <button className="studio-upload" type="button" onClick={() => input.current?.click()}>
+          <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = "";
+            void selectFile(file);
+          }} />
+          <button className="studio-upload" type="button" onClick={openFilePicker}>
             <span>{canEdit ? "Choose another image" : "Choose an image"}</span><b>JPG · PNG · WEBP / 10 MB</b>
           </button>
           {!canEdit && <p>or drop it here</p>}
@@ -284,6 +328,7 @@ export function CustomSkinStudio() {
               {RECIPES.map((recipe) => <RecipeCard
                 key={recipe.id}
                 recipe={recipe}
+                imageUrl={imageUrl}
                 profile={profile}
                 position={settings}
                 selected={settings.recipe === recipe.id}
@@ -307,7 +352,7 @@ export function CustomSkinStudio() {
         </>}
 
         <div className="studio-action">
-          {canEdit ? <button className="primary-link" type="button" disabled={status === "creating" || status === "processing"} onClick={() => void createSkin()}>{status === "processing" ? "Preparing preview…" : status === "creating" ? "Creating private skin…" : "Create private skin"}<span>→</span></button> : <button className="text-link studio-sample-link" type="button" onClick={() => input.current?.click()}>Replace the sample with your image ↑</button>}
+          {canEdit ? <button className="primary-link" type="button" disabled={status === "creating" || status === "processing"} onClick={() => void createSkin()}>{status === "processing" ? "Preparing preview…" : status === "creating" ? "Creating private skin…" : "Create private skin"}<span>→</span></button> : <button className="text-link studio-sample-link" type="button" onClick={openFilePicker}>Replace the sample with your image ↑</button>}
           <p>Nothing uploads until you create the skin.</p>
         </div>
 
