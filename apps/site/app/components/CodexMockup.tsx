@@ -64,6 +64,10 @@ export function CodexMockup({
     "--studio-composer-blur": `${tokens.composerBlur}px`,
     "--studio-border-alpha": `${tokens.borderAlpha}%`,
     "--studio-radius": `${tokens.radius}px`,
+    "--studio-icon-surface-alpha": `${tokens.iconSurfaceAlpha}%`,
+    "--studio-icon-border-alpha": `${tokens.iconBorderAlpha}%`,
+    "--studio-icon-glow-alpha": `${tokens.iconGlowAlpha}%`,
+    "--studio-icon-glyph": tokens.iconGlyphOnAccent ? tokens.surface : tokens.accent,
     "--studio-shadow": tokens.shadow,
     "--studio-saturation": tokens.saturation / 100,
     "--studio-image-contrast": tokens.imageContrast / 100,
@@ -87,7 +91,7 @@ export function CodexMockup({
       </div>
       <aside className="mockup-sidebar" aria-hidden="true">
         <strong>Codex <small>⌄</small></strong>
-        <nav><span>＋ New chat</span><span>⌘ Commands</span><span>◴ Scheduled</span><span>◇ Plugins</span></nav>
+        <nav><span><i>＋</i> New chat</span><span><i>⌘</i> Commands</span><span><i>◴</i> Scheduled</span><span><i>◇</i> Plugins</span></nav>
         <p>Projects</p>
         <b><i>□</i> codextheme</b>
         <span className="mockup-project">Private skin studio</span>

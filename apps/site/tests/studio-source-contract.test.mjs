@@ -6,6 +6,10 @@ const component = await readFile(
   new URL("../app/components/CustomSkinStudio.tsx", import.meta.url),
   "utf8",
 );
+const mockup = await readFile(
+  new URL("../app/components/CodexMockup.tsx", import.meta.url),
+  "utf8",
+);
 const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
 test("recipe material slices use the current image and focal treatment", () => {
@@ -25,4 +29,21 @@ test("studio owns object URLs outside React state updaters and resets file selec
 
 test("preview code inherits readable ink instead of forcing the adaptive accent", () => {
   assert.match(css, /\.mockup-thread pre \{[^}]*color: var\(--studio-ink\)/s);
+});
+
+test("preview uses the same closed icon-material tokens as generated skins", () => {
+  for (const property of [
+    "--studio-icon-surface-alpha",
+    "--studio-icon-border-alpha",
+    "--studio-icon-glow-alpha",
+    "--studio-icon-glyph",
+  ]) {
+    assert.ok(mockup.includes(`\"${property}\"`), `mockup must expose ${property}`);
+  }
+  assert.match(mockup, /tokens\.iconGlyphOnAccent \? tokens\.surface : tokens\.accent/);
+  assert.match(mockup, /<nav><span><i>＋<\/i> New chat<\/span>/);
+  assert.match(css, /\.mockup-sidebar nav i \{[^}]*var\(--studio-accent\)/s);
+  assert.match(css, /\.mockup-prompts i \{[^}]*var\(--studio-icon-glyph\)[^}]*var\(--studio-icon-surface-alpha\)[^}]*var\(--studio-icon-glow-alpha\)/s);
+  assert.match(css, /\.mockup-agent > i \{[^}]*var\(--studio-accent\)/s);
+  assert.match(css, /\.mockup-composer b \{[^}]*var\(--studio-icon-glyph\)[^}]*var\(--studio-icon-surface-alpha\)[^}]*var\(--studio-icon-glow-alpha\)/s);
 });
