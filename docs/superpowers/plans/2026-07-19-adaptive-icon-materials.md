@@ -10,7 +10,7 @@
 
 ## Status
 
-Implemented on 2026-07-19. Cinematic, Glass, and Focus now produce distinct icon surface, border, glyph, and glow treatments in both the browser preview and generated private-skin CSS while preserving Codex's native icon shapes and dimensions.
+Implemented on 2026-07-19. Cinematic, Glass, and Focus now produce distinct icon surface, border, glyph, and glow treatments in both the browser preview and generated private-skin CSS while preserving Codex's native icon shapes and dimensions. Generated Home and composer icons receive a real background fill, and assistant-message icons inherit the same accent/glow treatment shown in Session preview.
 
 Verification evidence:
 
@@ -145,6 +145,7 @@ html.codedrobe-codex-skin aside.app-shell-left-panel :is(button, a, [role="butto
 html.codedrobe-codex-skin .dream-home :is(button, [role="button"]) svg,
 html.codedrobe-codex-skin .composer-surface-chrome :is(button, [role="button"]) svg {
   color: var(--codextheme-icon-glyph) !important;
+  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
   border-radius: 50% !important;
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
@@ -152,6 +153,8 @@ html.codedrobe-codex-skin .composer-surface-chrome :is(button, [role="button"]) 
     0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
 }
 ```
+
+Assistant-message SVGs receive only `color` and `filter`, matching the Session preview without adding a replacement asset or changing layout. Tests enforce a declaration allowlist for every native-icon rule.
 
 - [x] **Step 4: Run package and runtime safety tests**
 
