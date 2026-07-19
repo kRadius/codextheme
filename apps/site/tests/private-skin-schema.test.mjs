@@ -62,6 +62,10 @@ function assertOwnedCssSelectors(css, label) {
   }
 }
 
+function declarationNames(block) {
+  return [...new Set([...block.matchAll(/^\s*([a-z-]+)\s*:/gmu)].map((match) => match[1]))].sort();
+}
+
 test("settings clamp to the four editor controls", () => {
   assert.deepEqual(normalizePrivateSkinSettings({
     visibility: 200,
@@ -348,6 +352,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const selected = css.match(/aside\.app-shell-left-panel\s+:is\(\[aria-current="page"\],\s*\[aria-selected="true"\],\s*\[data-state="active"\]\)\s*\{([^}]*)\}/s);
     const code = css.match(/:is\(pre, code, \[data-language\]\)\s*\{([^}]*)\}/s);
     const navigationIcons = css.match(/aside\.app-shell-left-panel :is\(button, a, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
+    const assistantIcons = css.match(/\[data-message-author-role="assistant"\] svg\s*\{([^}]*)\}/s);
     const homeIcons = css.match(/\.dream-home :is\(button, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
     const composerIcons = css.match(/\.composer-surface-chrome :is\(button, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
     assert.ok(sidebar, `${recipe} CSS must include the owned sidebar rule.`);
@@ -357,6 +362,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.ok(selected, `${recipe} CSS must scope selected states to the owned sidebar.`);
     assert.ok(code, `${recipe} CSS must include the code surface rule.`);
     assert.ok(navigationIcons, `${recipe} CSS must color native navigation icons.`);
+    assert.ok(assistantIcons, `${recipe} CSS must color native assistant message icons.`);
     assert.ok(homeIcons, `${recipe} CSS must materialize native Home action icons.`);
     assert.ok(composerIcons, `${recipe} CSS must materialize native composer icons.`);
     assert.match(sidebar[1], new RegExp(`surface\\) ${expected.sidebarAlpha}%`));
@@ -380,11 +386,17 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
     assert.match(navigationIcons[1], /color:\s*var\(--codextheme-accent\)/);
     assert.match(navigationIcons[1], /drop-shadow/);
+    assert.match(assistantIcons[1], /color:\s*var\(--codextheme-accent\)/);
+    assert.match(assistantIcons[1], /drop-shadow/);
+    assert.deepEqual(declarationNames(navigationIcons[1]), ["color", "filter"]);
+    assert.deepEqual(declarationNames(assistantIcons[1]), ["color", "filter"]);
     for (const material of [homeIcons[1], composerIcons[1]]) {
       assert.match(material, /color:\s*var\(--codextheme-icon-glyph\)/);
+      assert.match(material, /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-surface-alpha\), transparent\)/);
       assert.match(material, /border-radius:\s*50%/);
       assert.match(material, /box-shadow:/);
       assert.doesNotMatch(material, /(?:width|height|padding|margin):/);
+      assert.deepEqual(declarationNames(material), ["background-color", "border-radius", "box-shadow", "color"]);
     }
     assert.match(css, new RegExp(`--codextheme-icon-surface-alpha: ${expected.iconSurfaceAlpha}%`));
     assert.match(css, new RegExp(`--codextheme-icon-border-alpha: ${expected.iconBorderAlpha}%`));

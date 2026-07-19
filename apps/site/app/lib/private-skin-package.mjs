@@ -109,8 +109,14 @@ html.codedrobe-codex-skin aside.app-shell-left-panel :is(button, a, [role="butto
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
 }
 
+html.codedrobe-codex-skin [data-message-author-role="assistant"] svg {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
+}
+
 html.codedrobe-codex-skin .dream-home :is(button, [role="button"]) svg {
   color: var(--codextheme-icon-glyph) !important;
+  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
   border-radius: 50% !important;
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
@@ -120,6 +126,7 @@ html.codedrobe-codex-skin .dream-home :is(button, [role="button"]) svg {
 
 html.codedrobe-codex-skin .composer-surface-chrome :is(button, [role="button"]) svg {
   color: var(--codextheme-icon-glyph) !important;
+  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
   border-radius: 50% !important;
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
