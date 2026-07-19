@@ -102,12 +102,19 @@ test("private ids reject malformed tokens before storage lookup", () => {
   }
 });
 
-test("palette remains dark and readable", () => {
-  const palette = derivePalette({ red: 210, green: 70, blue: 120 });
-  assert.match(palette.accent, /^#[0-9a-f]{6}$/);
-  assert.match(palette.surface, /^#[0-9a-f]{6}$/);
-  assert.match(palette.ink, /^#[0-9a-f]{6}$/);
-  assert.ok(palette.contrast >= 60);
+test("palette preserves the legacy compatibility colors", () => {
+  assert.deepEqual(derivePalette({ red: 210, green: 70, blue: 120 }), {
+    accent: "#b13e67",
+    surface: "#271018",
+    ink: "#f4f1eb",
+    contrast: 74,
+  });
+  assert.deepEqual(derivePalette({ red: 10, green: 20, blue: 30 }), {
+    accent: "#71777d",
+    surface: "#07080a",
+    ink: "#f4f1eb",
+    contrast: 74,
+  });
 });
 
 test("generated packages contain only local images and safe Codex CSS", () => {

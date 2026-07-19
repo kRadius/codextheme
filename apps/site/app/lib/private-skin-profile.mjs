@@ -63,6 +63,12 @@ const BASES = Object.freeze({
   }),
 });
 
+const FALLBACK_COLORS = Object.freeze({
+  primary: "#64748b",
+  secondary: "#8b5cf6",
+  highlight: "#c4b5fd",
+});
+
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
 }
@@ -77,14 +83,35 @@ function hex(red, green, blue) {
     .join("")}`;
 }
 
-function parseHex(value, fallback) {
+function normalizeHex(value, fallback) {
   const match = /^#([0-9a-f]{6})$/iu.exec(typeof value === "string" ? value : "");
-  const source = match ? match[1] : fallback.slice(1);
+  return match ? `#${match[1].toLowerCase()}` : fallback;
+}
+
+function parseHex(value, fallback) {
+  const source = normalizeHex(value, fallback).slice(1);
   return [
     Number.parseInt(source.slice(0, 2), 16),
     Number.parseInt(source.slice(2, 4), 16),
     Number.parseInt(source.slice(4, 6), 16),
   ];
+}
+
+function safeMetric(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function safeProfile(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return {
+    primary: normalizeHex(source.primary, FALLBACK_COLORS.primary),
+    secondary: normalizeHex(source.secondary, FALLBACK_COLORS.secondary),
+    highlight: normalizeHex(source.highlight, FALLBACK_COLORS.highlight),
+    luminance: safeMetric(source.luminance, 45),
+    saturation: safeMetric(source.saturation, 0),
+    contrast: safeMetric(source.contrast, 0),
+    complexity: safeMetric(source.complexity, 0),
+  };
 }
 
 function mixRgb(source, target, ratio) {
@@ -122,9 +149,7 @@ function hueDistance(first, second) {
 
 function fallbackProfile() {
   const profile = {
-    primary: "#64748b",
-    secondary: "#8b5cf6",
-    highlight: "#c4b5fd",
+    ...FALLBACK_COLORS,
     luminance: 0,
     saturation: 0,
     contrast: 0,
@@ -142,8 +167,9 @@ export function recommendRecipe(profile = {}) {
 export function deriveRecipeDefaults(profile, recipe, position = {}) {
   const id = normalizePrivateSkinRecipe(recipe);
   const base = BASES[id];
+  const safe = safeProfile(profile);
   const brightnessCorrection = clamp(
-    Math.round(((profile?.luminance ?? 45) - 45) * 0.24),
+    Math.round((safe.luminance - 45) * 0.24),
     0,
     14,
   );
@@ -159,15 +185,21 @@ export function deriveRecipeDefaults(profile, recipe, position = {}) {
 }
 
 export function analyzeImagePixels({ data, width, height, channels } = {}) {
+  if (!(data instanceof Uint8Array) && !(data instanceof Uint8ClampedArray)) {
+    throw new TypeError("Image data must be a Uint8Array or Uint8ClampedArray byte buffer.");
+  }
   if (channels !== 3 && channels !== 4) {
     throw new TypeError("Image channels must be 3 or 4.");
   }
-  if (!Number.isInteger(width) || width < 0 || !Number.isInteger(height) || height < 0) {
-    throw new TypeError("Image width and height must be non-negative integers.");
+  if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
+    throw new TypeError("Image width and height must be positive safe integers.");
   }
   const pixelCount = width * height;
+  if (!Number.isSafeInteger(pixelCount) || pixelCount > 4096) {
+    throw new TypeError("Image sample must contain at most 4096 pixels.");
+  }
   const requiredLength = pixelCount * channels;
-  if (!data || typeof data.length !== "number" || data.length < requiredLength) {
+  if (data.length < requiredLength) {
     throw new TypeError("Image data is shorter than its dimensions require.");
   }
 
@@ -300,12 +332,13 @@ export function deriveSkinTokens(profile = {}, settings = {}) {
   const normalized = normalizePrivateSkinSettings(settings);
   const recipe = normalized.recipe;
   const base = BASES[recipe];
+  const safe = safeProfile(profile);
   return {
     recipe,
-    accent: profile.highlight,
-    accentSoft: profile.secondary,
-    surface: mixHex(profile.primary, "#06080d", recipe === "focus" ? 0.90 : 0.84),
-    surfaceRaised: mixHex(profile.secondary, "#0b0d12", recipe === "glass" ? 0.78 : 0.86),
+    accent: safe.highlight,
+    accentSoft: safe.secondary,
+    surface: mixHex(safe.primary, "#06080d", recipe === "focus" ? 0.90 : 0.84),
+    surfaceRaised: mixHex(safe.secondary, "#0b0d12", recipe === "glass" ? 0.78 : 0.86),
     ink: "#f4f1eb",
     mutedInk: "#b9bbc1",
     visibility: normalized.visibility,
@@ -331,11 +364,16 @@ export function deriveSkinTokens(profile = {}, settings = {}) {
 }
 
 export function derivePaletteFromProfile(profile = {}) {
-  const contrast = Number.isFinite(profile.contrast) ? profile.contrast : 74;
+  const safe = safeProfile(profile);
+  const primary = parseHex(safe.primary, FALLBACK_COLORS.primary);
+  const luminance = 0.2126 * primary[0] + 0.7152 * primary[1] + 0.0722 * primary[2];
+  const accent = luminance < 95
+    ? mixRgb(primary, [255, 255, 255], 0.42)
+    : mixRgb(primary, [24, 24, 24], 0.18);
   return {
-    accent: profile.highlight,
-    surface: mixHex(profile.primary, "#06080d", 0.84),
+    accent: hex(...accent),
+    surface: hex(...mixRgb(primary, [6, 6, 6], 0.84)),
     ink: "#f4f1eb",
-    contrast: Math.round(clamp(contrast, 60, 100)),
+    contrast: 74,
   };
 }

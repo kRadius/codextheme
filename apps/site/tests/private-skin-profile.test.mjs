@@ -117,6 +117,58 @@ test("pixel analysis validates shape and ignores transparent pixels", () => {
   });
 });
 
+test("pixel analysis accepts only bounded byte samples", () => {
+  for (const data of [
+    [10, 20, 30],
+    new Float32Array([Number.NaN, 20, 30]),
+    new Float32Array([Infinity, 20, 30]),
+  ]) {
+    assert.throws(
+      () => analyzeImagePixels({ data, width: 1, height: 1, channels: 3 }),
+      { name: "TypeError", message: /Uint8Array|byte buffer/i },
+    );
+  }
+
+  for (const [width, height] of [
+    [0, 1],
+    [-1, 1],
+    [Number.MAX_SAFE_INTEGER + 1, 1],
+  ]) {
+    assert.throws(
+      () => analyzeImagePixels({ data: new Uint8Array(3), width, height, channels: 3 }),
+      { name: "TypeError", message: /positive safe integers/i },
+    );
+  }
+  assert.throws(
+    () => analyzeImagePixels({
+      data: new Uint8Array(65 * 64 * 3),
+      width: 65,
+      height: 64,
+      channels: 3,
+    }),
+    { name: "TypeError", message: /4096/i },
+  );
+
+  assert.doesNotThrow(() => analyzeImagePixels({
+    data: new Uint8ClampedArray([10, 20, 30]),
+    width: 1,
+    height: 1,
+    channels: 3,
+  }));
+  assert.doesNotThrow(() => analyzeImagePixels({
+    data: Buffer.from([10, 20, 30]),
+    width: 1,
+    height: 1,
+    channels: 3,
+  }));
+  assert.doesNotThrow(() => analyzeImagePixels({
+    data: new Uint8Array(64 * 64 * 3),
+    width: 64,
+    height: 64,
+    channels: 3,
+  }));
+});
+
 test("recommendation follows the three closed thresholds", () => {
   assert.equal(recommendRecipe({ complexity: 58, luminance: 40, contrast: 40 }), "focus");
   assert.equal(recommendRecipe({ complexity: 40, luminance: 76, contrast: 40 }), "focus");
@@ -152,6 +204,69 @@ test("recipes produce distinct complete surface systems", () => {
   }
   assert.equal(tokens[2].positionX, 35);
   assert.equal(tokens[2].positionY, 65);
+});
+
+test("recipe defaults treat non-finite luminance as neutral", () => {
+  for (const luminance of [Number.NaN, Infinity, -Infinity]) {
+    assert.deepEqual(deriveRecipeDefaults({ luminance }, "glass"), {
+      recipe: "glass",
+      visibility: 76,
+      overlay: 44,
+      blur: 1,
+      zoom: 110,
+      positionX: 50,
+      positionY: 50,
+    });
+  }
+  assert.equal(deriveRecipeDefaults({ luminance: 120 }, "glass").overlay, 58);
+});
+
+test("skin tokens and compatibility palettes normalize invalid profiles", () => {
+  const defaults = deriveSkinTokens({}, {});
+  assert.deepEqual({
+    accent: defaults.accent,
+    accentSoft: defaults.accentSoft,
+    surface: defaults.surface,
+    surfaceRaised: defaults.surfaceRaised,
+  }, {
+    accent: "#c4b5fd",
+    accentSoft: "#8b5cf6",
+    surface: "#151921",
+    surfaceRaised: "#1d1832",
+  });
+
+  const invalid = deriveSkinTokens({
+    primary: "#bad",
+    secondary: "not-a-color",
+    highlight: undefined,
+  }, { recipe: "glass" });
+  assert.deepEqual({
+    accent: invalid.accent,
+    accentSoft: invalid.accentSoft,
+    surface: invalid.surface,
+    surfaceRaised: invalid.surfaceRaised,
+  }, {
+    accent: "#c4b5fd",
+    accentSoft: "#8b5cf6",
+    surface: "#151921",
+    surfaceRaised: "#271e44",
+  });
+  for (const key of ["accent", "accentSoft", "surface", "surfaceRaised"]) {
+    assert.match(defaults[key], /^#[0-9a-f]{6}$/);
+    assert.match(invalid[key], /^#[0-9a-f]{6}$/);
+  }
+
+  assert.deepEqual(derivePaletteFromProfile({
+    primary: "#bad",
+    secondary: null,
+    highlight: "url(https://example.com)",
+    contrast: Number.NaN,
+  }), {
+    accent: "#566376",
+    surface: "#15181b",
+    ink: "#f4f1eb",
+    contrast: 74,
+  });
 });
 
 test("skin tokens expose only the closed semantic contract", () => {
@@ -201,10 +316,10 @@ test("skin tokens expose only the closed semantic contract", () => {
     shadow: "0 18px 42px rgba(0,0,0,.30)",
   });
   assert.deepEqual(derivePaletteFromProfile(profile), {
-    accent: "#f0b0d0",
-    surface: "#1a0e1a",
+    accent: "#b587a3",
+    surface: "#1a0d14",
     ink: "#f4f1eb",
-    contrast: 60,
+    contrast: 74,
   });
   for (const contrast of [Number.NaN, Infinity, -Infinity]) {
     assert.equal(derivePaletteFromProfile({ ...profile, contrast }).contrast, 74);

@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import next from "next";
 import test, { after, before } from "node:test";
+import { buildPrivateSkinForm } from "../app/lib/browser-image.mjs";
 
 const routes = [
   "../app/page.tsx",
@@ -177,4 +178,41 @@ test("private skin routes fail closed before storage access", async () => {
 
   const cleanup = await fetch(`${origin}/api/private-skins/cleanup`);
   assert.equal(cleanup.status, 401);
+});
+
+test("browser private skin settings reach image validation", async () => {
+  const browserForm = buildPrivateSkinForm({
+    image: new Blob(["not-a-webp"], { type: "image/webp" }),
+    settings: { recipe: "glass" },
+  });
+  const invalidImage = await fetch(`${origin}/api/private-skins`, {
+    method: "POST",
+    body: browserForm,
+  });
+  assert.equal(invalidImage.status, 400);
+  assert.deepEqual(await invalidImage.json(), { error: "invalid_upload" });
+});
+
+test("unknown private skin settings return a stable client error", async () => {
+  const unknownSettings = new FormData();
+  unknownSettings.append("image", new Blob(["not-a-webp"], { type: "image/webp" }), "custom-skin.webp");
+  unknownSettings.append("settings", JSON.stringify({ recipe: "glass", unknown: true }));
+  const invalidSettings = await fetch(`${origin}/api/private-skins`, {
+    method: "POST",
+    body: unknownSettings,
+  });
+  assert.equal(invalidSettings.status, 400);
+  assert.deepEqual(await invalidSettings.json(), { error: "invalid_settings" });
+});
+
+test("malformed private skin settings return a stable client error", async () => {
+  const malformedSettings = new FormData();
+  malformedSettings.append("image", new Blob(["not-a-webp"], { type: "image/webp" }), "custom-skin.webp");
+  malformedSettings.append("settings", "{not-json");
+  const response = await fetch(`${origin}/api/private-skins`, {
+    method: "POST",
+    body: malformedSettings,
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: "invalid_settings" });
 });
