@@ -291,6 +291,9 @@ Change:
 ```js
 assert.equal(Object.keys(icons).length, 12);
 assert.match(helpers.previewIconImage(icons, "icon-sites", { x: 100, y: 120, size: 32 }), /<image /);
+
+const generatorSource = await readFile(path.join(repoRoot, "themes/scripts/generate-previews.mjs"), "utf8");
+assert.match(generatorSource, /navIcon\(246, accent, "line", iconData, "icon-sites"\)/);
 ```
 
 - [ ] **Step 2: Run the preview test and verify RED**
@@ -301,7 +304,7 @@ Run:
 node --test themes/tests/generate-previews.test.mjs
 ```
 
-Expected: FAIL until the generator's closed set and sidebar composition include Sites.
+Expected: FAIL on the `navIcon(246, ...)` assertion until the sidebar composition renders Sites, even though Task 1 has already extended the closed asset set.
 
 - [ ] **Step 3: Insert Sites into the synthetic Codex sidebar**
 
