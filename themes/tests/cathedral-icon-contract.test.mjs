@@ -89,12 +89,19 @@ test("Cathedral list interactions use gold hover and selected surfaces", async (
   assert.match(rootBlock, /--color-token-list-hover-background:\s*color-mix\(in srgb, var\(--codextheme-surface\) 84%, var\(--codextheme-accent\) 16%\)\s*!important/);
   assert.match(rootBlock, /--color-token-list-active-selection-background:\s*color-mix\(in srgb, var\(--codextheme-surface\) 76%, var\(--codextheme-accent\) 24%\)\s*!important/);
 
-  const selectedSelector = `${root.replace(":root", "html")} aside.app-shell-left-panel :is([class~="bg-token-list-active-selection-background"], [class~="bg-token-list-hover-background"], [aria-current="page"])`;
-  const selectedStart = css.indexOf(`${selectedSelector} {`);
-  assert.notEqual(selectedStart, -1);
-  const selectedBlock = css.slice(selectedStart, css.indexOf("}", selectedStart) + 1);
-  assert.match(selectedBlock, /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) 42%, transparent\)\s*!important/);
-  assert.doesNotMatch(selectedBlock, /(?:width|height|margin|padding|transform)\s*:/);
+  const selectedSelectors = [
+    '[class~="bg-token-list-active-selection-background"]',
+    '[class~="bg-token-list-hover-background"]',
+    '[aria-current="page"]',
+  ].map((suffix) => `${root.replace(":root", "html")} aside.app-shell-left-panel ${suffix}`);
+  for (const selectedSelector of selectedSelectors) {
+    assert.ok(selectedSelector.length <= 180);
+    const selectedStart = css.indexOf(`${selectedSelector} {`);
+    assert.notEqual(selectedStart, -1);
+    const selectedBlock = css.slice(selectedStart, css.indexOf("}", selectedStart) + 1);
+    assert.match(selectedBlock, /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) 42%, transparent\)\s*!important/);
+    assert.doesNotMatch(selectedBlock, /(?:width|height|margin|padding|transform)\s*:/);
+  }
 });
 
 test("live count expression reads only bounded selector counts", async () => {

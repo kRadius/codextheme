@@ -12,7 +12,15 @@
   --color-token-list-active-selection-background: color-mix(in srgb, var(--codextheme-surface) 76%, var(--codextheme-accent) 24%) !important;
 }
 
-html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-shell-left-panel :is([class~="bg-token-list-active-selection-background"], [class~="bg-token-list-hover-background"], [aria-current="page"]) {
+html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-shell-left-panel [class~="bg-token-list-active-selection-background"] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--codextheme-accent) 42%, transparent) !important;
+}
+
+html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-shell-left-panel [class~="bg-token-list-hover-background"] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--codextheme-accent) 42%, transparent) !important;
+}
+
+html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] aside.app-shell-left-panel [aria-current="page"] {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--codextheme-accent) 42%, transparent) !important;
 }
 
