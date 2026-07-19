@@ -33,7 +33,7 @@
 - Modify: `apps/site/package.json`
 - Delete: `apps/site/public/favicon.svg`
 
-- [ ] **Step 1: Write the failing asset-contract test**
+- [x] **Step 1: Write the failing asset-contract test**
 
 Create `apps/site/tests/brand-assets.test.mjs`:
 
@@ -60,13 +60,13 @@ test("brand assets share the selected blue-node C identity", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run `node --test apps/site/tests/brand-assets.test.mjs`.
 
 Expected: FAIL with `ENOENT` for `apps/site/public/brand-mark.svg`.
 
-- [ ] **Step 3: Add the canonical SVG**
+- [x] **Step 3: Add the canonical SVG**
 
 Create `apps/site/public/brand-mark.svg`:
 
@@ -80,7 +80,7 @@ Create `apps/site/public/brand-mark.svg`:
 
 Delete `apps/site/public/favicon.svg`; no production code will retain its URL.
 
-- [ ] **Step 4: Add the deterministic PNG generator**
+- [x] **Step 4: Add the deterministic PNG generator**
 
 Create `apps/site/scripts/generate-brand-assets.mjs`:
 
@@ -107,7 +107,7 @@ Update `apps/site/package.json` scripts to contain:
 "build": "next build"
 ```
 
-- [ ] **Step 5: Generate the Apple icon and rerun the focused test**
+- [x] **Step 5: Generate the Apple icon and rerun the focused test**
 
 Run:
 
@@ -118,7 +118,7 @@ node --test apps/site/tests/brand-assets.test.mjs
 
 Expected: PASS, with one passing test and a 180x180 PNG at `apps/site/public/apple-touch-icon.png`.
 
-- [ ] **Step 6: Commit the asset pipeline**
+- [x] **Step 6: Commit the asset pipeline**
 
 ```bash
 git add apps/site/package.json apps/site/public/brand-mark.svg apps/site/public/apple-touch-icon.png apps/site/public/favicon.svg apps/site/scripts/generate-brand-assets.mjs apps/site/tests/brand-assets.test.mjs
@@ -133,7 +133,7 @@ git commit -m "feat: add unified brand assets"
 - Modify: `apps/site/app/globals.css`
 - Modify: `apps/site/app/layout.tsx`
 
-- [ ] **Step 1: Change the rendered-HTML assertions first**
+- [x] **Step 1: Change the rendered-HTML assertions first**
 
 Replace the old favicon assertion in `apps/site/tests/rendered-html.test.mjs` and add visible-mark assertions:
 
@@ -144,13 +144,13 @@ const visibleBrandMarks = [...homeHtml.matchAll(/<img class="brand-mark" src="\/
 assert.equal(visibleBrandMarks.length, 2);
 ```
 
-- [ ] **Step 2: Run the site test and verify the new contract fails**
+- [x] **Step 2: Run the site test and verify the new contract fails**
 
 Run `npm test -w @codextheme/site`.
 
 Expected: FAIL because the rendered HTML still contains `/favicon.svg` and dot spans.
 
-- [ ] **Step 3: Render a single shared brand link**
+- [x] **Step 3: Render a single shared brand link**
 
 In `apps/site/app/components/SiteChrome.tsx`, add:
 
@@ -167,7 +167,7 @@ function BrandLink() {
 
 Replace both duplicated brand links with `<BrandLink />`.
 
-- [ ] **Step 4: Size the visible mark without layout movement**
+- [x] **Step 4: Size the visible mark without layout movement**
 
 Replace `.brand-mark` in `apps/site/app/globals.css` with:
 
@@ -177,7 +177,7 @@ Replace `.brand-mark` in `apps/site/app/globals.css` with:
 
 Keep the existing `.brand` gap, font, and header geometry unchanged.
 
-- [ ] **Step 5: Point metadata at the shared assets**
+- [x] **Step 5: Point metadata at the shared assets**
 
 Replace the `icons` entry in `apps/site/app/layout.tsx` with:
 
@@ -188,13 +188,13 @@ icons: {
 },
 ```
 
-- [ ] **Step 6: Run the site tests and verify the contract passes**
+- [x] **Step 6: Run the site tests and verify the contract passes**
 
 Run `npm test -w @codextheme/site`.
 
 Expected: PASS with the brand asset test and rendered HTML test included.
 
-- [ ] **Step 7: Commit site integration**
+- [x] **Step 7: Commit site integration**
 
 ```bash
 git add apps/site/app/components/SiteChrome.tsx apps/site/app/globals.css apps/site/app/layout.tsx apps/site/tests/rendered-html.test.mjs
@@ -206,29 +206,29 @@ git commit -m "feat: unify site brand mark"
 **Files:**
 - Verify only; no planned source changes.
 
-- [ ] **Step 1: Run the complete repository check**
+- [x] **Step 1: Run the complete repository check**
 
 Run `npm run check`.
 
 Expected: type checks, 2 theme tests, 42 CLI tests, 42 runtime tests, all site tests, production builds, and package audits pass.
 
-- [ ] **Step 2: Start the site locally**
+- [x] **Step 2: Start the site locally**
 
 Run `npm run dev -w @codextheme/site`.
 
 Expected: Next.js reports a localhost URL and serves the home page.
 
-- [ ] **Step 3: Inspect desktop and mobile layouts**
+- [x] **Step 3: Inspect desktop and mobile layouts**
 
 Open the local site at 1440x900 and 390x844. Verify:
 
 - the C mark is 22px and vertically centered with `codextheme.tech`;
-- the header remains 68px tall;
+- the header remains 68px tall on desktop and keeps its existing 62px mobile height;
 - navigation and wordmark do not wrap at the mobile breakpoint;
 - the footer renders the same mark without duplicate accessible text;
 - the browser tab displays the blue-node C icon.
 
-- [ ] **Step 4: Check the final diff**
+- [x] **Step 4: Check the final diff**
 
 Run:
 
