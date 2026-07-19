@@ -35,10 +35,10 @@ test("catalog contains only the three finished gothic flagship themes", async ()
     assert.equal(theme.author, "CodexTheme Studio");
     assert.equal(theme.compatibility, "Codex Desktop / macOS");
     assert.match(theme.updatedAt, /^2026-\d{2}-\d{2}$/);
-    assert.equal(theme.previewHome, `themes/${theme.slug}/previews/home.png`);
-    assert.equal(theme.previewSession, `themes/${theme.slug}/previews/session.png`);
+    assert.equal(theme.previewHome, `themes/${theme.slug}/previews/home-v012.png`);
+    assert.equal(theme.previewSession, `themes/${theme.slug}/previews/session-v012.png`);
     assert.equal(theme.source, `themes/${theme.slug}/theme.json`);
-    assert.equal(theme.command, `npx --yes @codextheme/cli@0.2.1 apply ${theme.slug}`);
+    assert.equal(theme.command, `npx --yes @codextheme/cli@0.2.2 apply ${theme.slug}`);
   }
 });
 

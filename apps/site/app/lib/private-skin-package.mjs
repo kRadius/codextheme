@@ -40,6 +40,10 @@ html.codedrobe-codex-skin body::before {
   transform: scale(${zoom});
 }
 
+html.codedrobe-codex-skin body:has(.dream-home)::before {
+  background-image: linear-gradient(rgba(5, 6, 10, ${overlay}), rgba(5, 6, 10, ${overlay})), var(--codedrobe-image-hero);
+}
+
 html.codedrobe-codex-skin body > * {
   position: relative;
   z-index: 1;
@@ -82,9 +86,7 @@ html.codedrobe-codex-skin :is(button, a, input, textarea, [tabindex]):focus-visi
 html.codedrobe-codex-skin .dream-home {
   position: relative;
   isolation: isolate;
-  background-image: linear-gradient(rgba(5, 6, 10, ${overlay}), rgba(5, 6, 10, ${overlay})), var(--codedrobe-image-hero) !important;
-  background-position: ${settings.positionX}% ${settings.positionY}% !important;
-  background-size: cover !important;
+  background: transparent !important;
 }
 
 #codedrobe-codex-skin-chrome {
