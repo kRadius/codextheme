@@ -4,8 +4,10 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { buildThemePackage, MAX_THEME_PACKAGE_BYTES } from "@codextheme/runtime";
 import sharp from "sharp";
 import test from "node:test";
+import { CATHEDRAL_ICON_IDS } from "../scripts/generate-cathedral-icons.mjs";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = path.resolve(import.meta.dirname, "../..");
@@ -24,6 +26,8 @@ const ICON_IDS = [
   "icon-add",
   "icon-send",
 ];
+
+assert.deepEqual(CATHEDRAL_ICON_IDS, ICON_IDS);
 
 test("Cathedral glyph masters render as the closed transparent PNG set", async () => {
   const outputRoot = await mkdtemp(path.join(os.tmpdir(), "codextheme-cathedral-icons-"));
@@ -56,5 +60,26 @@ test("Cathedral glyph masters render as the closed transparent PNG set", async (
     }
   } finally {
     await rm(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test("Cathedral packages exactly the base artwork and closed glyph set", async () => {
+  const catalog = JSON.parse(await readFile(path.join(themeRoot, "catalog.json"), "utf8"));
+  const baseImages = ["hero", "session-bg"];
+
+  for (const entry of catalog.filter((theme) => theme.status === "available")) {
+    const manifestPath = path.join(repoRoot, entry.source);
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    const { bundle, serialized } = await buildThemePackage(manifestPath, {
+      exportedAt: "2026-07-19T00:00:00.000Z",
+    });
+    const actualIds = Object.keys(bundle.assets.images).sort();
+    const expectedIds = entry.slug === "cathedral-nocturne"
+      ? [...baseImages, ...CATHEDRAL_ICON_IDS].sort()
+      : baseImages;
+
+    assert.deepEqual(actualIds, expectedIds, `${entry.slug} image contract drifted`);
+    assert.ok(Buffer.byteLength(serialized) <= MAX_THEME_PACKAGE_BYTES);
+    if (entry.slug === "cathedral-nocturne") assert.equal(manifest.version, "1.1.0");
   }
 });

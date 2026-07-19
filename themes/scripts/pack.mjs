@@ -7,12 +7,20 @@ import {
   resolveThemeTarget,
   writeThemePackage,
 } from "@codextheme/runtime";
+import { CATHEDRAL_ICON_IDS } from "./generate-cathedral-icons.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repo = path.resolve(root, "..");
 const catalog = JSON.parse(await fs.readFile(path.join(root, "catalog.json"), "utf8"));
 const outputRoot = path.join(repo, "packages", "cli", "themes");
 const exportedAt = "2026-07-18T00:00:00.000Z";
+const BASE_IMAGE_IDS = Object.freeze(["hero", "session-bg"]);
+
+function expectedImageIds(slug) {
+  return slug === "cathedral-nocturne"
+    ? [...BASE_IMAGE_IDS, ...CATHEDRAL_ICON_IDS].sort()
+    : [...BASE_IMAGE_IDS].sort();
+}
 
 await fs.mkdir(outputRoot, { recursive: true });
 
@@ -27,8 +35,9 @@ for (const entry of catalog.filter((theme) => theme.status === "available")) {
   }
   const target = resolveThemeTarget(bundle, "codex");
   const imageIds = Object.keys(target.imageDataUrls).sort();
-  if (imageIds.join(",") !== "hero,session-bg") {
-    throw new Error(`${entry.slug} must embed exactly hero and session-bg images.`);
+  const expected = expectedImageIds(entry.slug);
+  if (imageIds.join(",") !== expected.join(",")) {
+    throw new Error(`${entry.slug} must embed exactly ${expected.join(", ")} images.`);
   }
 }
 

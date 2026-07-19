@@ -2,10 +2,21 @@
   "schemaVersion": 1,
   "id": "cathedral-nocturne",
   "displayName": "Cathedral Nocturne / 黑金圣堂",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "images": {
     "hero": "assets/hero.jpg",
-    "session-bg": "assets/session.jpg"
+    "session-bg": "assets/session.jpg",
+    "icon-new-chat": "assets/icons/icon-new-chat.png",
+    "icon-pull-requests": "assets/icons/icon-pull-requests.png",
+    "icon-scheduled": "assets/icons/icon-scheduled.png",
+    "icon-plugins": "assets/icons/icon-plugins.png",
+    "icon-project-folder": "assets/icons/icon-project-folder.png",
+    "icon-explore": "assets/icons/icon-explore.png",
+    "icon-build": "assets/icons/icon-build.png",
+    "icon-review": "assets/icons/icon-review.png",
+    "icon-fix": "assets/icons/icon-fix.png",
+    "icon-add": "assets/icons/icon-add.png",
+    "icon-send": "assets/icons/icon-send.png"
   },
   "copy": {
     "brandTitle": "CATHEDRAL NOCTURNE",
