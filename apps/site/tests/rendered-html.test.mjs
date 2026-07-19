@@ -114,7 +114,7 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
     assert.equal((html.match(/data-copy-terminal/g) ?? []).length, 1);
     assert.match(html, new RegExp(`data-theme-slug="${slug}"`));
-    assert.match(html, new RegExp(`@codextheme\\/cli@0\\.2\\.1 apply ${slug}`));
+    assert.match(html, new RegExp(`@codextheme\\/cli@0\\.2\\.2 apply ${slug}`));
     assert.match(html, new RegExp(availableThemeCopy[slug].name));
     assert.match(html, new RegExp(availableThemeCopy[slug].description.replaceAll(".", "\\.")));
     assert.match(html, /Ready to install/);
@@ -153,6 +153,7 @@ test("security, help, robots, and sitemap routes render", async () => {
   const securityHtml = await (await render("/security")).text();
   assert.match(securityHtml, /temporary ID/);
   assert.match(securityHtml, /Agent provider/);
+  assert.doesNotMatch(securityHtml, /CodeDrobe/i);
 
   const missing = await render("/themes/not-a-real-theme");
   assert.equal(missing.status, 404);

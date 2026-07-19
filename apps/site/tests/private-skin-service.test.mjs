@@ -52,7 +52,7 @@ test("create stores one private package and returns no blob url", async () => {
   const result = await app.service.create({ image: Buffer.from("source"), settings: {}, now });
   assert.match(result.id, /^[a-z0-9]+\.[A-Za-z0-9_-]{32}$/);
   assert.deepEqual(Object.keys(result).sort(), ["command", "expiresAt", "id"]);
-  assert.match(result.command, /^npx --yes @codextheme\/cli@0\.2\.1 apply-private /);
+  assert.match(result.command, /^npx --yes @codextheme\/cli@0\.2\.2 apply-private /);
   assert.equal(app.blobs.size, 1);
   const stored = JSON.parse([...app.blobs.values()][0]);
   assert.equal(stored.format, "codedrobe-theme");
