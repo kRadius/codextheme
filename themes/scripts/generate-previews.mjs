@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
+import { loadCathedralPreviewIcons, previewIconImage } from "./cathedral-preview-icons.mjs";
 
 const themeRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(themeRoot, "..");
@@ -21,14 +22,16 @@ function escapeXml(value) {
     .replaceAll('"', "&quot;");
 }
 
-function navIcon(y, accent, kind = "line") {
+function navIcon(y, accent, kind = "line", iconData = {}, id = "") {
+  const image = previewIconImage(iconData, id, { x: 35, y: y - 17, size: 24 });
+  if (image) return image;
   if (kind === "dot") {
     return `<circle cx="45" cy="${y - 5}" r="7" fill="${accent}" fill-opacity=".72"/>`;
   }
   return `<rect x="37" y="${y - 13}" width="16" height="16" rx="4" fill="none" stroke="${accent}" stroke-width="1.5" stroke-opacity=".8"/>`;
 }
 
-function chrome(theme, body, backgroundData, mode) {
+function chrome(theme, body, backgroundData, mode, iconData) {
   const accent = theme.accent;
   const surface = theme.surface;
   const project = theme.name.replaceAll(" ", "-");
@@ -74,14 +77,14 @@ function chrome(theme, body, backgroundData, mode) {
       <text x="38" y="113" fill="#f5f2eb" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="650">Codex</text>
       <path d="M104 105 l6 6 6-6" fill="none" stroke="#fff" stroke-opacity=".58" stroke-width="1.5"/>
 
-      ${navIcon(160, accent)}<text x="70" y="160" fill="#eeeae2" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">New chat</text>
-      ${navIcon(203, accent)}<text x="70" y="203" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Pull requests</text>
-      ${navIcon(246, accent, "dot")}<text x="70" y="246" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Scheduled</text>
-      ${navIcon(289, accent)}<text x="70" y="289" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Plugins</text>
+      ${navIcon(160, accent, "line", iconData, "icon-new-chat")}<text x="70" y="160" fill="#eeeae2" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">New chat</text>
+      ${navIcon(203, accent, "line", iconData, "icon-pull-requests")}<text x="70" y="203" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Pull requests</text>
+      ${navIcon(246, accent, "dot", iconData, "icon-scheduled")}<text x="70" y="246" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Scheduled</text>
+      ${navIcon(289, accent, "line", iconData, "icon-plugins")}<text x="70" y="289" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Plugins</text>
 
       <text x="38" y="350" fill="#fff" fill-opacity=".46" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" letter-spacing="1.3">PROJECTS</text>
       <rect x="29" y="372" width="246" height="46" rx="11" fill="${accent}" fill-opacity=".12" stroke="${accent}" stroke-opacity=".44"/>
-      <path d="M45 389 h10 l4 4 h14 v13 H45 Z" fill="none" stroke="${accent}" stroke-width="1.5"/>
+      ${previewIconImage(iconData, "icon-project-folder", { x: 43, y: 380, size: 34 }) || `<path d="M45 389 h10 l4 4 h14 v13 H45 Z" fill="none" stroke="${accent}" stroke-width="1.5"/>`}
       <text x="82" y="401" fill="#f2eee5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">${escapeXml(project)}</text>
 
       <text x="38" y="472" fill="#fff" fill-opacity=".46" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" letter-spacing="1.3">CHATS</text>
@@ -101,7 +104,7 @@ function chrome(theme, body, backgroundData, mode) {
   </svg>`;
 }
 
-function homeBody(theme, manifest) {
+function homeBody(theme, manifest, iconData) {
   const accent = theme.accent;
   const cards = [
     ["Explore", "Understand a codebase"],
@@ -109,12 +112,14 @@ function homeBody(theme, manifest) {
     ["Review", "Suggest focused changes"],
     ["Fix", "Resolve issues and failures"],
   ];
+  const cardIconIds = ["icon-explore", "icon-build", "icon-review", "icon-fix"];
   const cardMarkup = cards.map(([title, subtitle], index) => {
     const x = 350 + index * 292;
+    const icon = previewIconImage(iconData, cardIconIds[index], { x: x + 26, y: 613, size: 24 });
     return `<g>
       <rect x="${x}" y="585" width="270" height="145" rx="16" fill="#0a0b0c" fill-opacity=".79" stroke="${accent}" stroke-opacity=".3" filter="url(#shadow)"/>
       <circle cx="${x + 38}" cy="625" r="18" fill="${accent}" fill-opacity=".13" stroke="${accent}" stroke-opacity=".55"/>
-      <path d="M${x + 31} ${625} h14 M${x + 38} ${618} v14" stroke="${accent}" stroke-width="1.5"/>
+      ${icon || `<path d="M${x + 31} ${625} h14 M${x + 38} ${618} v14" stroke="${accent}" stroke-width="1.5"/>`}
       <text x="${x + 24}" y="674" fill="#f3efe7" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="600">${title}</text>
       <text x="${x + 24}" y="701" fill="#fff" fill-opacity=".48" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13">${subtitle}</text>
     </g>`;
@@ -131,15 +136,21 @@ function homeBody(theme, manifest) {
     <text x="454" y="835" fill="#fff" fill-opacity=".43" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Ask Codex to build, review, or explain...</text>
     <line x1="448" y1="864" x2="1438" y2="864" stroke="#fff" stroke-opacity=".08"/>
     <circle cx="461" cy="894" r="12" fill="none" stroke="${accent}" stroke-width="1.5"/>
-    <path d="M455 894 h12 M461 888 v12" stroke="${accent}" stroke-width="1.5"/>
+    ${previewIconImage(iconData, "icon-add", { x: 450, y: 883, size: 22 }) || `<path d="M455 894 h12 M461 888 v12" stroke="${accent}" stroke-width="1.5"/>`}
     <text x="489" y="900" fill="#fff" fill-opacity=".55" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14">Local workspace</text>
     <circle cx="1419" cy="894" r="18" fill="${accent}" fill-opacity=".83"/>
-    <path d="M1412 895 l7-7 7 7 M1419 888 v13" fill="none" stroke="#090a0b" stroke-width="2"/>
+    ${previewIconImage(iconData, "icon-send", { x: 1406, y: 881, size: 26 }) || `<path d="M1412 895 l7-7 7 7 M1419 888 v13" fill="none" stroke="#090a0b" stroke-width="2"/>`}
   </g>`;
 }
 
-function sessionBody(theme) {
+function sessionBody(theme, iconData) {
   const accent = theme.accent;
+  const addIcon = previewIconImage(iconData, "icon-add", { x: 450, y: 875, size: 22 });
+  const composerLeft = addIcon
+    ? `<circle cx="461" cy="886" r="12" fill="none" stroke="${accent}" stroke-width="1.5"/>
+      ${addIcon}
+      <text x="489" y="892" fill="#fff" fill-opacity=".52" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14">Custom</text>`
+    : `<text x="454" y="892" fill="#fff" fill-opacity=".52" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14">Custom</text>`;
   return `<g>
     <text x="350" y="126" fill="#f7f4ed" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="650">Build a theme catalog</text>
     <text x="350" y="154" fill="#fff" fill-opacity=".42" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13">Safe demonstration session · no user data</text>
@@ -168,24 +179,25 @@ function sessionBody(theme) {
     <rect x="424" y="760" width="1038" height="165" rx="20" fill="url(#composer)" stroke="${accent}" stroke-opacity=".46" filter="url(#shadow)"/>
     <text x="454" y="805" fill="#fff" fill-opacity=".43" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Continue the task...</text>
     <line x1="448" y1="846" x2="1438" y2="846" stroke="#fff" stroke-opacity=".08"/>
-    <text x="454" y="892" fill="#fff" fill-opacity=".52" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14">Custom</text>
+    ${composerLeft}
     <text x="1360" y="892" text-anchor="end" fill="#fff" fill-opacity=".52" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14">Codex</text>
     <circle cx="1419" cy="886" r="18" fill="${accent}" fill-opacity=".83"/>
-    <path d="M1412 887 l7-7 7 7 M1419 880 v13" fill="none" stroke="#090a0b" stroke-width="2"/>
+    ${previewIconImage(iconData, "icon-send", { x: 1406, y: 873, size: 26 }) || `<path d="M1412 887 l7-7 7 7 M1419 880 v13" fill="none" stroke="#090a0b" stroke-width="2"/>`}
   </g>`;
 }
 
 for (const theme of catalog) {
   const manifestPath = path.join(themeRoot, theme.slug, "theme.json");
   const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  const iconData = await loadCathedralPreviewIcons({ themeRoot, slug: theme.slug, manifest });
 
   for (const mode of ["home", "session"]) {
     const imageName = mode === "home" ? manifest.images.hero : manifest.images["session-bg"];
     const previewPath = mode === "home" ? theme.previewHome : theme.previewSession;
     const outputPath = path.join(publicRoot, previewPath);
     const background = await fs.readFile(path.join(themeRoot, theme.slug, imageName));
-    const body = mode === "home" ? homeBody(theme, manifest) : sessionBody(theme);
-    const svg = chrome(theme, body, background.toString("base64"), mode);
+    const body = mode === "home" ? homeBody(theme, manifest, iconData) : sessionBody(theme, iconData);
+    const svg = chrome(theme, body, background.toString("base64"), mode, iconData);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toFile(outputPath);
   }

@@ -12,9 +12,9 @@
     "surface": "#15120e",
     "author": "CodexTheme Studio",
     "compatibility": "Codex Desktop / macOS",
-    "updatedAt": "2026-07-18",
-    "previewHome": "themes/cathedral-nocturne/previews/home-v012.png",
-    "previewSession": "themes/cathedral-nocturne/previews/session-v012.png",
+    "updatedAt": "2026-07-19",
+    "previewHome": "themes/cathedral-nocturne/previews/home-v013.png",
+    "previewSession": "themes/cathedral-nocturne/previews/session-v013.png",
     "source": "themes/cathedral-nocturne/theme.json",
     "command": "npx --yes @codextheme/cli@0.2.3 apply cathedral-nocturne"
   },
