@@ -17,6 +17,12 @@ export function createStudioRequestGate() {
 export function createStudioAsyncCoordinator() {
   const createGate = createStudioRequestGate();
   const imageGate = createStudioRequestGate();
+  function finishImage(revision) {
+    if (!imageGate.isCurrent(revision)) return false;
+    imageGate.invalidate();
+    createGate.invalidate();
+    return true;
+  }
   return Object.freeze({
     beginCreate() {
       return createGate.begin();
@@ -32,10 +38,10 @@ export function createStudioAsyncCoordinator() {
       return imageGate.begin();
     },
     commitImage(revision) {
-      if (!imageGate.isCurrent(revision)) return false;
-      imageGate.invalidate();
-      createGate.invalidate();
-      return true;
+      return finishImage(revision);
+    },
+    failImage(revision) {
+      return finishImage(revision);
     },
     isCurrentImage(revision) {
       return imageGate.isCurrent(revision);

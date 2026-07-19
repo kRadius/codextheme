@@ -44,3 +44,24 @@ test("a stale processed image cannot invalidate the current create request", () 
   assert.equal(coordinator.commitImage(currentImage), true);
   assert.equal(coordinator.isCurrentCreate(create), false);
 });
+
+test("failing the latest image transaction invalidates a create started during decoding", () => {
+  const coordinator = createStudioAsyncCoordinator();
+  const image = coordinator.beginImage();
+  const create = coordinator.beginCreate();
+
+  assert.equal(coordinator.failImage(image), true);
+  assert.equal(coordinator.isCurrentImage(image), false);
+  assert.equal(coordinator.isCurrentCreate(create), false);
+});
+
+test("a stale image failure cannot invalidate the current create request", () => {
+  const coordinator = createStudioAsyncCoordinator();
+  const staleImage = coordinator.beginImage();
+  const currentImage = coordinator.beginImage();
+  const create = coordinator.beginCreate();
+
+  assert.equal(coordinator.failImage(staleImage), false);
+  assert.equal(coordinator.isCurrentImage(currentImage), true);
+  assert.equal(coordinator.isCurrentCreate(create), true);
+});

@@ -70,6 +70,7 @@ function RecipeCard({
   position,
   selected,
   recommended,
+  disabled,
   onSelect,
 }: {
   recipe: (typeof RECIPES)[number];
@@ -77,6 +78,7 @@ function RecipeCard({
   position: Pick<SkinSettings, "positionX" | "positionY">;
   selected: boolean;
   recommended: boolean;
+  disabled: boolean;
   onSelect: (id: RecipeId) => void;
 }) {
   const recipeSettings = deriveRecipeDefaults(profile, recipe.id, position);
@@ -110,6 +112,7 @@ function RecipeCard({
       type="button"
       className="recipe-card"
       aria-pressed={selected}
+      disabled={disabled}
       onClick={() => onSelect(recipe.id)}
     >
       <span className="recipe-swatch" aria-hidden="true" style={swatchStyle}>
@@ -129,7 +132,7 @@ function RecipeCard({
 }
 
 export function CustomSkinStudio() {
-  const [status, setStatus] = useState<"sample" | "editing" | "creating" | "ready" | "error">("sample");
+  const [status, setStatus] = useState<"sample" | "processing" | "editing" | "creating" | "ready" | "error">("sample");
   const [mode, setMode] = useState<"home" | "session">("home");
   const [image, setImage] = useState<{ blob: Blob; url: string; profile: ImageProfile } | null>(null);
   const [settings, setSettings] = useState<SkinSettings>(() => deriveRecipeDefaults(SAMPLE_PROFILE, "cinematic"));
@@ -144,10 +147,11 @@ export function CustomSkinStudio() {
     if (!file) return;
     const processingRevision = asyncCoordinator.beginImage();
     setResult(null);
-    setStatus("editing");
+    setStatus("processing");
     setMessage("");
     const validation = validateSourceFile(file);
     if (!validation.ok) {
+      asyncCoordinator.failImage(processingRevision);
       setStatus("error");
       setMessage(validation.error ?? "This image cannot be used.");
       trackStudioEvent("custom_create_error", file.size > 10_000_000 ? "upload_too_large" : "invalid_upload");
@@ -172,7 +176,7 @@ export function CustomSkinStudio() {
       setMessage("");
       trackStudioEvent("custom_preview_ready");
     } catch (error) {
-      if (!asyncCoordinator.isCurrentImage(processingRevision)) return;
+      if (!asyncCoordinator.failImage(processingRevision)) return;
       setStatus("error");
       setMessage(error instanceof Error ? error.message : "This image could not be prepared.");
       trackStudioEvent("custom_create_error", "invalid_upload");
@@ -180,6 +184,7 @@ export function CustomSkinStudio() {
   }
 
   function update(name: AdjustableSetting, value: number) {
+    if (status === "processing") return;
     asyncCoordinator.invalidateCreate();
     setSettings((current) => normalizePrivateSkinSettings({ ...current, [name]: value }));
     setResult(null);
@@ -188,6 +193,7 @@ export function CustomSkinStudio() {
   }
 
   function selectRecipe(id: RecipeId) {
+    if (status === "processing") return;
     asyncCoordinator.invalidateCreate();
     setSettings((current) => deriveRecipeDefaults(profile, id, current));
     setResult(null);
@@ -197,6 +203,7 @@ export function CustomSkinStudio() {
   }
 
   function resetAutomaticSettings() {
+    if (status === "processing") return;
     asyncCoordinator.invalidateCreate();
     setSettings((current) => deriveRecipeDefaults(profile, current.recipe, current));
     setResult(null);
@@ -205,7 +212,7 @@ export function CustomSkinStudio() {
   }
 
   async function createSkin() {
-    if (!image) return;
+    if (!image || status === "processing") return;
     const requestRevision = asyncCoordinator.beginCreate();
     setStatus("creating");
     setMessage("");
@@ -255,7 +262,7 @@ export function CustomSkinStudio() {
       <div className="studio-copy">
         <p className="eyebrow"><span /> CUSTOM CODEX SKIN GENERATOR</p>
         <h1 id="studio-title">Turn any image into a Codex skin.</h1>
-        <p className="studio-lead">Upload an image, choose a complete visual system, and apply the finished Codex skin with one command. This Codex theme generator keeps the preview local until you create it.</p>
+        <p className="studio-lead">Upload an image, choose a complete visual system, and apply the finished Codex skin with one command.</p>
         <div className="studio-trust"><span>No account</span><span>Private temporary upload</span><span>24-hour link</span></div>
 
         <div
@@ -281,6 +288,7 @@ export function CustomSkinStudio() {
                 position={settings}
                 selected={settings.recipe === recipe.id}
                 recommended={profile.recommendedRecipe === recipe.id}
+                disabled={status === "processing"}
                 onSelect={selectRecipe}
               />)}
             </div>
@@ -288,18 +296,18 @@ export function CustomSkinStudio() {
           <details className="studio-advanced">
             <summary>Advanced adjustments</summary>
             <div className="studio-controls" aria-label="Skin adjustments">
-              <label><span>Background visibility <output>{settings.visibility}%</output></span><input type="range" min="20" max="100" value={settings.visibility} onChange={(event) => update("visibility", Number(event.target.value))} /></label>
-              <label><span>Overlay darkness <output>{settings.overlay}%</output></span><input type="range" min="0" max="80" value={settings.overlay} onChange={(event) => update("overlay", Number(event.target.value))} /></label>
-              <label><span>Blur <output>{settings.blur}px</output></span><input type="range" min="0" max="16" value={settings.blur} onChange={(event) => update("blur", Number(event.target.value))} /></label>
-              <label><span>Zoom <output>{settings.zoom}%</output></span><input type="range" min="100" max="160" value={settings.zoom} onChange={(event) => update("zoom", Number(event.target.value))} /></label>
-              <div className="position-pair"><span>Image position</span><label><small>X</small><input aria-label="Horizontal image position" type="range" min="0" max="100" value={settings.positionX} onChange={(event) => update("positionX", Number(event.target.value))} /></label><label><small>Y</small><input aria-label="Vertical image position" type="range" min="0" max="100" value={settings.positionY} onChange={(event) => update("positionY", Number(event.target.value))} /></label></div>
-              <button className="studio-reset" type="button" onClick={resetAutomaticSettings}>Reset automatic settings</button>
+              <label><span>Background visibility <output>{settings.visibility}%</output></span><input disabled={status === "processing"} type="range" min="20" max="100" value={settings.visibility} onChange={(event) => update("visibility", Number(event.target.value))} /></label>
+              <label><span>Overlay darkness <output>{settings.overlay}%</output></span><input disabled={status === "processing"} type="range" min="0" max="80" value={settings.overlay} onChange={(event) => update("overlay", Number(event.target.value))} /></label>
+              <label><span>Blur <output>{settings.blur}px</output></span><input disabled={status === "processing"} type="range" min="0" max="16" value={settings.blur} onChange={(event) => update("blur", Number(event.target.value))} /></label>
+              <label><span>Zoom <output>{settings.zoom}%</output></span><input disabled={status === "processing"} type="range" min="100" max="160" value={settings.zoom} onChange={(event) => update("zoom", Number(event.target.value))} /></label>
+              <div className="position-pair"><span>Image position</span><label><small>X</small><input disabled={status === "processing"} aria-label="Horizontal image position" type="range" min="0" max="100" value={settings.positionX} onChange={(event) => update("positionX", Number(event.target.value))} /></label><label><small>Y</small><input disabled={status === "processing"} aria-label="Vertical image position" type="range" min="0" max="100" value={settings.positionY} onChange={(event) => update("positionY", Number(event.target.value))} /></label></div>
+              <button className="studio-reset" type="button" disabled={status === "processing"} onClick={resetAutomaticSettings}>Reset automatic settings</button>
             </div>
           </details>
         </>}
 
         <div className="studio-action">
-          {canEdit ? <button className="primary-link" type="button" disabled={status === "creating"} onClick={() => void createSkin()}>{status === "creating" ? "Creating private skin…" : "Create private skin"}<span>→</span></button> : <button className="text-link studio-sample-link" type="button" onClick={() => input.current?.click()}>Replace the sample with your image ↑</button>}
+          {canEdit ? <button className="primary-link" type="button" disabled={status === "creating" || status === "processing"} onClick={() => void createSkin()}>{status === "processing" ? "Preparing preview…" : status === "creating" ? "Creating private skin…" : "Create private skin"}<span>→</span></button> : <button className="text-link studio-sample-link" type="button" onClick={() => input.current?.click()}>Replace the sample with your image ↑</button>}
           <p>Nothing uploads until you create the skin.</p>
         </div>
 

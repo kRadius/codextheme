@@ -95,8 +95,8 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   }
   assert.match(homeHtml, /CUSTOM CODEX SKIN GENERATOR/);
   assert.match(homeHtml, /Turn any image into a Codex skin/);
+  assert.match(homeHtml, /<p class="studio-lead">Upload an image, choose a complete visual system, and apply the finished Codex skin with one command\.<\/p>/);
   assert.match(homeHtml, /custom Codex skin/i);
-  assert.match(homeHtml, /Codex theme generator/i);
   assert.match(homeHtml, /No account/);
   assert.match(homeHtml, /Private temporary upload/);
   assert.match(homeHtml, /Paste into a local Codex task/);
