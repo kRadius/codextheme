@@ -240,6 +240,10 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       composerBlur: 22,
       borderAlpha: 38,
       radius: 12,
+      iconSurfaceAlpha: 92,
+      iconBorderAlpha: 58,
+      iconGlowAlpha: 42,
+      iconGlyph: "var(--codextheme-surface)",
       artworkBlur: 0,
       saturation: "1.04",
       imageContrast: "1.06",
@@ -258,6 +262,10 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       composerBlur: 28,
       borderAlpha: 30,
       radius: 16,
+      iconSurfaceAlpha: 24,
+      iconBorderAlpha: 44,
+      iconGlowAlpha: 24,
+      iconGlyph: "var(--codextheme-accent)",
       artworkBlur: 1,
       saturation: "1.08",
       imageContrast: "1.02",
@@ -276,6 +284,10 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       composerBlur: 12,
       borderAlpha: 18,
       radius: 8,
+      iconSurfaceAlpha: 12,
+      iconBorderAlpha: 26,
+      iconGlowAlpha: 0,
+      iconGlyph: "var(--codextheme-accent)",
       artworkBlur: 6,
       saturation: "0.92",
       imageContrast: "1.00",
@@ -321,6 +333,10 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       "--codextheme-muted-ink",
       "--codextheme-line",
       "--codextheme-radius",
+      "--codextheme-icon-surface-alpha",
+      "--codextheme-icon-border-alpha",
+      "--codextheme-icon-glow-alpha",
+      "--codextheme-icon-glyph",
     ]) {
       assert.ok(css.includes(`${variable}:`), `${recipe} CSS must define ${variable}.`);
     }
@@ -331,12 +347,18 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const composer = css.match(/\.composer-surface-chrome\s*\{([^}]*)\}/s);
     const selected = css.match(/aside\.app-shell-left-panel\s+:is\(\[aria-current="page"\],\s*\[aria-selected="true"\],\s*\[data-state="active"\]\)\s*\{([^}]*)\}/s);
     const code = css.match(/:is\(pre, code, \[data-language\]\)\s*\{([^}]*)\}/s);
+    const navigationIcons = css.match(/aside\.app-shell-left-panel :is\(button, a, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
+    const homeIcons = css.match(/\.dream-home :is\(button, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
+    const composerIcons = css.match(/\.composer-surface-chrome :is\(button, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
     assert.ok(sidebar, `${recipe} CSS must include the owned sidebar rule.`);
     assert.ok(main, `${recipe} CSS must include the main surface rule.`);
     assert.ok(header, `${recipe} CSS must include the header rule.`);
     assert.ok(composer, `${recipe} CSS must include the composer rule.`);
     assert.ok(selected, `${recipe} CSS must scope selected states to the owned sidebar.`);
     assert.ok(code, `${recipe} CSS must include the code surface rule.`);
+    assert.ok(navigationIcons, `${recipe} CSS must color native navigation icons.`);
+    assert.ok(homeIcons, `${recipe} CSS must materialize native Home action icons.`);
+    assert.ok(composerIcons, `${recipe} CSS must materialize native composer icons.`);
     assert.match(sidebar[1], new RegExp(`surface\\) ${expected.sidebarAlpha}%`));
     assert.match(sidebar[1], new RegExp(`accent\\) ${expected.borderAlpha}%`));
     assert.match(sidebar[1], new RegExp(`blur\\(${expected.sidebarBlur}px\\) saturate\\(1\\.08\\)`));
@@ -356,6 +378,18 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(selected[1], /inset 3px 0 0 var\(--codextheme-accent\)/);
     assert.match(selected[1], /border-radius:\s*var\(--codextheme-radius\)/);
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
+    assert.match(navigationIcons[1], /color:\s*var\(--codextheme-accent\)/);
+    assert.match(navigationIcons[1], /drop-shadow/);
+    for (const material of [homeIcons[1], composerIcons[1]]) {
+      assert.match(material, /color:\s*var\(--codextheme-icon-glyph\)/);
+      assert.match(material, /border-radius:\s*50%/);
+      assert.match(material, /box-shadow:/);
+      assert.doesNotMatch(material, /(?:width|height|padding|margin):/);
+    }
+    assert.match(css, new RegExp(`--codextheme-icon-surface-alpha: ${expected.iconSurfaceAlpha}%`));
+    assert.match(css, new RegExp(`--codextheme-icon-border-alpha: ${expected.iconBorderAlpha}%`));
+    assert.match(css, new RegExp(`--codextheme-icon-glow-alpha: ${expected.iconGlowAlpha}%`));
+    assert.ok(css.includes(`--codextheme-icon-glyph: ${expected.iconGlyph}`));
     assert.match(css, new RegExp(`--codextheme-radius: ${expected.radius}px`));
     assert.equal((css.match(/\[aria-current="page"\]/gu) ?? []).length, 1);
     assert.equal((css.match(/\[aria-selected="true"\]/gu) ?? []).length, 1);

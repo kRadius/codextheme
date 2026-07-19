@@ -37,6 +37,10 @@ function buildCss(tokens) {
   --codextheme-muted-ink: ${tokens.mutedInk};
   --codextheme-line: color-mix(in srgb, ${tokens.accent} ${tokens.borderAlpha}%, transparent);
   --codextheme-radius: ${tokens.radius}px;
+  --codextheme-icon-surface-alpha: ${tokens.iconSurfaceAlpha}%;
+  --codextheme-icon-border-alpha: ${tokens.iconBorderAlpha}%;
+  --codextheme-icon-glow-alpha: ${tokens.iconGlowAlpha}%;
+  --codextheme-icon-glyph: ${tokens.iconGlyphOnAccent ? "var(--codextheme-surface)" : "var(--codextheme-accent)"};
 }
 
 html.codedrobe-codex-skin body {
@@ -98,6 +102,29 @@ html.codedrobe-codex-skin aside.app-shell-left-panel :is([aria-current="page"], 
   border-color: color-mix(in srgb, var(--codextheme-accent) 44%, transparent) !important;
   border-radius: var(--codextheme-radius) !important;
   box-shadow: inset 3px 0 0 var(--codextheme-accent) !important;
+}
+
+html.codedrobe-codex-skin aside.app-shell-left-panel :is(button, a, [role="button"]) svg {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
+}
+
+html.codedrobe-codex-skin .dream-home :is(button, [role="button"]) svg {
+  color: var(--codextheme-icon-glyph) !important;
+  border-radius: 50% !important;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
+    0 0 0 5px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-border-alpha), transparent),
+    0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
+}
+
+html.codedrobe-codex-skin .composer-surface-chrome :is(button, [role="button"]) svg {
+  color: var(--codextheme-icon-glyph) !important;
+  border-radius: 50% !important;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
+    0 0 0 5px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-border-alpha), transparent),
+    0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
 }
 
 html.codedrobe-codex-skin :is(pre, code, [data-language]) {
