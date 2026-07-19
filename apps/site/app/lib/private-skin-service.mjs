@@ -122,7 +122,7 @@ export function createPrivateSkinService({
       return {
         id,
         expiresAt: expiresAt.toISOString(),
-        command: `npx --yes @codextheme/cli@0.2.2 apply-private ${id}`,
+        command: `npx --yes @codextheme/cli@0.2.3 apply-private ${id}`,
       };
     },
 

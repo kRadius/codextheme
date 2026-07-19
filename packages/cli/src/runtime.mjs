@@ -2,6 +2,37 @@ import * as runtimeCore from "@codextheme/runtime";
 import { themeFilename } from "./catalog.mjs";
 
 const RENDERER_ABSENT_CODES = new Set(["CODEDROBE_TARGET_TIMEOUT", "ECONNREFUSED"]);
+const PRIVATE_THEME_ID = /^private-[a-z0-9]{20}$/;
+const LEGACY_PRIVATE_HOME_RULE = /html\.codedrobe-codex-skin \.dream-home \{\n  position: relative;\n  isolation: isolate;\n  background-image: (linear-gradient\(rgba\(5, 6, 10, (?:0|1)\.\d{2}\), rgba\(5, 6, 10, (?:0|1)\.\d{2}\)\), var\(--codedrobe-image-hero\)) !important;\n  background-position: \d{1,3}% \d{1,3}% !important;\n  background-size: cover !important;\n\}/;
+const PRIVATE_WINDOW_RULE = /html\.codedrobe-codex-skin body::before \{[\s\S]*?\n\}/;
+
+function migratePrivateBackgroundAnchor(bundle) {
+  const target = bundle?.targets?.codex;
+  if (
+    !PRIVATE_THEME_ID.test(bundle?.theme?.id ?? "")
+    || bundle?.theme?.displayName !== "Private Custom Skin"
+    || typeof target?.css !== "string"
+    || target.css.includes("body:has(.dream-home)::before")
+  ) return bundle;
+
+  const legacyHome = target.css.match(LEGACY_PRIVATE_HOME_RULE);
+  const windowRule = target.css.match(PRIVATE_WINDOW_RULE);
+  if (!legacyHome || !windowRule) return bundle;
+
+  const homeWindow = `${windowRule[0]}\n\nhtml.codedrobe-codex-skin body:has(.dream-home)::before {\n  background-image: ${legacyHome[1]};\n}`;
+  const homeSurface = "html.codedrobe-codex-skin .dream-home {\n  position: relative;\n  isolation: isolate;\n  background: transparent !important;\n}";
+  const css = target.css
+    .replace(PRIVATE_WINDOW_RULE, homeWindow)
+    .replace(LEGACY_PRIVATE_HOME_RULE, homeSurface);
+
+  return {
+    ...bundle,
+    targets: {
+      ...bundle.targets,
+      codex: { ...target, css },
+    },
+  };
+}
 
 function restoreComplete(result) {
   const rendererComplete = result?.renderer?.restored === true
@@ -18,7 +49,12 @@ export function createRuntime({ core = runtimeCore, platform = process.platform 
     try {
       core.validateThemePackage(bundle);
       if (core.lintThemePackage(bundle).length) throw new Error("lint");
-      return core.resolveThemeTarget(bundle, adapter.id);
+      const migrated = migratePrivateBackgroundAnchor(bundle);
+      if (migrated !== bundle) {
+        core.validateThemePackage(migrated);
+        if (core.lintThemePackage(migrated).length) throw new Error("lint");
+      }
+      return core.resolveThemeTarget(migrated, adapter.id);
     } catch {
       throw Object.assign(new Error("Theme failed safety validation."), { code: "E_DOM_INCOMPATIBLE" });
     }

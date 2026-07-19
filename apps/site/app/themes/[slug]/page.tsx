@@ -49,7 +49,7 @@ export default async function ThemePage({ params }: { params: Promise<{ slug: st
           <div>
             <p className="eyebrow"><span /> AVAILABLE NOW</p>
             <h2 id="apply-title">Apply with Codex</h2>
-            <p>Copy the guided install and paste it into a local Codex task. It tells the Agent to run the exact pinned @codextheme/cli 0.2.2 command in an interactive shell without substituting another package. If a restart is required, a one-shot helper finishes the apply after the current task ends. Prefer the shell yourself? Use the Terminal fallback beside the main button.</p>
+            <p>Copy the guided install and paste it into a local Codex task. It tells the Agent to run the exact pinned @codextheme/cli 0.2.3 command in an interactive shell without substituting another package. If a restart is required, a one-shot helper finishes the apply after the current task ends. Prefer the shell yourself? Use the Terminal fallback beside the main button.</p>
             <div className="command-box">{theme.command}</div>
             <div className="copy-row"><CopyCommand command={theme.command} themeSlug={theme.slug} /></div>
           </div>

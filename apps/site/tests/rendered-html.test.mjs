@@ -114,7 +114,7 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     assert.equal((html.match(/data-copy-command/g) ?? []).length, 1);
     assert.equal((html.match(/data-copy-terminal/g) ?? []).length, 1);
     assert.match(html, new RegExp(`data-theme-slug="${slug}"`));
-    assert.match(html, new RegExp(`@codextheme\\/cli@0\\.2\\.2 apply ${slug}`));
+    assert.match(html, new RegExp(`@codextheme\\/cli@0\\.2\\.3 apply ${slug}`));
     assert.match(html, new RegExp(availableThemeCopy[slug].name));
     assert.match(html, new RegExp(availableThemeCopy[slug].description.replaceAll(".", "\\.")));
     assert.match(html, /Ready to install/);
