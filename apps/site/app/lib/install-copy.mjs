@@ -1,4 +1,4 @@
-const PINNED_INSTALL_COMMAND = /^npx --yes @codextheme\/cli@0\.2\.2 (?:apply [a-z0-9]+(?:-[a-z0-9]+)*|apply-private [a-z0-9]+\.[A-Za-z0-9_-]{32})$/;
+const PINNED_INSTALL_COMMAND = /^npx --yes @codextheme\/cli@0\.2\.3 (?:apply [a-z0-9]+(?:-[a-z0-9]+)*|apply-private [a-z0-9]+\.[A-Za-z0-9_-]{32})$/;
 
 const AGENT_INSTRUCTION = [
   "Run the following command exactly in an interactive local macOS shell (PTY).",

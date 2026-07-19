@@ -57,3 +57,41 @@ test("runtime recovery reports a partial restore without claiming success", asyn
 
   assert.equal(result.recovered, false);
 });
+
+test("runtime anchors legacy cached private artwork without mutating the cache bundle", async () => {
+  const legacyCss = `html.codedrobe-codex-skin body::before {
+  content: "";
+  position: fixed;
+  inset: -5%;
+  background-image: linear-gradient(rgba(5, 6, 10, 0.42), rgba(5, 6, 10, 0.42)), var(--codedrobe-image-session-bg);
+  background-position: 40% 65%;
+  background-size: cover;
+}
+
+html.codedrobe-codex-skin .dream-home {
+  position: relative;
+  isolation: isolate;
+  background-image: linear-gradient(rgba(5, 6, 10, 0.42), rgba(5, 6, 10, 0.42)), var(--codedrobe-image-hero) !important;
+  background-position: 40% 65% !important;
+  background-size: cover !important;
+}`;
+  const bundle = {
+    theme: { id: "private-aaaaaaaaaaaaaaaaaaaa", displayName: "Private Custom Skin" },
+    targets: { codex: { css: legacyCss } },
+  };
+  const core = {
+    getAdapter() { return { id: "codex" }; },
+    validateThemePackage() {},
+    lintThemePackage() { return []; },
+    resolveThemeTarget(value) { return value.targets.codex; },
+  };
+  const runtime = createRuntime({ core, platform: "darwin" });
+
+  const resolved = await runtime.loadThemeBundle(bundle);
+
+  assert.match(resolved.css, /body:has\(\.dream-home\)::before\s*\{[^}]*var\(--codedrobe-image-hero\)/s);
+  const homeSurface = resolved.css.match(/\.dream-home\s*\{([^}]*)\}/s);
+  assert.ok(homeSurface);
+  assert.doesNotMatch(homeSurface[1], /var\(--codedrobe-image-hero\)/);
+  assert.equal(bundle.targets.codex.css, legacyCss);
+});

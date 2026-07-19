@@ -3,7 +3,7 @@
 Create, preview, and apply reversible Codex Desktop skins on macOS. The public studio and theme gallery live at [codextheme.tech](https://codextheme.tech).
 
 ```bash
-npx --yes @codextheme/cli@0.2.2 apply cathedral-nocturne
+npx --yes @codextheme/cli@0.2.3 apply cathedral-nocturne
 ```
 
 ## Available themes
@@ -27,13 +27,13 @@ Requirements: macOS, Node.js 22.4 or newer, and Codex Desktop.
 Themes apply to the current Codex process. After reopening Codex, run:
 
 ```bash
-npx --yes @codextheme/cli@0.2.2 reapply
+npx --yes @codextheme/cli@0.2.3 reapply
 ```
 
 Restore the official appearance with:
 
 ```bash
-npx --yes @codextheme/cli@0.2.2 restore
+npx --yes @codextheme/cli@0.2.3 restore
 ```
 
 ## Trust boundary
