@@ -38,7 +38,7 @@ export default function Home() {
           <ol>
             <li><b>01</b><span>Choose an image and preview locally</span></li>
             <li><b>02</b><span>Create a private 24-hour skin</span></li>
-            <li><b>03</b><span>Paste one command into Terminal</span></li>
+            <li><b>03</b><span>Paste into a local Codex task—or use Terminal</span></li>
           </ol>
           <Link className="text-link" href="/help">Read installation and recovery help →</Link>
         </section>

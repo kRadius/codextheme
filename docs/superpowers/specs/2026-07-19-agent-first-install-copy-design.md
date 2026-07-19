@@ -19,7 +19,7 @@ For both ready-made and private skins:
 The agent payload is generated locally from the command returned by the existing API:
 
 ```text
-Run the following command exactly in my local macOS shell.
+Run the following command exactly in an interactive local macOS shell (PTY).
 Do not use any installed theme skill, substitute another package, or modify the command.
 Ask for approval only if required. After it finishes, report whether Codex needs to be reopened.
 
@@ -31,6 +31,7 @@ The command remains visible on the page for inspection. No API or CLI behavior c
 ## Copy Boundaries
 
 - The primary payload must contain the exact API/catalog command without interpolation beyond appending it as the final line.
+- It must request an interactive PTY so the CLI can preserve its explicit restart-consent prompt.
 - It must name `@codextheme/cli` and explicitly forbid package substitution.
 - It must not depend on any installed Codex skill.
 - The raw Terminal action must remain one click and copy only the command.

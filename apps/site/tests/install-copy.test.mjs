@@ -8,7 +8,7 @@ const privateCommand = "npx --yes @codextheme/cli@0.2.0 apply-private mrsm16zh.U
 test("agent copy constrains the Code Agent and preserves the exact command", () => {
   const payload = buildInstallCopy(catalogCommand, "agent");
 
-  assert.match(payload, /exactly in my local macOS shell/);
+  assert.match(payload, /interactive local macOS shell \(PTY\)/);
   assert.match(payload, /Do not use any installed theme skill/);
   assert.match(payload, /substitute another package/);
   assert.match(payload, /@codextheme\/cli/);

@@ -38,7 +38,7 @@ npx --yes @codextheme/cli@0.2.0 apply-private <timestamp>.<base64url-secret>
 For `terminal`, return the validated command. For `agent`, return:
 
 ```text
-Run the following command exactly in my local macOS shell.
+Run the following command exactly in an interactive local macOS shell (PTY).
 Do not use any installed theme skill, substitute another package, or modify the command.
 Ask for approval only if required. After it finishes, report whether Codex needs to be reopened.
 

@@ -95,6 +95,8 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   assert.match(homeHtml, /Codex theme generator/i);
   assert.match(homeHtml, /No account/);
   assert.match(homeHtml, /Private temporary upload/);
+  assert.match(homeHtml, /Paste into a local Codex task/);
+  assert.doesNotMatch(homeHtml, /Paste one command into Terminal/);
   assert.match(homeHtml, /Need inspiration\?<br\/>Start with a ready-made skin/);
   assert.match(homeHtml, /Cathedral Nocturne/);
   assert.match(homeHtml, /Create a skin/);
@@ -116,9 +118,10 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
     assert.match(html, new RegExp(availableThemeCopy[slug].name));
     assert.match(html, new RegExp(availableThemeCopy[slug].description.replaceAll(".", "\\.")));
     assert.match(html, /Ready to install/);
-    assert.match(html, /Apply with one command/);
+    assert.match(html, /Apply with Codex/);
     assert.match(html, /Copy &amp; apply with Codex/);
     assert.match(html, /Copy Terminal command/);
+    assert.doesNotMatch(html, /open Terminal, paste it/i);
     assert.match(html, /HOME \/ VERIFIED THEME PREVIEW/);
     assert.match(html, /SESSION \/ VERIFIED THEME PREVIEW/);
     assert.doesNotMatch(html, /真实截图待补齐|制作中|返回全部主题|一条命令应用|安装边界/);
@@ -142,6 +145,14 @@ test("security, help, robots, and sitemap routes render", async () => {
       assert.doesNotMatch(html, /返回首页|使用帮助|安全边界/);
     }
   }
+
+  const helpHtml = await (await render("/help")).text();
+  assert.match(helpHtml, /local Codex task/);
+  assert.match(helpHtml, /Terminal fallback/);
+
+  const securityHtml = await (await render("/security")).text();
+  assert.match(securityHtml, /temporary ID/);
+  assert.match(securityHtml, /Agent provider/);
 
   const missing = await render("/themes/not-a-real-theme");
   assert.equal(missing.status, 404);
