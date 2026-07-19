@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "brand:build": "node scripts/generate-brand-assets.mjs",
+    "build": "npm run brand:build && next build",
     "start": "next start",
     "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
