@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  DEFAULT_PRIVATE_SKIN_SETTINGS,
   MAX_PROCESSED_IMAGE_BYTES,
+  PRIVATE_SKIN_RECIPES,
   createPrivateSkinId,
+  normalizePrivateSkinRecipe,
   normalizePrivateSkinSettings,
   parsePrivateSkinId,
 } from "../app/lib/private-skin-schema.mjs";
@@ -27,6 +30,7 @@ test("settings clamp to the four editor controls", () => {
     positionX: 40,
     positionY: 65,
   }), {
+    recipe: "cinematic",
     visibility: 100,
     overlay: 0,
     blur: 16,
@@ -39,6 +43,7 @@ test("settings clamp to the four editor controls", () => {
 
 test("settings use safe defaults for missing and non-finite input", () => {
   assert.deepEqual(normalizePrivateSkinSettings({ visibility: Number.NaN, zoom: Infinity }), {
+    recipe: "cinematic",
     visibility: 72,
     overlay: 42,
     blur: 2,
@@ -46,6 +51,39 @@ test("settings use safe defaults for missing and non-finite input", () => {
     positionX: 50,
     positionY: 50,
   });
+});
+
+test("settings expose exactly the seven-field closed recipe schema", () => {
+  assert.deepEqual(PRIVATE_SKIN_RECIPES, ["cinematic", "glass", "focus"]);
+  assert.ok(Object.isFrozen(PRIVATE_SKIN_RECIPES));
+  assert.deepEqual(DEFAULT_PRIVATE_SKIN_SETTINGS, {
+    recipe: "cinematic",
+    visibility: 72,
+    overlay: 42,
+    blur: 2,
+    zoom: 110,
+    positionX: 50,
+    positionY: 50,
+  });
+  assert.equal(normalizePrivateSkinRecipe("focus"), "focus");
+  assert.equal(normalizePrivateSkinRecipe("arbitrary-css"), "cinematic");
+  assert.deepEqual(normalizePrivateSkinSettings({
+    recipe: "glass",
+    unknown: true,
+    token: "#fff",
+    css: "display:none",
+    profile: {},
+    palette: {},
+  }), {
+    recipe: "glass",
+    visibility: 72,
+    overlay: 42,
+    blur: 2,
+    zoom: 110,
+    positionX: 50,
+    positionY: 50,
+  });
+  assert.equal(normalizePrivateSkinSettings({ recipe: "arbitrary-css" }).recipe, "cinematic");
 });
 
 test("private ids expose expiry but retain 192 bits of randomness", () => {

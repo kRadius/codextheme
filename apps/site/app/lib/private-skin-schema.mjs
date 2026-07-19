@@ -7,7 +7,14 @@ export const MAX_IMAGE_WIDTH = 1920;
 export const MAX_IMAGE_HEIGHT = 1200;
 export const PRIVATE_SKIN_TTL_MS = 24 * 60 * 60 * 1000;
 
+export const PRIVATE_SKIN_RECIPES = Object.freeze(["cinematic", "glass", "focus"]);
+
+export function normalizePrivateSkinRecipe(value) {
+  return PRIVATE_SKIN_RECIPES.includes(value) ? value : "cinematic";
+}
+
 export const DEFAULT_PRIVATE_SKIN_SETTINGS = Object.freeze({
+  recipe: "cinematic",
   visibility: 72,
   overlay: 42,
   blur: 2,
@@ -30,6 +37,7 @@ function clamp(value, minimum, maximum, fallback) {
 export function normalizePrivateSkinSettings(value = {}) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return {
+    recipe: normalizePrivateSkinRecipe(source.recipe),
     visibility: clamp(source.visibility, 20, 100, DEFAULT_PRIVATE_SKIN_SETTINGS.visibility),
     overlay: clamp(source.overlay, 0, 80, DEFAULT_PRIVATE_SKIN_SETTINGS.overlay),
     blur: clamp(source.blur, 0, 16, DEFAULT_PRIVATE_SKIN_SETTINGS.blur),
