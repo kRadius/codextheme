@@ -13,7 +13,10 @@ export const metadata: Metadata = {
   },
   description: siteDescription,
   alternates: { canonical: "/" },
-  icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }] },
+  icons: {
+    icon: [{ url: "/brand-mark.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
     type: "website",
     locale: "en_US",

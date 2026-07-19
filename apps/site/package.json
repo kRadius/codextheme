@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "brand:build": "node scripts/generate-brand-assets.mjs",
     "build": "next build",
     "start": "next start",
     "test": "npm run build && node --test tests/*.test.mjs",
