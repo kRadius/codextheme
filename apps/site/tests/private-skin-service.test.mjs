@@ -5,7 +5,7 @@ import { createPrivateSkinId, privateSkinPathname } from "../app/lib/private-ski
 
 const now = new Date("2026-07-19T00:00:00.000Z");
 
-function harness() {
+function harness({ dominant = { red: 100, green: 70, blue: 160 } } = {}) {
   const blobs = new Map();
   const calls = [];
   const blob = {
@@ -37,7 +37,7 @@ function harness() {
     buffer: Buffer.from("normalized-webp"),
     width: 1600,
     height: 1000,
-    dominant: { red: 100, green: 70, blue: 160 },
+    dominant,
   });
   const service = createPrivateSkinService({
     blob,
@@ -56,6 +56,23 @@ test("create stores one private package and returns no blob url", async () => {
   assert.equal(app.blobs.size, 1);
   const stored = JSON.parse([...app.blobs.values()][0]);
   assert.equal(stored.format, "codedrobe-theme");
+});
+
+test("legacy service palettes keep stored adaptive skins image-specific", async () => {
+  const warm = harness({ dominant: { red: 210, green: 70, blue: 120 } });
+  const cool = harness({ dominant: { red: 10, green: 20, blue: 30 } });
+  await warm.service.create({ image: Buffer.from("warm"), settings: {}, now });
+  await cool.service.create({ image: Buffer.from("cool"), settings: {}, now });
+
+  const warmBundle = JSON.parse([...warm.blobs.values()][0]);
+  const coolBundle = JSON.parse([...cool.blobs.values()][0]);
+  const warmTheme = warmBundle.targets.codex;
+  const coolTheme = coolBundle.targets.codex;
+  assert.notEqual(warmTheme.options.baseTheme.accent, coolTheme.options.baseTheme.accent);
+  assert.notEqual(warmTheme.options.baseTheme.surface, coolTheme.options.baseTheme.surface);
+  assert.notEqual(warmTheme.css, coolTheme.css);
+  assert.match(warmTheme.css, new RegExp(`--codextheme-accent: ${warmTheme.options.baseTheme.accent}`));
+  assert.match(warmTheme.css, new RegExp(`--codextheme-surface: ${warmTheme.options.baseTheme.surface}`));
 });
 
 test("retrieval rejects expiry before reading storage", async () => {

@@ -175,6 +175,25 @@ test("generated packages contain only local images and safe Codex CSS", () => {
     surface: "#151921",
     opaqueWindows: true,
   });
+  for (const palette of [
+    {
+      accent: "url(https://example.com/tracker)",
+      surface: "#ffffff",
+      contrast: 100,
+    },
+    { accent: ["#abcdef"], surface: "#ffffff", contrast: 74 },
+    { accent: "#abcdef", surface: ["#ffffff"], contrast: 74 },
+  ]) {
+    const invalidPaletteBundle = validateThemePackage(JSON.parse(buildPrivateSkinPackage({
+      id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      exportedAt: "2026-07-19T00:00:00.000Z",
+      image: Buffer.from("safe-image"),
+      settings: normalizePrivateSkinSettings({}),
+      palette,
+    })));
+    assert.deepEqual(invalidPaletteBundle.targets.codex.options.baseTheme, bundle.targets.codex.options.baseTheme);
+    assert.equal(invalidPaletteBundle.targets.codex.css, bundle.targets.codex.css);
+  }
   assert.deepEqual(Object.keys(target.imageDataUrls).sort(), ["hero", "session-bg"]);
   assert.doesNotMatch(target.css, /@import|url\(\s*["']?https?:/i);
   assert.match(target.css, /background-position: 50% 50%/);
@@ -360,6 +379,24 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
   }
 
   assert.equal(new Set(cssByRecipe).size, 3);
+
+  const packageInput = {
+    id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    exportedAt: "2026-07-19T00:00:00.000Z",
+    image: Buffer.from("safe-image"),
+    settings: deriveRecipeDefaults(profile, "cinematic"),
+    profile,
+  };
+  const profileOnly = JSON.parse(buildPrivateSkinPackage(packageInput));
+  const withLegacyPalette = JSON.parse(buildPrivateSkinPackage({
+    ...packageInput,
+    palette: {
+      accent: "#ffffff",
+      surface: "#ffffff",
+      contrast: 100,
+    },
+  }));
+  assert.deepEqual(withLegacyPalette.targets.codex, profileOnly.targets.codex);
 });
 
 test("browser upload accepts only bounded raster sources", () => {

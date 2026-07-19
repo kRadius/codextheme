@@ -1,6 +1,26 @@
 import { MAX_PRIVATE_PACKAGE_BYTES, normalizePrivateSkinSettings } from "./private-skin-schema.mjs";
 import { deriveSkinTokens } from "./private-skin-profile.mjs";
 
+const SAFE_HEX = /^#[0-9a-f]{6}$/iu;
+
+function legacyPaletteToProfile(palette) {
+  if (!palette || typeof palette !== "object" || Array.isArray(palette)) return undefined;
+  if (typeof palette.accent !== "string" || typeof palette.surface !== "string") return undefined;
+  if (!SAFE_HEX.test(palette.accent) || !SAFE_HEX.test(palette.surface)) return undefined;
+  const accent = palette.accent.toLowerCase();
+  const surface = palette.surface.slice(1).match(/../gu).map((value) => Number.parseInt(value, 16));
+  const primary = `#${surface
+    .map((value) => Math.min(255, Math.max(0, Math.round((value - 5.04) / 0.16))))
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("")}`;
+  return {
+    primary,
+    secondary: accent,
+    highlight: accent,
+    contrast: Number.isFinite(palette.contrast) ? palette.contrast : 74,
+  };
+}
+
 function buildCss(tokens) {
   const visibility = (tokens.visibility / 100).toFixed(2);
   const overlay = (tokens.overlay / 100).toFixed(2);
@@ -124,15 +144,16 @@ html.codedrobe-codex-skin .dream-home {
 `;
 }
 
-export function buildPrivateSkinPackage({ id, exportedAt, image, settings, profile }) {
+export function buildPrivateSkinPackage({ id, exportedAt, image, settings, profile, palette }) {
   if (typeof id !== "string" || !id.includes(".")) throw new TypeError("id must be a private skin id.");
   if (typeof exportedAt !== "string" || !exportedAt) throw new TypeError("exportedAt is required.");
   if (!(image instanceof Uint8Array) || image.byteLength === 0) throw new TypeError("image is required.");
   const normalized = normalizePrivateSkinSettings(settings);
-  const tokens = deriveSkinTokens(profile, normalized);
+  const safeProfile = profile === undefined ? legacyPaletteToProfile(palette) : profile;
+  const tokens = deriveSkinTokens(safeProfile, normalized);
   const contrast = Math.round(Math.min(
     100,
-    Math.max(60, Number.isFinite(profile?.contrast) ? profile.contrast : 74),
+    Math.max(60, Number.isFinite(safeProfile?.contrast) ? safeProfile.contrast : 74),
   ));
   const base64 = Buffer.from(image).toString("base64");
   const randomPart = id.split(".")[1].slice(0, 20).toLowerCase();

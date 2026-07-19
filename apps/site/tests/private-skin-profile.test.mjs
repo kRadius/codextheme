@@ -18,6 +18,20 @@ function solid(red, green, blue, width = 4, height = 4) {
   return { data, width, height, channels: 3 };
 }
 
+function relativeLuminance(color) {
+  const channels = color.slice(1).match(/../gu).map((value) => Number.parseInt(value, 16) / 255);
+  const [red, green, blue] = channels.map((value) => (
+    value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  ));
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(first, second) {
+  const lighter = Math.max(relativeLuminance(first), relativeLuminance(second));
+  const darker = Math.min(relativeLuminance(first), relativeLuminance(second));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 test("pixel analysis is deterministic and bounded", () => {
   const first = analyzeImagePixels(solid(180, 52, 76));
   const second = analyzeImagePixels(solid(180, 52, 76));
@@ -277,6 +291,28 @@ test("skin tokens and compatibility palettes normalize invalid profiles", () => 
     ink: "#f4f1eb",
     contrast: 74,
   });
+});
+
+test("skin accents meet text contrast without changing an already readable highlight", () => {
+  const lowContrast = deriveSkinTokens({
+    primary: "#ffffff",
+    secondary: "#616175",
+    highlight: "#616175",
+  }, { recipe: "cinematic" });
+  assert.equal(lowContrast.surface, "#2e3034");
+  assert.ok(
+    contrastRatio(lowContrast.accent, lowContrast.surface) >= 4.5,
+    `${lowContrast.accent} must contrast with ${lowContrast.surface}`,
+  );
+  assert.match(lowContrast.accent, /^#[0-9a-f]{6}$/u);
+
+  const readable = deriveSkinTokens({
+    primary: "#ffffff",
+    secondary: "#8b5cf6",
+    highlight: "#f4f1eb",
+  }, { recipe: "cinematic" });
+  assert.ok(contrastRatio("#f4f1eb", readable.surface) >= 4.5);
+  assert.equal(readable.accent, "#f4f1eb");
 });
 
 test("skin tokens expose only the closed semantic contract", () => {

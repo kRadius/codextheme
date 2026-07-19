@@ -128,6 +128,29 @@ function mixHex(source, target, ratio) {
   return hex(...mixRgb(parseHex(source, "#64748b"), parseHex(target, "#06080d"), ratio));
 }
 
+function relativeLuminance(color) {
+  const [red, green, blue] = parseHex(color, "#64748b").map((channelValue) => {
+    const value = channelValue / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(first, second) {
+  const lighter = Math.max(relativeLuminance(first), relativeLuminance(second));
+  const darker = Math.min(relativeLuminance(first), relativeLuminance(second));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function readableAccent(accent, surface) {
+  if (contrastRatio(accent, surface) >= 4.5) return accent;
+  for (let percentage = 1; percentage <= 100; percentage += 1) {
+    const candidate = mixHex(accent, "#ffffff", percentage / 100);
+    if (contrastRatio(candidate, surface) >= 4.5) return candidate;
+  }
+  return "#ffffff";
+}
+
 function pixelLuminance(red, green, blue) {
   return (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255 * 100;
 }
@@ -339,11 +362,12 @@ export function deriveSkinTokens(profile = {}, settings = {}) {
   const recipe = normalized.recipe;
   const base = BASES[recipe];
   const safe = safeProfile(profile);
+  const surface = mixHex(safe.primary, "#06080d", recipe === "focus" ? 0.90 : 0.84);
   return {
     recipe,
-    accent: safe.highlight,
+    accent: readableAccent(safe.highlight, surface),
     accentSoft: safe.secondary,
-    surface: mixHex(safe.primary, "#06080d", recipe === "focus" ? 0.90 : 0.84),
+    surface,
     surfaceRaised: mixHex(safe.secondary, "#0b0d12", recipe === "glass" ? 0.78 : 0.86),
     ink: "#f4f1eb",
     mutedInk: "#b9bbc1",
