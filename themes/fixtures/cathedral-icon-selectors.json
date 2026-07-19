@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-19",
+  "privacy": "Selectors and bounded match counts only; no renderer content.",
+  "anchors": [
+    { "id": "icon-new-chat", "contexts": ["home", "session"], "expected": 1 },
+    { "id": "icon-pull-requests", "contexts": ["home", "session"], "expected": 1 },
+    { "id": "icon-sites", "contexts": ["home", "session"], "expected": 1 },
+    { "id": "icon-scheduled", "contexts": ["home", "session"], "expected": 1 },
+    { "id": "icon-plugins", "contexts": ["home", "session"], "expected": 1 },
+    { "id": "icon-project-folder", "contexts": ["home", "session"], "min": 1, "max": 20 },
+    { "id": "icon-explore", "contexts": ["home"], "min": 0, "max": 1 },
+    { "id": "icon-build", "contexts": ["home"], "min": 0, "max": 1 },
+    { "id": "icon-review", "contexts": ["home"], "min": 0, "max": 1 },
+    { "id": "icon-fix", "contexts": ["home"], "min": 0, "max": 1 },
+    { "id": "icon-add", "contexts": ["home", "session"], "expected": 1 },
+    { "id": "icon-send", "contexts": ["home", "session"], "expected": 1 }
+  ]
+}

@@ -26,7 +26,13 @@ const codex = {
     },
   },
   matchTarget(target) {
-    return target?.type === "page" && String(target.url ?? "").startsWith("app://");
+    const url = String(target?.url ?? "");
+    if (target?.type !== "page" || !url.startsWith("app://")) return false;
+    try {
+      return new URL(url).searchParams.get("initialRoute") !== "/avatar-overlay";
+    } catch {
+      return false;
+    }
   },
   verification: {
     rootAny: ["main.main-surface"],

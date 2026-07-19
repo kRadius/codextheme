@@ -11,6 +11,10 @@ test("built-in adapters have unique ids and ports", () => {
 test("Codex target matcher accepts only app pages", () => {
   const adapter = getAdapter("codex");
   assert.equal(adapter.matchTarget({ type: "page", url: "app://codex/home" }), true);
+  assert.equal(adapter.matchTarget({
+    type: "page",
+    url: "app://-/index.html?initialRoute=%2Favatar-overlay",
+  }), false);
   assert.equal(adapter.matchTarget({ type: "page", url: "file:///tmp/index.html" }), false);
   assert.equal(adapter.matchTarget({ type: "worker", url: "app://codex/worker" }), false);
 });

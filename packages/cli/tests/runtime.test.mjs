@@ -58,6 +58,43 @@ test("runtime recovery reports a partial restore without claiming success", asyn
   assert.equal(result.recovered, false);
 });
 
+test("catalog runtime accepts only the closed Cathedral selector warning set", async () => {
+  const selector = 'html.codedrobe-codex-skin[data-codedrobe-theme="cathedral-nocturne"] .dream-home .group\\/home-suggestions button:nth-child(1) svg';
+  const approved = {
+    code: "positional-selector",
+    appId: "codex",
+    location: "targets.codex.css",
+    selector,
+  };
+  const bundle = {
+    theme: { id: "cathedral-nocturne", version: "1.1.0" },
+    targets: { codex: { css: "" } },
+  };
+
+  function runtimeWith(warnings) {
+    const core = {
+      getAdapter() { return { id: "codex" }; },
+      validateThemePackage() {},
+      lintThemePackage() { return warnings; },
+      resolveThemeTarget(value) { return value.targets.codex; },
+    };
+    return createRuntime({ core, platform: "darwin" });
+  }
+
+  await assert.doesNotReject(runtimeWith([approved]).loadThemeBundle(bundle));
+  await assert.rejects(
+    runtimeWith([{ ...approved, selector: `${selector} path` }]).loadThemeBundle(bundle),
+    /Theme failed safety validation/,
+  );
+  await assert.rejects(
+    runtimeWith([approved]).loadThemeBundle({
+      ...bundle,
+      theme: { id: "private-aaaaaaaaaaaaaaaaaaaa", version: "1.1.0" },
+    }),
+    /Theme failed safety validation/,
+  );
+});
+
 test("runtime anchors legacy cached private artwork without mutating the cache bundle", async () => {
   const legacyCss = `html.codedrobe-codex-skin body::before {
   content: "";

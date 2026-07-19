@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packages = [
   { name: "@codextheme/runtime", version: "0.1.0", directory: "packages/runtime" },
-  { name: "@codextheme/cli", version: "0.2.3", directory: "packages/cli" },
+  { name: "@codextheme/cli", version: "0.2.4", directory: "packages/cli" },
 ];
 const requiredFiles = new Set(["LICENSE", "NOTICE", "README.md", "package.json"]);
 const forbiddenScripts = new Set(["preinstall", "install", "postinstall"]);
