@@ -32,7 +32,15 @@ async function requireRestartConsent(promptRestart) {
   }
 }
 
-async function applyResolvedTheme({ theme, nextState, runtime, stateStore, promptRestart, now }) {
+async function delegateRestart({ theme, nextState, restartHandoff }) {
+  return {
+    theme,
+    handoff: await restartHandoff.schedule(nextState),
+    appliedAt: null,
+  };
+}
+
+async function applyResolvedTheme({ theme, nextState, runtime, stateStore, promptRestart, restartHandoff, now }) {
   let detection;
   try {
     detection = await runtime.detect();
@@ -46,6 +54,7 @@ async function applyResolvedTheme({ theme, nextState, runtime, stateStore, promp
   let restartExisting = false;
   if (detection.running && !detection.ready) {
     await requireRestartConsent(promptRestart);
+    if (restartHandoff) return delegateRestart({ theme, nextState, restartHandoff });
     restartExisting = true;
   }
 
@@ -55,6 +64,7 @@ async function applyResolvedTheme({ theme, nextState, runtime, stateStore, promp
   } catch (error) {
     if (error?.code === "CODEDROBE_RESTART_REQUIRED" && !restartExisting) {
       await requireRestartConsent(promptRestart);
+      if (restartHandoff) return delegateRestart({ theme, nextState, restartHandoff });
       restartExisting = true;
       try {
         result = await runtime.apply({ theme, restartExisting });
@@ -75,7 +85,7 @@ async function applyResolvedTheme({ theme, nextState, runtime, stateStore, promp
   return { theme, result, appliedAt };
 }
 
-export async function applyTheme({ slug, runtime, stateStore, promptRestart, now = () => new Date() }) {
+export async function applyTheme({ slug, runtime, stateStore, promptRestart, restartHandoff, now = () => new Date() }) {
   let theme;
   try {
     theme = await runtime.loadTheme(slug);
@@ -88,11 +98,12 @@ export async function applyTheme({ slug, runtime, stateStore, promptRestart, now
     runtime,
     stateStore,
     promptRestart,
+    restartHandoff,
     now,
   });
 }
 
-export async function applyPrivateTheme({ bundle, cacheKey, runtime, stateStore, promptRestart, now = () => new Date() }) {
+export async function applyPrivateTheme({ bundle, cacheKey, runtime, stateStore, promptRestart, restartHandoff, now = () => new Date() }) {
   let theme;
   try {
     theme = await runtime.loadThemeBundle(bundle);
@@ -105,6 +116,7 @@ export async function applyPrivateTheme({ bundle, cacheKey, runtime, stateStore,
     runtime,
     stateStore,
     promptRestart,
+    restartHandoff,
     now,
   });
 }

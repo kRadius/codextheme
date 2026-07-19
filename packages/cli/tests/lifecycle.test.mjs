@@ -38,11 +38,12 @@ function harness({ detect, apply, restore, state } = {}) {
   return { calls, runtime, stateStore, getState: () => currentState };
 }
 
-const applyOptions = (app, promptRestart = async () => false) => ({
+const applyOptions = (app, promptRestart = async () => false, restartHandoff) => ({
   slug: "midnight-circuit",
   runtime: app.runtime,
   stateStore: app.stateStore,
   promptRestart,
+  restartHandoff,
   now: () => new Date(timestamp),
 });
 
@@ -66,16 +67,61 @@ test("closed and CDP-ready Codex apply without an eager restart", async () => {
 test("running Codex without CDP cancels unless restart receives explicit consent", async () => {
   const detect = { installed: true, running: true, ready: false };
   const cancelled = harness({ detect });
-  await assert.rejects(() => applyTheme(applyOptions(cancelled)), { code: "E_RESTART_REQUIRED" });
+  const cancelledHandoff = {
+    async schedule(action) {
+      cancelled.calls.push(["handoff.schedule", action]);
+      return { queued: true };
+    },
+  };
+  await assert.rejects(
+    () => applyTheme(applyOptions(cancelled, async () => false, cancelledHandoff)),
+    { code: "E_RESTART_REQUIRED" },
+  );
   assert.equal(cancelled.calls.some(([name]) => name === "apply"), false);
+  assert.equal(cancelled.calls.some(([name]) => name === "handoff.schedule"), false);
   assert.equal(cancelled.getState(), null);
 
   const approved = harness({ detect });
-  await applyTheme(applyOptions(approved, async () => true));
-  assert.deepEqual(approved.calls.find(([name]) => name === "apply"), ["apply", true]);
+  const restartHandoff = {
+    async schedule(action) {
+      approved.calls.push(["handoff.schedule", action]);
+      return { queued: true, resultPath: "/tmp/result.json" };
+    },
+  };
+  const result = await applyTheme(applyOptions(approved, async () => true, restartHandoff));
+  assert.deepEqual(approved.calls.find(([name]) => name === "handoff.schedule"), [
+    "handoff.schedule",
+    { schemaVersion: 2, source: "catalog", themeSlug: "midnight-circuit" },
+  ]);
+  assert.equal(approved.calls.some(([name]) => name === "apply"), false);
+  assert.equal(approved.calls.some(([name]) => name === "state.write"), false);
+  assert.deepEqual(result.handoff, { queued: true, resultPath: "/tmp/result.json" });
+  assert.equal(result.appliedAt, null);
 });
 
-test("runtime restart-required result prompts once and retries with restart", async () => {
+test("runtime restart-required result hands off instead of restarting in the foreground", async () => {
+  let attempts = 0;
+  const app = harness({
+    apply: async () => {
+      attempts += 1;
+      throw Object.assign(new Error("restart"), { code: "CODEDROBE_RESTART_REQUIRED" });
+    },
+  });
+  let prompts = 0;
+  const restartHandoff = {
+    async schedule(action) {
+      app.calls.push(["handoff.schedule", action]);
+      return { queued: true };
+    },
+  };
+  await applyTheme(applyOptions(app, async () => { prompts += 1; return true; }, restartHandoff));
+  assert.equal(prompts, 1);
+  assert.deepEqual(app.calls.filter(([name]) => name === "apply"), [["apply", false]]);
+  assert.equal(app.calls.filter(([name]) => name === "handoff.schedule").length, 1);
+  assert.equal(app.calls.some(([name]) => name === "state.write"), false);
+});
+
+test("authorized worker without a handoff coordinator retries with restart", async () => {
   let attempts = 0;
   const app = harness({
     apply: async () => {
@@ -84,9 +130,7 @@ test("runtime restart-required result prompts once and retries with restart", as
       return { targets: [{ result: { pass: true } }] };
     },
   });
-  let prompts = 0;
-  await applyTheme(applyOptions(app, async () => { prompts += 1; return true; }));
-  assert.equal(prompts, 1);
+  await applyTheme(applyOptions(app, async () => true));
   assert.deepEqual(app.calls.filter(([name]) => name === "apply"), [["apply", false], ["apply", true]]);
 });
 
