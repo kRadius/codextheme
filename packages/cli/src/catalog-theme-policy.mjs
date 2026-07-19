@@ -1,8 +1,9 @@
 const sidebarPrefix = 'aside.app-shell-left-panel [role="navigation"] .vertical-scroll-fade-mask > div:first-child > div > div > div';
+const newChatSelector = 'aside.app-shell-left-panel [role="navigation"] > div.relative.z-10 > div.flex.flex-col.gap-1 > div.flex.flex-col.gap-px > div:first-child > button:first-child svg';
 
 export const CATHEDRAL_ICON_ANCHORS = Object.freeze([
-  { id: "icon-new-chat", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(1) svg`, expected: 1 },
-  { id: "icon-pull-requests", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(2) svg`, expected: 1 },
+  { id: "icon-new-chat", contexts: ["home", "session"], selector: newChatSelector, expected: 1 },
+  { id: "icon-pull-requests", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(1) svg`, expected: 1 },
   { id: "icon-scheduled", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(3) svg`, expected: 1 },
   { id: "icon-plugins", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(4) svg`, expected: 1 },
   {

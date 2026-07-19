@@ -51,8 +51,8 @@
         "recommended": [
           { "name": "session-surface", "any": ["main.main-surface"] },
           { "name": "composer-surface", "any": [".composer-surface-chrome"] },
-          { "name": "icon-new-chat", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(1) svg"] },
-          { "name": "icon-pull-requests", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(2) svg"] },
+          { "name": "icon-new-chat", "any": ["aside.app-shell-left-panel [role='navigation'] > div.relative.z-10 > div.flex.flex-col.gap-1 > div.flex.flex-col.gap-px > div:first-child > button:first-child svg"] },
+          { "name": "icon-pull-requests", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(1) svg"] },
           { "name": "icon-scheduled", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(3) svg"] },
           { "name": "icon-plugins", "any": ["aside.app-shell-left-panel [role='navigation'] .vertical-scroll-fade-mask > div:first-child > div > div > div > button:nth-child(4) svg"] },
           { "name": "icon-project-folder", "any": ["aside.app-shell-left-panel .group\\/folder-row > div:first-child > span:first-child > svg"] },
