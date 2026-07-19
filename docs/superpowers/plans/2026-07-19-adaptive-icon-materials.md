@@ -8,6 +8,19 @@
 
 **Tech Stack:** Next.js 16, React 19, CSS custom properties, Node.js 22 test runner, existing private-theme package builder and safety linter.
 
+## Status
+
+Implemented on 2026-07-19. Cinematic, Glass, and Focus now produce distinct icon surface, border, glyph, and glow treatments in both the browser preview and generated private-skin CSS while preserving Codex's native icon shapes and dimensions.
+
+Verification evidence:
+
+- `npm test`: PASS — theme preview 2/2, CLI 42/42, runtime 42/42, site 70/70; the site suite also completed its Next.js production build.
+- `npm run typecheck`: PASS.
+- `npm run lint --workspace @codextheme/site`: PASS.
+- Desktop browser: PASS — all three recipes produced distinct computed icon materials with unchanged 26×26 Home action icons and 25×25 composer icons; Home and Session switching remained stable.
+- 390×844 browser viewport: PASS — `scrollWidth === clientWidth === 390`; the studio preview remained inside the viewport.
+- Real Codex smoke gate: pending post-deploy. The current Codex renderer did not expose the local CDP endpoint on port 9335, and the app was not restarted solely for verification.
+
 ---
 
 ## File Map
@@ -26,7 +39,7 @@
 - Modify: `apps/site/tests/private-skin-profile.test.mjs`
 - Modify: `apps/site/app/lib/private-skin-profile.mjs`
 
-- [ ] **Step 1: Write the failing token assertions**
+- [x] **Step 1: Write the failing token assertions**
 
 Extend the three-recipe test so the expected values are:
 
@@ -44,7 +57,7 @@ assert.deepEqual(tokens.map((value) => ({
 ]);
 ```
 
-- [ ] **Step 2: Run the focused test and verify failure**
+- [x] **Step 2: Run the focused test and verify failure**
 
 Run:
 
@@ -54,7 +67,7 @@ node --test apps/site/tests/private-skin-profile.test.mjs
 
 Expected: FAIL because the four token properties are undefined.
 
-- [ ] **Step 3: Add recipe-specific values to `BASES` and `deriveSkinTokens`**
+- [x] **Step 3: Add recipe-specific values to `BASES` and `deriveSkinTokens`**
 
 Add the four values shown above to each recipe base, then extend the returned token object with:
 
@@ -67,7 +80,7 @@ iconGlyphOnAccent: base.iconGlyphOnAccent,
 
 Do not add them to public request settings; users cannot submit arbitrary icon CSS or values.
 
-- [ ] **Step 4: Run the focused test**
+- [x] **Step 4: Run the focused test**
 
 Run:
 
@@ -83,7 +96,7 @@ Expected: PASS.
 - Modify: `apps/site/tests/private-skin-schema.test.mjs`
 - Modify: `apps/site/app/lib/private-skin-package.mjs`
 
-- [ ] **Step 1: Write failing generated-CSS assertions**
+- [x] **Step 1: Write failing generated-CSS assertions**
 
 For each recipe package, assert that:
 
@@ -100,7 +113,7 @@ assert.doesNotMatch(homeIcons[1], /(?:width|height|padding|margin):/);
 
 Also assert that each recipe embeds its expected icon alpha values and the existing owned-selector audit still passes.
 
-- [ ] **Step 2: Run the package test and verify failure**
+- [x] **Step 2: Run the package test and verify failure**
 
 Run:
 
@@ -110,7 +123,7 @@ node --test apps/site/tests/private-skin-schema.test.mjs
 
 Expected: FAIL because the package has no icon-material rules.
 
-- [ ] **Step 3: Add scoped icon-material CSS**
+- [x] **Step 3: Add scoped icon-material CSS**
 
 Define closed CSS variables in the root token block:
 
@@ -140,7 +153,7 @@ html.codedrobe-codex-skin .composer-surface-chrome :is(button, [role="button"]) 
 }
 ```
 
-- [ ] **Step 4: Run package and runtime safety tests**
+- [x] **Step 4: Run package and runtime safety tests**
 
 Run:
 
@@ -157,11 +170,11 @@ Expected: PASS with no unowned selector or remote-resource warning.
 - Modify: `apps/site/app/components/CodexMockup.tsx`
 - Modify: `apps/site/app/globals.css`
 
-- [ ] **Step 1: Write failing preview wiring assertions**
+- [x] **Step 1: Write failing preview wiring assertions**
 
 Assert that `CodexMockup` exposes all four values as CSS custom properties and that the mockup sidebar, Home action icons, session agent icon, and composer submit icon consume the icon-material properties. Assert that the Home icon rule does not set width, height, padding, or margin beyond the existing mockup dimensions.
 
-- [ ] **Step 2: Run the source contract test and verify failure**
+- [x] **Step 2: Run the source contract test and verify failure**
 
 Run:
 
@@ -171,7 +184,7 @@ node --test apps/site/tests/studio-source-contract.test.mjs
 
 Expected: FAIL because icon-material custom properties are absent.
 
-- [ ] **Step 3: Wire tokens and preview CSS**
+- [x] **Step 3: Wire tokens and preview CSS**
 
 Expose the shared values from `CodexMockup`:
 
@@ -184,7 +197,7 @@ Expose the shared values from `CodexMockup`:
 
 Wrap only the existing mock sidebar glyph characters in `<i>` elements. Reuse the existing Home, session-agent, and composer icon elements and style their color, circular background/ring, and glow from those variables. Do not add new controls or change the upload flow.
 
-- [ ] **Step 4: Run the source contract and site tests**
+- [x] **Step 4: Run the source contract and site tests**
 
 Run:
 
@@ -199,7 +212,7 @@ Expected: PASS.
 **Files:**
 - Verify only.
 
-- [ ] **Step 1: Run all repository tests**
+- [x] **Step 1: Run all repository tests**
 
 Run:
 
@@ -209,7 +222,7 @@ npm test
 
 Expected: all CLI, runtime, repository, and site tests pass.
 
-- [ ] **Step 2: Run the production build**
+- [x] **Step 2: Run the production build**
 
 Run:
 
@@ -219,10 +232,10 @@ npm run build --workspace apps/site
 
 Expected: Next.js production build completes successfully.
 
-- [ ] **Step 3: Inspect Home and Session at desktop and mobile widths**
+- [x] **Step 3: Inspect Home and Session at desktop and mobile widths**
 
 Use the existing local site, upload or load the sample image, switch all three recipes and both preview modes, and confirm icon styling is visibly distinct but does not change layout or obscure glyphs.
 
-- [ ] **Step 4: Record the result**
+- [x] **Step 4: Record the result**
 
 Update the adaptive design and plan status with exact test/build evidence. Do not claim real-Codex icon compatibility without a live loopback DOM snapshot and production apply; if port 9335 is unavailable, record that as a post-deploy smoke gate.
