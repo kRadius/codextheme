@@ -27,6 +27,11 @@ async function streamText(stream) {
 function isValidPixelSample(sample) {
   if (!(sample?.data instanceof Uint8Array)) return false;
   if (sample.data.byteLength > 4096) return false;
+  const backing = sample.data.buffer;
+  const isArrayBuffer = backing instanceof ArrayBuffer;
+  const isSharedArrayBuffer = typeof SharedArrayBuffer === "function"
+    && backing instanceof SharedArrayBuffer;
+  if ((!isArrayBuffer && !isSharedArrayBuffer) || backing.byteLength > 4096) return false;
   if (sample.channels !== 3 && sample.channels !== 4) return false;
   if (!Number.isSafeInteger(sample.width) || sample.width <= 0) return false;
   if (!Number.isSafeInteger(sample.height) || sample.height <= 0) return false;

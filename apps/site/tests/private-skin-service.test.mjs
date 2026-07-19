@@ -160,6 +160,8 @@ test("normalization returns a bounded 32 by 32 RGB sample without dominant stats
 });
 
 test("create rejects unsafe processed samples before storage", async () => {
+  const backing = new ArrayBuffer(1_000_000);
+  const tiny = new Uint8Array(backing, 0, 3);
   const invalidSamples = [
     { data: [10, 20, 30], width: 1, height: 1, channels: 3 },
     { data: new Uint8Array(3), width: 1, height: 1, channels: 2 },
@@ -169,6 +171,7 @@ test("create rejects unsafe processed samples before storage", async () => {
     { data: new Uint8Array(65 * 65 * 3), width: 65, height: 65, channels: 3 },
     { data: new Uint8Array(11), width: 2, height: 2, channels: 3 },
     { data: new Uint8Array(1_000_000), width: 1, height: 1, channels: 3 },
+    { data: tiny, width: 1, height: 1, channels: 3 },
   ];
   for (const sample of invalidSamples) {
     const app = harness({ sample });
