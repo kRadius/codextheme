@@ -1,9 +1,10 @@
-const PINNED_INSTALL_COMMAND = /^npx --yes @codextheme\/cli@0\.2\.0 (?:apply [a-z0-9]+(?:-[a-z0-9]+)*|apply-private [a-z0-9]+\.[A-Za-z0-9_-]{32})$/;
+const PINNED_INSTALL_COMMAND = /^npx --yes @codextheme\/cli@0\.2\.1 (?:apply [a-z0-9]+(?:-[a-z0-9]+)*|apply-private [a-z0-9]+\.[A-Za-z0-9_-]{32})$/;
 
 const AGENT_INSTRUCTION = [
   "Run the following command exactly in an interactive local macOS shell (PTY).",
   "Do not use any installed theme skill, substitute another package, or modify the command.",
-  "Ask for approval only if required. After it finishes, report whether Codex needs to be reopened.",
+  "Ask for approval only if required. Codex may close and reopen once after the CLI hands work to its one-shot helper.",
+  "After the handoff succeeds, the current Codex task may end; do not treat that expected restart as a failed command.",
 ].join("\n");
 
 export function buildInstallCopy(command, mode) {

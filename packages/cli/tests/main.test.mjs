@@ -7,7 +7,7 @@ function sink() {
   return { write(chunk) { value += chunk; }, text() { return value; } };
 }
 
-function harness({ state = null } = {}) {
+function harness({ state = null, detection, restartHandoff } = {}) {
   const calls = [];
   const stdout = sink();
   const stderr = sink();
@@ -27,7 +27,7 @@ function harness({ state = null } = {}) {
     },
     async detect() {
       calls.push(["detect"]);
-      return { installed: true, running: false, ready: false };
+      return detection ?? { installed: true, running: false, ready: false };
     },
     async apply({ restartExisting }) {
       calls.push(["apply", restartExisting]);
@@ -69,6 +69,7 @@ function harness({ state = null } = {}) {
           return JSON.stringify({ theme: { id: "private-test", displayName: "Private Custom Skin" } });
         },
       },
+      restartHandoff,
     },
   };
 }
@@ -101,8 +102,30 @@ test("successful apply prints pinned reapply and restore commands", async () => 
   const app = harness();
   assert.equal(await run(["apply", "cathedral-nocturne"], app.deps), 0);
   assert.match(app.stdout.text(), /主题已应用并通过验证/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.0 reapply/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.0 restore/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.1 reapply/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.1 restore/);
+});
+
+test("restart-required apply reports a detached handoff instead of completed application", async () => {
+  const queued = [];
+  const app = harness({
+    detection: { installed: true, running: true, ready: false },
+    restartHandoff: {
+      async schedule(action) {
+        queued.push(action);
+        return { queued: true, resultPath: "/tmp/last-result.json" };
+      },
+    },
+  });
+  app.deps.promptRestart = async () => true;
+
+  assert.equal(await run(["apply", "cathedral-nocturne"], app.deps), 0);
+  assert.equal(queued.length, 1);
+  assert.match(app.stdout.text(), /独立任务/);
+  assert.match(app.stdout.text(), /Codex 将自动关闭并重新打开一次/);
+  assert.match(app.stdout.text(), /当前 Codex task 可能结束/);
+  assert.doesNotMatch(app.stdout.text(), /主题已应用并通过验证/);
+  assert.equal(app.calls.some(([name, restart]) => name === "apply" && restart === true), false);
 });
 
 test("unknown slugs and malformed argv return E_USAGE without runtime calls", async () => {
@@ -124,7 +147,7 @@ test("unsupported platforms fail before a theme is loaded", async () => {
 test("version is available without constructing runtime state", async () => {
   const app = harness();
   assert.equal(await run(["--version"], app.deps), 0);
-  assert.equal(app.stdout.text(), "0.2.0\n");
+  assert.equal(app.stdout.text(), "0.2.1\n");
   assert.equal(app.calls.length, 0);
 });
 

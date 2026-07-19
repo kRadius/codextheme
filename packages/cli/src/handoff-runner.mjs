@@ -90,6 +90,7 @@ export async function runHandoffJob({
   cache,
   lifecycle = { applyTheme, applyPrivateTheme },
   waitForParentExit = waitForProcessExit,
+  settleAfterParentExit = () => delay(1500),
   notify = notifyHandoff,
   now = () => new Date(),
 }) {
@@ -97,6 +98,7 @@ export async function runHandoffJob({
   try {
     const job = await store.readPending();
     await waitForParentExit(job.parentPid);
+    await settleAfterParentExit();
     await applyJob({ job, lifecycle, cache, runtime, stateStore, now });
     await store.writeResult({
       schemaVersion: 1,

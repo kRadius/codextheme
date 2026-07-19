@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildInstallCopy } from "../app/lib/install-copy.mjs";
 
-const catalogCommand = "npx --yes @codextheme/cli@0.2.0 apply cathedral-nocturne";
-const privateCommand = "npx --yes @codextheme/cli@0.2.0 apply-private mrsm16zh.UsX3wZp4MRN7Y54nKXfLKH5dwSyWLzSi";
+const catalogCommand = "npx --yes @codextheme/cli@0.2.1 apply cathedral-nocturne";
+const privateCommand = "npx --yes @codextheme/cli@0.2.1 apply-private mrsm16zh.UsX3wZp4MRN7Y54nKXfLKH5dwSyWLzSi";
 
 test("agent copy constrains the Code Agent and preserves the exact command", () => {
   const payload = buildInstallCopy(catalogCommand, "agent");
@@ -12,6 +12,8 @@ test("agent copy constrains the Code Agent and preserves the exact command", () 
   assert.match(payload, /Do not use any installed theme skill/);
   assert.match(payload, /substitute another package/);
   assert.match(payload, /@codextheme\/cli/);
+  assert.match(payload, /Codex may close and reopen once/);
+  assert.match(payload, /current Codex task may end/);
   assert.ok(payload.endsWith(`\n\n${catalogCommand}`));
 });
 
@@ -23,7 +25,8 @@ test("copy rejects commands that are not a pinned install action", () => {
   for (const command of [
     `${catalogCommand}\necho injected`,
     "npx --yes @codextheme/cli@latest apply cathedral-nocturne",
-    "npx --yes @codextheme/cli@0.2.0 restore",
+    "npx --yes @codextheme/cli@0.2.1 restore",
+    "npx --yes @codextheme/cli@0.2.0 apply cathedral-nocturne",
     "npx --yes @codedrobe/core apply cathedral-nocturne",
   ]) {
     assert.throws(

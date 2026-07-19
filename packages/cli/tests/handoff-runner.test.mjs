@@ -16,6 +16,7 @@ function harness(job) {
       async removePending() { calls.push(["store.removePending"]); },
     },
     waitForParentExit: async (pid) => { calls.push(["waitForParentExit", pid]); },
+    settleAfterParentExit: async () => { calls.push(["settleAfterParentExit"]); },
     notify: async (status) => { calls.push(["notify", status]); },
     now: () => new Date(completedAt),
     stateStore: { marker: "state" },
@@ -42,9 +43,10 @@ test("handoff runner waits for the foreground process and applies a catalog them
   const exitCode = await runHandoffJob({ ...app, runtime, lifecycle, cache: {} });
 
   assert.equal(exitCode, 0);
-  assert.deepEqual(app.calls.slice(0, 3), [
+  assert.deepEqual(app.calls.slice(0, 4), [
     ["store.readPending"],
     ["waitForParentExit", 4321],
+    ["settleAfterParentExit"],
     ["applyTheme", "cathedral-nocturne", runtime, app.stateStore],
   ]);
   assert.deepEqual(app.results, [{
