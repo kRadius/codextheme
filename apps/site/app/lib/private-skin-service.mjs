@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { del, get, list, put } from "@vercel/blob";
 import sharp from "sharp";
 import { buildPrivateSkinPackage } from "./private-skin-package.mjs";
-import { derivePalette } from "./private-skin-palette.mjs";
+import { analyzeImagePixels } from "./private-skin-profile.mjs";
 import {
   MAX_PRIVATE_PACKAGE_BYTES,
   MAX_SOURCE_IMAGE_BYTES,
@@ -22,6 +22,18 @@ function serviceError(code, message) {
 
 async function streamText(stream) {
   return new Response(stream).text();
+}
+
+function isValidPixelSample(sample) {
+  if (!(sample?.data instanceof Uint8Array)) return false;
+  if (sample.data.byteLength > 4096) return false;
+  if (sample.channels !== 3 && sample.channels !== 4) return false;
+  if (!Number.isSafeInteger(sample.width) || sample.width <= 0) return false;
+  if (!Number.isSafeInteger(sample.height) || sample.height <= 0) return false;
+  const pixelCount = sample.width * sample.height;
+  if (!Number.isSafeInteger(pixelCount) || pixelCount > 4096) return false;
+  const requiredLength = pixelCount * sample.channels;
+  return Number.isSafeInteger(requiredLength) && sample.data.byteLength >= requiredLength;
 }
 
 export const vercelPrivateBlob = {
@@ -66,11 +78,18 @@ export async function normalizeUploadedImage(source) {
     throw serviceError("E_IMAGE_TOO_SMALL", "The image must be at least 800 by 500 pixels.");
   }
 
-  const dominantStats = await sharp(source, { animated: false }).rotate().resize({
-    width: 48,
-    height: 48,
-    fit: "cover",
-  }).stats();
+  const { data: sampledData, info: sampledInfo } = await sharp(source, { animated: false })
+    .rotate()
+    .resize({ width: 32, height: 32, fit: "fill" })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const sample = {
+    data: new Uint8Array(sampledData),
+    width: sampledInfo.width,
+    height: sampledInfo.height,
+    channels: sampledInfo.channels,
+  };
 
   for (const width of [1920, 1600, 1280]) {
     for (const quality of [82, 72, 62, 52]) {
@@ -84,7 +103,7 @@ export async function normalizeUploadedImage(source) {
           buffer: data,
           width: info.width,
           height: info.height,
-          dominant: dominantStats.dominant,
+          sample,
         };
       }
     }
@@ -103,16 +122,19 @@ export function createPrivateSkinService({
       if (!(processed?.buffer instanceof Uint8Array) || processed.buffer.byteLength > MAX_NORMALIZED_IMAGE_BYTES) {
         throw serviceError("E_INVALID_UPLOAD", "The processed image is invalid.");
       }
+      if (!isValidPixelSample(processed.sample)) {
+        throw serviceError("E_INVALID_UPLOAD", "The processed image sample is invalid.");
+      }
       const id = createPrivateSkinId({ now, randomBytes });
       const { expiresAt } = parsePrivateSkinId(id);
       const normalized = normalizePrivateSkinSettings(settings);
-      const palette = derivePalette(processed.dominant);
+      const profile = analyzeImagePixels(processed.sample);
       const serialized = buildPrivateSkinPackage({
         id,
         exportedAt: now.toISOString(),
         image: processed.buffer,
         settings: normalized,
-        palette,
+        profile,
       });
       try {
         await blob.put(privateSkinPathname(id), serialized);

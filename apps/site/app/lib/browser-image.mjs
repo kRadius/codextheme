@@ -1,4 +1,4 @@
-import { derivePalette } from "./private-skin-palette.mjs";
+import { analyzeImagePixels } from "./private-skin-profile.mjs";
 import {
   MAX_IMAGE_HEIGHT,
   MAX_IMAGE_WIDTH,
@@ -32,30 +32,19 @@ function canvasBlob(canvas, quality) {
   return new Promise((resolve) => canvas.toBlob(resolve, "image/webp", quality));
 }
 
-function sampledColor(canvas) {
+export function sampledPixels(canvas) {
   const sample = document.createElement("canvas");
   sample.width = 32;
   sample.height = 32;
   const context = sample.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("A 2D canvas context is unavailable for image analysis.");
   context.drawImage(canvas, 0, 0, 32, 32);
-  const pixels = context.getImageData(0, 0, 32, 32).data;
-  let red = 0;
-  let green = 0;
-  let blue = 0;
-  let weight = 0;
-  for (let index = 0; index < pixels.length; index += 4) {
-    if (pixels[index + 3] < 128) continue;
-    const maximum = Math.max(pixels[index], pixels[index + 1], pixels[index + 2]);
-    const minimum = Math.min(pixels[index], pixels[index + 1], pixels[index + 2]);
-    const saturationWeight = Math.max(1, maximum - minimum);
-    red += pixels[index] * saturationWeight;
-    green += pixels[index + 1] * saturationWeight;
-    blue += pixels[index + 2] * saturationWeight;
-    weight += saturationWeight;
-  }
-  return weight
-    ? { red: red / weight, green: green / weight, blue: blue / weight }
-    : { red: 120, green: 100, blue: 180 };
+  return {
+    data: context.getImageData(0, 0, 32, 32).data,
+    width: 32,
+    height: 32,
+    channels: 4,
+  };
 }
 
 export async function processBrowserImage(file) {
@@ -94,7 +83,7 @@ export async function processBrowserImage(file) {
       url: URL.createObjectURL(blob),
       width: canvas.width,
       height: canvas.height,
-      palette: derivePalette(sampledColor(canvas)),
+      profile: analyzeImagePixels(sampledPixels(canvas)),
     };
   } finally {
     bitmap.close();

@@ -22,6 +22,8 @@ import {
 } from "@codextheme/runtime";
 import {
   buildPrivateSkinForm,
+  processBrowserImage,
+  sampledPixels,
   validateSourceFile,
 } from "../app/lib/browser-image.mjs";
 
@@ -411,11 +413,116 @@ test("browser upload accepts only bounded raster sources", () => {
   });
 });
 
-test("upload request omits filename, palette, and source metadata", () => {
+test("upload request retains only the normalized seven-field settings contract", () => {
   const body = buildPrivateSkinForm({
     image: new Blob(["x"], { type: "image/webp" }),
-    settings: { visibility: 90, unknown: "discard" },
+    settings: {
+      recipe: "glass",
+      visibility: 90,
+      profile: { primary: "#ffffff" },
+      palette: { accent: "#ffffff" },
+      filename: "private.webp",
+      unknown: "discard",
+    },
   });
   assert.deepEqual([...body.keys()], ["image", "settings"]);
-  assert.deepEqual(JSON.parse(String(body.get("settings"))), normalizePrivateSkinSettings({ visibility: 90 }));
+  const settings = JSON.parse(String(body.get("settings")));
+  assert.deepEqual(settings, {
+    recipe: "glass",
+    visibility: 90,
+    overlay: 42,
+    blur: 2,
+    zoom: 110,
+    positionX: 50,
+    positionY: 50,
+  });
+  assert.deepEqual(Object.keys(settings), [
+    "recipe",
+    "visibility",
+    "overlay",
+    "blur",
+    "zoom",
+    "positionX",
+    "positionY",
+  ]);
+  for (const key of ["profile", "unknown", "palette", "filename"]) {
+    assert.equal(Object.hasOwn(settings, key), false);
+  }
+});
+
+test("browser sampling fails clearly when a 2D canvas is unavailable", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = { createElement: () => ({ getContext: () => null }) };
+  try {
+    assert.throws(
+      () => sampledPixels({}),
+      /2D canvas context is unavailable/u,
+    );
+  } finally {
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+  }
+});
+
+test("browser processing returns the shared profile from a bounded RGBA sample", async () => {
+  const previousDocument = globalThis.document;
+  const previousCreateImageBitmap = globalThis.createImageBitmap;
+  const pixels = new Uint8ClampedArray(32 * 32 * 4);
+  for (let index = 0; index < pixels.length; index += 4) {
+    pixels[index] = 220;
+    pixels[index + 1] = index % 8 === 0 ? 180 : 48;
+    pixels[index + 2] = 76;
+    pixels[index + 3] = 255;
+  }
+  let canvasCount = 0;
+  let closed = false;
+  globalThis.document = {
+    createElement(type) {
+      assert.equal(type, "canvas");
+      canvasCount += 1;
+      if (canvasCount === 1) {
+        return {
+          getContext: () => ({
+            fillRect() {},
+            drawImage() {},
+            set fillStyle(value) {},
+          }),
+          toBlob(callback) {
+            callback(new Blob(["normalized"], { type: "image/webp" }));
+          },
+        };
+      }
+      return {
+        getContext: () => ({
+          drawImage() {},
+          getImageData: () => ({ data: pixels }),
+        }),
+      };
+    },
+  };
+  globalThis.createImageBitmap = async () => ({
+    width: 800,
+    height: 500,
+    close() { closed = true; },
+  });
+
+  try {
+    const processed = await processBrowserImage(new Blob(["source"], { type: "image/png" }));
+    assert.deepEqual(processed.profile, analyzeImagePixels({
+      data: pixels,
+      width: 32,
+      height: 32,
+      channels: 4,
+    }));
+    assert.equal(Object.hasOwn(processed, "palette"), false);
+    assert.equal(processed.width, 800);
+    assert.equal(processed.height, 500);
+    assert.equal(closed, true);
+    URL.revokeObjectURL(processed.url);
+  } finally {
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+    if (previousCreateImageBitmap === undefined) delete globalThis.createImageBitmap;
+    else globalThis.createImageBitmap = previousCreateImageBitmap;
+  }
 });

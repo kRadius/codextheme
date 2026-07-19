@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CodexMockup } from "./CodexMockup";
 import { buildPrivateSkinForm, processBrowserImage, validateSourceFile } from "../lib/browser-image.mjs";
 import { DEFAULT_PRIVATE_SKIN_SETTINGS, normalizePrivateSkinSettings } from "../lib/private-skin-schema.mjs";
+import { derivePaletteFromProfile } from "../lib/private-skin-profile.mjs";
 import { trackStudioEvent } from "../lib/analytics.mjs";
 import { buildInstallCopy } from "../lib/install-copy.mjs";
 
@@ -11,6 +12,16 @@ const SAMPLE = "/themes/crimson-eclipse/hero.jpg";
 const SAMPLE_PALETTE = { accent: "#d95764", surface: "#170d10", ink: "#f4f1eb" };
 
 type Result = { command: string; expiresAt: string };
+type ImageProfile = {
+  primary: string;
+  secondary: string;
+  highlight: string;
+  luminance: number;
+  saturation: number;
+  contrast: number;
+  complexity: number;
+  recommendedRecipe: string;
+};
 type SkinSettings = {
   visibility: number;
   overlay: number;
@@ -23,7 +34,7 @@ type SkinSettings = {
 export function CustomSkinStudio() {
   const [status, setStatus] = useState<"sample" | "editing" | "creating" | "ready" | "error">("sample");
   const [mode, setMode] = useState<"home" | "session">("home");
-  const [image, setImage] = useState<{ blob: Blob; url: string; palette: typeof SAMPLE_PALETTE } | null>(null);
+  const [image, setImage] = useState<{ blob: Blob; url: string; profile: ImageProfile } | null>(null);
   const [settings, setSettings] = useState<SkinSettings>({ ...DEFAULT_PRIVATE_SKIN_SETTINGS });
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<Result | null>(null);
@@ -102,7 +113,7 @@ export function CustomSkinStudio() {
     }
   }
 
-  const palette = image?.palette ?? SAMPLE_PALETTE;
+  const palette = image ? derivePaletteFromProfile(image.profile) : SAMPLE_PALETTE;
   const imageUrl = image?.url ?? SAMPLE;
   const canEdit = Boolean(image);
 
