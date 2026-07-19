@@ -1,8 +1,12 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { deriveSkinTokens } from "../lib/private-skin-profile.mjs";
+
+type RecipeId = "cinematic" | "glass" | "focus";
 
 type SkinSettings = {
+  recipe: RecipeId;
   visibility: number;
   overlay: number;
   blur: number;
@@ -11,30 +15,58 @@ type SkinSettings = {
   positionY: number;
 };
 
-type Palette = { accent: string; surface: string; ink: string };
+type ImageProfile = {
+  primary: string;
+  secondary: string;
+  highlight: string;
+  luminance: number;
+  saturation: number;
+  contrast: number;
+  complexity: number;
+  recommendedRecipe: RecipeId;
+};
 
 export function CodexMockup({
   imageUrl,
+  profile,
   settings,
-  palette,
   mode,
   onModeChange,
 }: {
   imageUrl: string;
+  profile: ImageProfile;
   settings: SkinSettings;
-  palette: Palette;
   mode: "home" | "session";
   onModeChange: (mode: "home" | "session") => void;
 }) {
+  const tokens = deriveSkinTokens(profile, settings);
   const style = {
-    "--studio-accent": palette.accent,
-    "--studio-surface": palette.surface,
-    "--studio-ink": palette.ink,
-    "--studio-visibility": settings.visibility / 100,
-    "--studio-overlay": settings.overlay / 100,
-    "--studio-blur": `${settings.blur}px`,
-    "--studio-zoom": settings.zoom / 100,
-    "--studio-position": `${settings.positionX}% ${settings.positionY}%`,
+    "--studio-accent": tokens.accent,
+    "--studio-accent-soft": tokens.accentSoft,
+    "--studio-surface": tokens.surface,
+    "--studio-surface-raised": tokens.surfaceRaised,
+    "--studio-ink": tokens.ink,
+    "--studio-muted-ink": tokens.mutedInk,
+    "--studio-visibility": tokens.visibility / 100,
+    "--studio-overlay": tokens.overlay / 100,
+    "--studio-blur": `${tokens.blur}px`,
+    "--studio-zoom": tokens.zoom / 100,
+    "--studio-position": `${tokens.positionX}% ${tokens.positionY}%`,
+    "--studio-sidebar-alpha": `${tokens.sidebarAlpha}%`,
+    "--studio-main-alpha": `${tokens.mainAlpha}%`,
+    "--studio-header-alpha": `${tokens.headerAlpha}%`,
+    "--studio-composer-alpha": `${tokens.composerAlpha}%`,
+    "--studio-code-alpha": `${tokens.codeAlpha}%`,
+    "--studio-selection-alpha": `${tokens.selectionAlpha}%`,
+    "--studio-sidebar-blur": `${tokens.sidebarBlur}px`,
+    "--studio-main-blur": `${tokens.mainBlur}px`,
+    "--studio-header-blur": `${tokens.headerBlur}px`,
+    "--studio-composer-blur": `${tokens.composerBlur}px`,
+    "--studio-border-alpha": `${tokens.borderAlpha}%`,
+    "--studio-radius": `${tokens.radius}px`,
+    "--studio-shadow": tokens.shadow,
+    "--studio-saturation": tokens.saturation / 100,
+    "--studio-image-contrast": tokens.imageContrast / 100,
   } as CSSProperties;
 
   return (
@@ -86,7 +118,7 @@ export function CodexMockup({
         )}
         <div className="mockup-composer"><span>Ask Codex anything</span><b>↑</b></div>
       </main>
-      <figcaption><span>LIVE BROWSER PREVIEW</span><b>{mode === "home" ? "CODEX HOME" : "CODEX SESSION"}</b></figcaption>
+      <figcaption><span>LIVE BROWSER PREVIEW · {tokens.recipe.toUpperCase()} SKIN</span><b>{mode === "home" ? "CODEX HOME" : "CODEX SESSION"}</b></figcaption>
     </figure>
   );
 }

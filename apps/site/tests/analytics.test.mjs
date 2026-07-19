@@ -45,3 +45,27 @@ test("studio tracking accepts only coarse events and normalized errors", async (
     ["event", "custom_create_error", { error_category: "invalid_upload" }],
   ]);
 });
+
+test("recipe tracking exposes only the closed style and recommendation flag", async () => {
+  const analytics = await loadAnalytics();
+  const calls = [];
+  const target = { gtag: (...args) => calls.push(args) };
+
+  assert.equal(analytics.trackRecipeSelect("glass", true, target), true);
+  assert.equal(analytics.trackRecipeSelect("custom-css", false, target), false);
+  assert.deepEqual(calls, [
+    ["event", "custom_recipe_select", { recipe: "glass", recommended: "yes" }],
+  ]);
+});
+
+test("recipe tracking records non-recommended closed styles without extra data", async () => {
+  const analytics = await loadAnalytics();
+  const calls = [];
+  const target = { gtag: (...args) => calls.push(args) };
+
+  assert.equal(analytics.trackRecipeSelect("focus", false, target), true);
+  assert.equal(analytics.trackRecipeSelect("glass", { image: "data" }, target), false);
+  assert.deepEqual(calls, [
+    ["event", "custom_recipe_select", { recipe: "focus", recommended: "no" }],
+  ]);
+});

@@ -31,6 +31,7 @@ const ERROR_CATEGORIES = new Set([
   "network",
   "service_unavailable",
 ]);
+const RECIPE_IDS = new Set(["cinematic", "glass", "focus"]);
 
 export function trackStudioEvent(name, errorCategory, target = globalThis) {
   if (!STUDIO_EVENTS.has(name) || typeof target?.gtag !== "function") return false;
@@ -38,5 +39,14 @@ export function trackStudioEvent(name, errorCategory, target = globalThis) {
     ? { error_category: errorCategory }
     : {};
   target.gtag("event", name, parameters);
+  return true;
+}
+
+export function trackRecipeSelect(recipe, recommended, target = globalThis) {
+  if (!RECIPE_IDS.has(recipe) || typeof recommended !== "boolean" || typeof target?.gtag !== "function") return false;
+  target.gtag("event", "custom_recipe_select", {
+    recipe,
+    recommended: recommended ? "yes" : "no",
+  });
   return true;
 }
