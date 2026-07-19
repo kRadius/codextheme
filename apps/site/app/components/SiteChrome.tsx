@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export const SUBMIT_THEME_URL = "https://github.com/kRadius/codextheme/issues/new?title=Theme%20submission%3A%20&body=Theme%20name%3A%0AStyle%20description%3A%0AAsset%20sources%20and%20licenses%3A%0A";
@@ -7,7 +8,7 @@ const REPOSITORY_URL = "https://github.com/kRadius/codextheme";
 function BrandLink() {
   return (
     <Link className="brand" href="/">
-      <img className="brand-mark" src="/brand-mark.svg" width="22" height="22" alt="" />
+      <Image className="brand-mark" src="/brand-mark.svg" width={22} height={22} alt="" />
       codextheme.tech
     </Link>
   );

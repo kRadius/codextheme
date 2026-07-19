@@ -75,7 +75,7 @@ test("home and every flagship theme render screenshot-first crawlable HTML", asy
   assert.match(homeHtml, /<link rel="canonical" href="https:\/\/codextheme\.tech"/);
   assert.match(homeHtml, /<link rel="icon" href="\/brand-mark\.svg" type="image\/svg\+xml"/);
   assert.match(homeHtml, /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png" sizes="180x180" type="image\/png"/);
-  const visibleBrandMarks = [...homeHtml.matchAll(/<img class="brand-mark" src="\/brand-mark\.svg" width="22" height="22" alt=""/g)];
+  const visibleBrandMarks = [...homeHtml.matchAll(/<img(?=[^>]*class="brand-mark")(?=[^>]*src="\/brand-mark\.svg")(?=[^>]*width="22")(?=[^>]*height="22")(?=[^>]*alt="")(?=[^>]*data-nimg="1")[^>]*>/g)];
   assert.equal(visibleBrandMarks.length, 2);
 
   const jsonLdBlocks = [...homeHtml.matchAll(
