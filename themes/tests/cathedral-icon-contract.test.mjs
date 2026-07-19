@@ -109,15 +109,21 @@ test("lint policy exempts only registered Cathedral selector warnings", async ()
     selector: `${root} ${selector}`,
   };
 
-  assert.deepEqual(policy.unapprovedThemeLintWarnings("cathedral-nocturne", [approved]), []);
-  assert.deepEqual(policy.unapprovedThemeLintWarnings("silver-reliquary", [approved]), []);
-  assert.equal(policy.unapprovedThemeLintWarnings("silver-reliquary", [
+  const cathedral = { theme: { id: "cathedral-nocturne", version: "1.1.0" } };
+  const silver = { theme: { id: "silver-reliquary", version: "1.0.0" } };
+
+  assert.deepEqual(policy.unapprovedCatalogThemeLintWarnings(cathedral, [approved]), []);
+  assert.deepEqual(policy.unapprovedCatalogThemeLintWarnings(silver, [approved]), []);
+  assert.equal(policy.unapprovedCatalogThemeLintWarnings(silver, [
     { ...approved, location: "targets.codex.verification.recommended.icon-new-chat", selector },
   ]).length, 1);
-  assert.equal(policy.unapprovedThemeLintWarnings("cathedral-nocturne", [
+  assert.equal(policy.unapprovedCatalogThemeLintWarnings(cathedral, [
     { ...approved, code: "external-resource" },
   ]).length, 1);
-  assert.equal(policy.unapprovedThemeLintWarnings("cathedral-nocturne", [
+  assert.equal(policy.unapprovedCatalogThemeLintWarnings(cathedral, [
     { ...approved, selector: `${root} body svg` },
   ]).length, 1);
+  assert.equal(policy.unapprovedCatalogThemeLintWarnings({
+    theme: { id: "private-aaaaaaaaaaaaaaaaaaaa", version: "1.1.0" },
+  }, [approved]).length, 1);
 });

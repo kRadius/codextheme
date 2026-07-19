@@ -1,4 +1,5 @@
 import * as runtimeCore from "@codextheme/runtime";
+import { unapprovedCatalogThemeLintWarnings } from "./catalog-theme-policy.mjs";
 import { themeFilename } from "./catalog.mjs";
 
 const RENDERER_ABSENT_CODES = new Set(["CODEDROBE_TARGET_TIMEOUT", "ECONNREFUSED"]);
@@ -48,11 +49,15 @@ export function createRuntime({ core = runtimeCore, platform = process.platform 
   function resolveSafeTheme(bundle) {
     try {
       core.validateThemePackage(bundle);
-      if (core.lintThemePackage(bundle).length) throw new Error("lint");
+      if (unapprovedCatalogThemeLintWarnings(bundle, core.lintThemePackage(bundle)).length) {
+        throw new Error("lint");
+      }
       const migrated = migratePrivateBackgroundAnchor(bundle);
       if (migrated !== bundle) {
         core.validateThemePackage(migrated);
-        if (core.lintThemePackage(migrated).length) throw new Error("lint");
+        if (unapprovedCatalogThemeLintWarnings(migrated, core.lintThemePackage(migrated)).length) {
+          throw new Error("lint");
+        }
       }
       return core.resolveThemeTarget(migrated, adapter.id);
     } catch {

@@ -8,7 +8,7 @@ import {
   writeThemePackage,
 } from "@codextheme/runtime";
 import { CATHEDRAL_ICON_IDS } from "./generate-cathedral-icons.mjs";
-import { unapprovedThemeLintWarnings } from "./theme-lint-policy.mjs";
+import { unapprovedCatalogThemeLintWarnings } from "./theme-lint-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repo = path.resolve(root, "..");
@@ -31,7 +31,7 @@ for (const entry of catalog.filter((theme) => theme.status === "available")) {
   await writeThemePackage(manifest, output, { force: true, exportedAt });
   const bundle = await readThemePackage(output);
   const warnings = lintThemePackage(bundle);
-  const unapprovedWarnings = unapprovedThemeLintWarnings(entry.slug, warnings);
+  const unapprovedWarnings = unapprovedCatalogThemeLintWarnings(bundle, warnings);
   if (unapprovedWarnings.length) {
     throw new Error(`${entry.slug} has theme lint warnings: ${JSON.stringify(unapprovedWarnings)}`);
   }

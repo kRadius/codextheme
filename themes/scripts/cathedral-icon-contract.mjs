@@ -1,24 +1,6 @@
-const sidebarPrefix = 'aside.app-shell-left-panel [role="navigation"] .vertical-scroll-fade-mask > div:first-child > div > div > div';
+import { CATHEDRAL_ICON_ANCHORS } from "../../packages/cli/src/catalog-theme-policy.mjs";
 
-export const CATHEDRAL_ICON_ANCHORS = Object.freeze([
-  { id: "icon-new-chat", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(1) svg`, expected: 1 },
-  { id: "icon-pull-requests", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(2) svg`, expected: 1 },
-  { id: "icon-scheduled", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(3) svg`, expected: 1 },
-  { id: "icon-plugins", contexts: ["home", "session"], selector: `${sidebarPrefix} > button:nth-child(4) svg`, expected: 1 },
-  {
-    id: "icon-project-folder",
-    contexts: ["home", "session"],
-    selector: "aside.app-shell-left-panel .group\\/folder-row > div:first-child > span:first-child > svg",
-    min: 1,
-    max: 20,
-  },
-  { id: "icon-explore", contexts: ["home"], selector: ".dream-home .group\\/home-suggestions button:nth-child(1) svg", expected: 1 },
-  { id: "icon-build", contexts: ["home"], selector: ".dream-home .group\\/home-suggestions button:nth-child(2) svg", expected: 1 },
-  { id: "icon-review", contexts: ["home"], selector: ".dream-home .group\\/home-suggestions button:nth-child(3) svg", expected: 1 },
-  { id: "icon-fix", contexts: ["home"], selector: ".dream-home .group\\/home-suggestions button:nth-child(4) svg", expected: 1 },
-  { id: "icon-add", contexts: ["home", "session"], selector: ".composer-surface-chrome .col-start-1 button.aspect-square > svg", expected: 1 },
-  { id: "icon-send", contexts: ["home", "session"], selector: ".composer-surface-chrome button.size-token-button-composer > svg", expected: 1 },
-].map((anchor) => Object.freeze({ ...anchor, contexts: Object.freeze([...anchor.contexts]) })));
+export { CATHEDRAL_ICON_ANCHORS };
 
 export function classifyCathedralIconCounts(context, observed) {
   if (!new Set(["home", "session"]).has(context)) throw new Error("Icon probe context must be home or session.");
