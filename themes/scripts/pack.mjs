@@ -13,10 +13,15 @@ const repo = path.resolve(root, "..");
 const catalog = JSON.parse(await fs.readFile(path.join(root, "catalog.json"), "utf8"));
 const outputRoot = path.join(repo, "packages", "cli", "themes");
 const exportedAt = "2026-07-18T00:00:00.000Z";
+const compatibilitySlugs = ["aurora-glass", "crimson-eclipse", "midnight-circuit"];
+const packageEntries = [
+  ...catalog.filter((theme) => theme.status === "available"),
+  ...compatibilitySlugs.map((slug) => ({ slug, source: `themes/${slug}/theme.json` })),
+];
 
 await fs.mkdir(outputRoot, { recursive: true });
 
-for (const entry of catalog.filter((theme) => theme.status === "available")) {
+for (const entry of packageEntries) {
   const manifest = path.join(repo, entry.source);
   const output = path.join(outputRoot, `${entry.slug}.codextheme-theme`);
   await writeThemePackage(manifest, output, { force: true, exportedAt });
@@ -32,4 +37,4 @@ for (const entry of catalog.filter((theme) => theme.status === "available")) {
   }
 }
 
-console.log(`Packed and verified ${catalog.filter((theme) => theme.status === "available").length} available Codex themes.`);
+console.log(`Packed and verified ${packageEntries.length} Codex themes.`);
