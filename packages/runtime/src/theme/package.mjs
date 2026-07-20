@@ -1,8 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+  isHistoricalThemePackage,
+  normalizeHistoricalThemePackage,
+} from "./historical-package.mjs";
 
 export const THEME_FORMAT = "codextheme-theme";
-export const HISTORICAL_THEME_FORMAT = "codedrobe-theme";
 export const THEME_EXTENSION = ".codextheme-theme";
 export const THEME_SCHEMA_VERSION = 1;
 export const MAX_THEME_PACKAGE_BYTES = 30 * 1024 * 1024;
@@ -22,7 +25,7 @@ const MAX_LINT_SELECTOR_DISPLAY_LENGTH = 240;
 
 export function normalizeThemePackage(bundle) {
   if (bundle?.format === THEME_FORMAT) return bundle;
-  if (bundle?.format === HISTORICAL_THEME_FORMAT) return { ...bundle, format: THEME_FORMAT };
+  if (isHistoricalThemePackage(bundle)) return normalizeHistoricalThemePackage(bundle, THEME_FORMAT);
   throw new Error(`Unsupported theme format '${bundle?.format ?? "missing"}'.`);
 }
 

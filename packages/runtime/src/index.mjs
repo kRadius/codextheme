@@ -8,13 +8,11 @@ export { prepareHostSettings, restoreHostSettings } from "./runtime/host-setting
 export {
   MAX_THEME_PACKAGE_BYTES,
   MAX_THEME_IMAGES,
-  HISTORICAL_THEME_FORMAT,
   THEME_EXTENSION,
   THEME_FORMAT,
   THEME_SCHEMA_VERSION,
   buildThemePackage,
   lintThemePackage,
-  normalizeThemePackage,
   readThemePackage,
   resolveThemeTarget,
   validateThemePackage,

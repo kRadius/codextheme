@@ -90,7 +90,7 @@ function browserContext() {
       return home.classList.contains("dream-home") ? [home] : [];
     }
     if (selector === ".dream-home-shell") {
-      return [shell, ids.get("codedrobe-codex-skin-chrome")].filter((node) => node?.classList.contains("dream-home-shell"));
+      return [shell, ids.get("codextheme-codex-skin-chrome")].filter((node) => node?.classList.contains("dream-home-shell"));
     }
     return [];
   };
@@ -102,7 +102,7 @@ function browserContext() {
     getComputedStyle: (node) => ({
       display: "block",
       visibility: "visible",
-      pointerEvents: node?.id === "codedrobe-codex-skin-chrome" ? "none" : "auto",
+      pointerEvents: node?.id === "codextheme-codex-skin-chrome" ? "none" : "auto",
     }),
     MutationObserver: class { observe() {} disconnect() {} },
     setTimeout: () => 1,
@@ -112,14 +112,14 @@ function browserContext() {
     atob: globalThis.atob,
     Blob: globalThis.Blob,
     URL: {
-      createObjectURL: () => `blob:codedrobe-image-${++objectUrlSequence}`,
+      createObjectURL: () => `blob:codextheme-image-${++objectUrlSequence}`,
       revokeObjectURL: (url) => revokedUrls.push(url),
     },
   };
   return { context, root, home, ids, revokedUrls };
 }
 
-test("Codex legacy renderer profile restores old classes, copy, art, verification, and cleanup", () => {
+test("Codex renderer profile installs CodexTheme markers while cleaning the historical runtime", () => {
   const adapter = getAdapter("codex");
   const targetTheme = {
     theme: {
@@ -128,7 +128,7 @@ test("Codex legacy renderer profile restores old classes, copy, art, verificatio
       version: "1.0.0",
       copy: { brandTitle: "Dream title", tagline: "Dream tagline", ribbon: "🌹" },
     },
-    css: ":root.codedrobe-codex-skin { color: #432; } #codedrobe-codex-skin-chrome { pointer-events: none; }",
+    css: ":root.codextheme-codex-skin { color: #432; } #codextheme-codex-skin-chrome { pointer-events: none; }",
     options: { rendererProfile: "codex-theme-v1" },
     verification: null,
     imageDataUrls: {
@@ -150,13 +150,13 @@ test("Codex legacy renderer profile restores old classes, copy, art, verificatio
   assert.equal(oldRuntimeStopped, true);
   assert.equal(ids.has("codedrobe-codex-skin-style"), false);
   assert.equal(context.window.__CODEDROBE_CODEX_SKIN_STATE__, undefined);
-  assert.equal(root.classList.contains("codedrobe-host-codex"), true);
-  assert.equal(root.classList.contains("codedrobe-codex-skin"), true);
-  assert.equal(root.style.getPropertyValue("--dream-art"), 'url("blob:codedrobe-image-1")');
-  assert.equal(root.style.getPropertyValue("--codedrobe-image-hero"), 'url("blob:codedrobe-image-1")');
-  assert.equal(root.style.getPropertyValue("--codedrobe-image-logo"), 'url("blob:codedrobe-image-2")');
+  assert.equal(root.classList.contains("codextheme-host-codex"), true);
+  assert.equal(root.classList.contains("codextheme-codex-skin"), true);
+  assert.equal(root.style.getPropertyValue("--codextheme-art"), 'url("blob:codextheme-image-1")');
+  assert.equal(root.style.getPropertyValue("--codextheme-image-hero"), 'url("blob:codextheme-image-1")');
+  assert.equal(root.style.getPropertyValue("--codextheme-image-logo"), 'url("blob:codextheme-image-2")');
   assert.equal(home.classList.contains("dream-home"), true);
-  const chrome = ids.get("codedrobe-codex-skin-chrome");
+  const chrome = ids.get("codextheme-codex-skin-chrome");
   assert.ok(chrome);
   assert.equal(chrome.querySelector(".dream-brand-title").textContent, "Dream title");
   assert.equal(chrome.querySelector(".dream-ribbon-emoji").textContent, "🌹");
@@ -168,13 +168,13 @@ test("Codex legacy renderer profile restores old classes, copy, art, verificatio
   assert.deepEqual(JSON.parse(JSON.stringify(verified.images)), ["hero", "logo"]);
 
   vm.runInNewContext(buildRemoveExpression(adapter), context);
-  assert.equal(root.classList.contains("codedrobe-host-codex"), false);
-  assert.equal(root.classList.contains("codedrobe-codex-skin"), false);
+  assert.equal(root.classList.contains("codextheme-host-codex"), false);
+  assert.equal(root.classList.contains("codextheme-codex-skin"), false);
   assert.equal(home.classList.contains("dream-home"), false);
-  assert.equal(ids.has("codedrobe-codex-skin-chrome"), false);
-  assert.equal(root.style.getPropertyValue("--codedrobe-image-hero"), "");
-  assert.equal(root.style.getPropertyValue("--codedrobe-image-logo"), "");
-  assert.deepEqual(revokedUrls, ["blob:codedrobe-image-1", "blob:codedrobe-image-2"]);
+  assert.equal(ids.has("codextheme-codex-skin-chrome"), false);
+  assert.equal(root.style.getPropertyValue("--codextheme-image-hero"), "");
+  assert.equal(root.style.getPropertyValue("--codextheme-image-logo"), "");
+  assert.deepEqual(revokedUrls, ["blob:codextheme-image-1", "blob:codextheme-image-2"]);
 });
 
 test("Codex removal cleans a renderer that is still owned by the old Skill runtime", () => {

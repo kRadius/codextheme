@@ -1,5 +1,7 @@
+import { buildHistoricalRendererCleanupSource } from "./legacy-namespace.mjs";
+
 function safeHostClass(appId) {
-  return `codedrobe-host-${String(appId).replace(/[^a-z0-9_-]/gi, "-")}`;
+  return `codextheme-host-${String(appId).replace(/[^a-z0-9_-]/gi, "-")}`;
 }
 
 function resolveRendererProfile(adapter, targetTheme) {
@@ -17,8 +19,9 @@ function resolveRendererProfile(adapter, targetTheme) {
 
 function fallbackCleanupSource(adapter) {
   return Object.values(adapter.rendererProfiles ?? {})
-    .filter((profile) => typeof profile.cleanup === "function")
-    .map((profile) => `try { (${profile.cleanup.toString()})(); } catch {}`)
+    .flatMap((profile) => [profile.cleanup, profile.legacyCleanup])
+    .filter((cleanup) => typeof cleanup === "function")
+    .map((cleanup) => `try { (${cleanup.toString()})(); } catch {}`)
     .join("\n");
 }
 
@@ -142,6 +145,8 @@ export function buildApplyExpression({ adapter, targetTheme }) {
   });
   const profileId = JSON.stringify(profile?.id ?? null);
   const profileFactory = profile ? `(${profile.runtime.toString()})` : "null";
+  const legacyProfileCleanup = profile?.legacyCleanup ? `(${profile.legacyCleanup.toString()})` : "null";
+  const historicalRendererCleanup = buildHistoricalRendererCleanupSource(adapter);
   return `(() => {
     const host = ${host};
     const theme = ${theme};
@@ -149,9 +154,12 @@ export function buildApplyExpression({ adapter, targetTheme }) {
     const imageDataUrls = ${images};
     const profileId = ${profileId};
     const profileFactory = ${profileFactory};
-    const rootState = window.__CODEDROBE__ ||= { hosts: {} };
+    const legacyProfileCleanup = ${legacyProfileCleanup};
+    const rootState = window.__CODEXTHEME__ ||= { hosts: {} };
     rootState.hosts ||= {};
     rootState.hosts[host.id]?.cleanup?.();
+    ${historicalRendererCleanup}
+    try { legacyProfileCleanup?.(); } catch {}
     const imageUrls = {};
     const ownedImageUrls = new Set();
     const resolveImageUrl = (dataUrl) => {
@@ -183,20 +191,20 @@ export function buildApplyExpression({ adapter, targetTheme }) {
       for (const objectUrl of ownedImageUrls) globalThis.URL?.revokeObjectURL?.(objectUrl);
       throw error;
     }
-    const styleId = 'codedrobe-theme-style-' + host.id;
+    const styleId = 'codextheme-theme-style-' + host.id;
 
     const ensure = () => {
       const root = document.documentElement;
       if (!root) return false;
-      root.classList.add('codedrobe-theme', host.className);
-      root.dataset.codedrobeHost = host.id;
-      root.dataset.codedrobeTheme = theme.id;
-      root.dataset.codedrobeThemeVersion = theme.version;
+      root.classList.add('codextheme-theme', host.className);
+      root.dataset.codexthemeHost = host.id;
+      root.dataset.codexthemeTheme = theme.id;
+      root.dataset.codexthemeThemeVersion = theme.version;
       for (const [name, imageUrl] of Object.entries(imageUrls)) {
-        root.style.setProperty('--codedrobe-image-' + name, 'url("' + imageUrl + '")');
+        root.style.setProperty('--codextheme-image-' + name, 'url("' + imageUrl + '")');
       }
-      if (artUrl) root.style.setProperty('--codedrobe-art', 'url("' + artUrl + '")');
-      else root.style.removeProperty('--codedrobe-art');
+      if (artUrl) root.style.setProperty('--codextheme-art', 'url("' + artUrl + '")');
+      else root.style.removeProperty('--codextheme-art');
       let style = document.getElementById(styleId);
       if (!style) {
         style = document.createElement('style');
@@ -228,15 +236,15 @@ export function buildApplyExpression({ adapter, targetTheme }) {
       document.getElementById(styleId)?.remove();
       const root = document.documentElement;
       root?.classList.remove(host.className);
-      root?.style.removeProperty('--codedrobe-art');
-      for (const name of Object.keys(imageUrls)) root?.style.removeProperty('--codedrobe-image-' + name);
-      if (root?.dataset.codedrobeHost === host.id) {
-        delete root.dataset.codedrobeHost;
-        delete root.dataset.codedrobeTheme;
-        delete root.dataset.codedrobeThemeVersion;
+      root?.style.removeProperty('--codextheme-art');
+      for (const name of Object.keys(imageUrls)) root?.style.removeProperty('--codextheme-image-' + name);
+      if (root?.dataset.codexthemeHost === host.id) {
+        delete root.dataset.codexthemeHost;
+        delete root.dataset.codexthemeTheme;
+        delete root.dataset.codexthemeThemeVersion;
       }
       delete rootState.hosts[host.id];
-      if (!Object.keys(rootState.hosts).length) root?.classList.remove('codedrobe-theme');
+      if (!Object.keys(rootState.hosts).length) root?.classList.remove('codextheme-theme');
       return true;
     };
     rootState.hosts[host.id] = {
@@ -254,29 +262,31 @@ export function buildRemoveExpression(adapter) {
   const appId = JSON.stringify(adapter.id);
   const hostClass = JSON.stringify(safeHostClass(adapter.id));
   const fallbackCleanup = fallbackCleanupSource(adapter);
+  const historicalRendererCleanup = buildHistoricalRendererCleanupSource(adapter);
   return `(() => {
     const appId = ${appId};
-    const state = window.__CODEDROBE__?.hosts?.[appId];
-    if (state?.cleanup) return state.cleanup();
+    const state = window.__CODEXTHEME__?.hosts?.[appId];
+    try { state?.cleanup?.(); } catch {}
     ${fallbackCleanup}
-    document.getElementById('codedrobe-theme-style-' + appId)?.remove();
+    document.getElementById('codextheme-theme-style-' + appId)?.remove();
     const root = document.documentElement;
     root?.classList.remove(${hostClass});
-    root?.style.removeProperty('--codedrobe-art');
+    root?.style.removeProperty('--codextheme-art');
     if (root?.style) {
       for (let index = root.style.length - 1; index >= 0; index -= 1) {
         const name = root.style.item(index);
-        if (name.startsWith('--codedrobe-image-')) root.style.removeProperty(name);
+        if (name.startsWith('--codextheme-image-')) root.style.removeProperty(name);
       }
     }
-    if (root?.dataset.codedrobeHost === appId) {
-      delete root.dataset.codedrobeHost;
-      delete root.dataset.codedrobeTheme;
-      delete root.dataset.codedrobeThemeVersion;
+    if (root?.dataset.codexthemeHost === appId) {
+      delete root.dataset.codexthemeHost;
+      delete root.dataset.codexthemeTheme;
+      delete root.dataset.codexthemeThemeVersion;
     }
-    if (root && ![...root.classList].some((name) => name.startsWith('codedrobe-host-'))) {
-      root.classList.remove('codedrobe-theme');
+    if (root && ![...root.classList].some((name) => name.startsWith('codextheme-host-'))) {
+      root.classList.remove('codextheme-theme');
     }
+    ${historicalRendererCleanup}
     return true;
   })()`;
 }
@@ -296,7 +306,7 @@ export function buildVerifyExpression(adapter, expectedTheme = null, themeVerifi
     ${buildCompatibilityPrelude(adapter, themeVerification)}
     const expected = ${expected};
     const expectedProfileId = ${expectedProfileId};
-    const state = window.__CODEDROBE__?.hosts?.[appId];
+    const state = window.__CODEXTHEME__?.hosts?.[appId];
     const profile = state?.verifyProfile?.() ?? null;
     const profileMissing = (profile?.missing ?? []).map((item) => ({
       scope: 'profile', context: profile.id ?? state?.profileId ?? null, severity: 'required',
@@ -307,7 +317,7 @@ export function buildVerifyExpression(adapter, expectedTheme = null, themeVerifi
       installed: Boolean(state),
       themeId: state?.themeId ?? null,
       version: state?.version ?? null,
-      stylePresent: Boolean(document.getElementById('codedrobe-theme-style-' + appId)),
+      stylePresent: Boolean(document.getElementById('codextheme-theme-style-' + appId)),
       horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       images: state?.imageNames ?? [],
       profile,

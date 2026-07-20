@@ -401,7 +401,6 @@ export class CdpSession {
 
 export const VERSION: string;
 export const THEME_FORMAT: "codextheme-theme";
-export const HISTORICAL_THEME_FORMAT: "codedrobe-theme";
 export const THEME_EXTENSION: ".codextheme-theme";
 export const THEME_SCHEMA_VERSION: 1;
 export const MAX_THEME_PACKAGE_BYTES: number;
@@ -412,7 +411,6 @@ export const LEGACY_THEME_FORMAT: "codex-theme";
 export const LEGACY_THEME_EXTENSION: ".codex-theme";
 export const LEGACY_THEME_SCHEMA_VERSION: 1;
 
-export function normalizeThemePackage(bundle: ThemePackage | (Omit<ThemePackage, "format"> & { format: "codedrobe-theme" })): ThemePackage;
 
 export function listAdapters(): AppAdapter[];
 export function getAdapter(id: string): AppAdapter;

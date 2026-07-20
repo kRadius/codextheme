@@ -6,7 +6,7 @@ import { buildApplyExpression, buildProbeExpression, buildRemoveExpression, buil
 
 const targetTheme = {
   theme: { id: "dream", displayName: "Dream", version: "1.0.0" },
-  css: ":root.codedrobe-host-workbuddy { color: #432; }",
+  css: ":root.codextheme-host-workbuddy { color: #432; }",
   verification: {
     required: [{ name: "chat-surface", any: [".chat-container", ".wb-cb-chat"] }],
     recommended: [{ name: "chat-toolbar", any: [".chat-toolbar"] }],
@@ -22,16 +22,21 @@ const targetTheme = {
 test("renderer payload is namespaced by app and theme", () => {
   const adapter = getAdapter("workbuddy");
   const expression = buildApplyExpression({ adapter, targetTheme });
-  assert.match(expression, /codedrobe-host-workbuddy/);
-  assert.match(expression, /codedrobe-theme-style-/);
-  assert.match(expression, /__CODEDROBE__/);
-  assert.doesNotMatch(expression, /__CODEDROBE_CODEX_SKIN_STATE__/);
+  assert.match(expression, /codextheme-host-workbuddy/);
+  assert.match(expression, /codextheme-theme-style-/);
+  assert.match(expression, /__CODEXTHEME__/);
+  assert.match(expression, /--codextheme-image-/);
+  assert.match(expression, /dataset\.codexthemeTheme/);
+  assert.doesNotMatch(expression, /const rootState = window\.__CODEDROBE__/);
+  assert.doesNotMatch(expression, /window\.__CODEDROBE_CODEX_SKIN_STATE__\s*\|\|=/);
 });
 
 test("remove and verify expressions use the selected adapter", () => {
   const adapter = getAdapter("codex");
-  assert.match(buildRemoveExpression(adapter), /codex/);
-  assert.match(buildVerifyExpression(adapter, targetTheme.theme, targetTheme.verification), /chat-surface/);
+  const remove = buildRemoveExpression(adapter);
+  assert.match(remove, /codextheme-host-codex/);
+  assert.match(remove, /__CODEDROBE__/);
+  assert.match(buildVerifyExpression(adapter, targetTheme.theme, targetTheme.verification), /codextheme-theme-style-/);
 });
 
 test("preflight reports missing theme nodes separately from adapter landmarks", () => {

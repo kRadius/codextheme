@@ -6,7 +6,6 @@ import path from "node:path";
 import {
   THEME_EXTENSION,
   THEME_FORMAT,
-  HISTORICAL_THEME_FORMAT,
   buildThemePackage,
   lintThemePackage,
   normalizeThemePackage,
@@ -15,6 +14,7 @@ import {
   validateThemePackage,
   writeThemePackage,
 } from "../src/theme/package.mjs";
+import { HISTORICAL_THEME_FORMAT } from "../src/theme/historical-package.mjs";
 
 const exampleManifest = new URL("../examples/dream/theme.json", import.meta.url);
 
@@ -47,12 +47,31 @@ test("normalizes historical package input without mutating the source", () => {
   assert.equal(HISTORICAL_THEME_FORMAT, "codedrobe-theme");
   const normalized = normalizeThemePackage(legacyBundle);
   assert.equal(normalized.format, THEME_FORMAT);
+  assert.match(normalized.targets.codex.css, /:root \{ color: red; \}/);
   assert.notEqual(normalized, legacyBundle);
   assert.equal(legacyBundle.format, HISTORICAL_THEME_FORMAT);
   assert.equal(validateThemePackage(legacyBundle).format, THEME_FORMAT);
   assert.throws(
     () => normalizeThemePackage({ ...legacyBundle, format: "unknown-theme" }),
     /Unsupported theme format/,
+  );
+});
+
+test("migrates historical renderer selectors and image variables in memory", () => {
+  const normalized = normalizeThemePackage({
+    format: HISTORICAL_THEME_FORMAT,
+    schemaVersion: 1,
+    theme: { id: "legacy-css", displayName: "Legacy CSS", version: "1.0.0" },
+    targets: {
+      codex: {
+        css: "html.codedrobe-host-codex.codedrobe-codex-skin #codedrobe-codex-skin-chrome { background: var(--codedrobe-image-hero); }",
+      },
+    },
+  });
+
+  assert.equal(
+    normalized.targets.codex.css,
+    "html.codextheme-host-codex.codextheme-codex-skin #codextheme-codex-skin-chrome { background: var(--codextheme-image-hero); }",
   );
 });
 

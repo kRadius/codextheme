@@ -63,7 +63,7 @@ test("DOM snapshot exposes selector and style evidence without renderer content"
   const elements = [html, body, sidebar, button, hidden];
   const context = {
     document: {
-      documentElement: { dataset: { codedrobeTheme: "existing-theme", codedrobeThemeVersion: "2.0.0" } },
+      documentElement: { dataset: { codexthemeTheme: "existing-theme", codexthemeThemeVersion: "2.0.0" } },
       querySelectorAll(selector) {
         return elements.filter((element) => matchesSimple(element, selector));
       },
@@ -91,6 +91,7 @@ test("DOM snapshot exposes selector and style evidence without renderer content"
       hash: "#TOP_SECRET_HASH",
     },
     CSS: { escape: (value) => value.replace(/\//g, "\\/") },
+    __CODEXTHEME__: { hosts: { workbuddy: { themeId: "existing-theme", version: "2.0.0" } } },
   };
   const adapter = {
     id: "workbuddy",
