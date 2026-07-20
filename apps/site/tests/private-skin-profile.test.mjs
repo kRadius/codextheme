@@ -365,7 +365,7 @@ test("skin tokens expose only the closed semantic contract", () => {
     codeAlpha: 78,
     selectionAlpha: 16,
     sidebarBlur: 26,
-    mainBlur: 14,
+    mainBlur: 0,
     headerBlur: 24,
     composerBlur: 28,
     borderAlpha: 30,

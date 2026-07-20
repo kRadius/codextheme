@@ -80,7 +80,7 @@ test("create stores one private package and returns no blob url", async () => {
   assert.equal(stored.format, "codextheme-theme");
   assert.doesNotMatch(JSON.stringify(stored), /codedrobe/iu);
   const target = stored.targets.codex;
-  assert.match(target.css, /filter: blur\(6px\)/u);
+  assert.match(target.css, /main\.main-surface\s*\{[^}]*backdrop-filter: blur\(0px\)/su);
   assert.match(target.css, /var\(--codextheme-surface\) 94%/u);
   assert.match(target.css, /var\(--codextheme-surface-raised\) 98%/u);
   assert.notEqual(target.options.baseTheme.accent, "#c4b5fd");
