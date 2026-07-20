@@ -5,8 +5,8 @@ import {
 
 const BASES = Object.freeze({
   cinematic: Object.freeze({
-    visibility: 84,
-    overlay: 38,
+    visibility: 92,
+    overlay: 28,
     blur: 0,
     zoom: 108,
     sidebarAlpha: 78,
@@ -30,9 +30,9 @@ const BASES = Object.freeze({
     shadow: "0 22px 58px rgba(0,0,0,.42)",
   }),
   glass: Object.freeze({
-    visibility: 76,
-    overlay: 44,
-    blur: 1,
+    visibility: 90,
+    overlay: 30,
+    blur: 0,
     zoom: 110,
     sidebarAlpha: 62,
     mainAlpha: 20,
@@ -55,9 +55,9 @@ const BASES = Object.freeze({
     shadow: "0 18px 42px rgba(0,0,0,.30)",
   }),
   focus: Object.freeze({
-    visibility: 48,
-    overlay: 60,
-    blur: 6,
+    visibility: 78,
+    overlay: 44,
+    blur: 1,
     zoom: 112,
     sidebarAlpha: 94,
     mainAlpha: 82,
