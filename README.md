@@ -16,6 +16,8 @@ npx --yes @codextheme/cli@0.2.3 apply cathedral-nocturne
 
 The homepage also includes a private custom skin studio. It processes an uploaded image in the browser, previews it in a Codex shell, lets the user adjust visibility, darkness, blur, zoom, and position, then creates a temporary one-command skin. No account is required.
 
+All current catalog and private packages use the `codextheme-theme` format and CodexTheme-owned renderer markers. Packages created before this namespace migration remain readable through a compatibility layer and are normalized in memory before application.
+
 ## User flow
 
 Requirements: macOS, Node.js 22.4 or newer, and Codex Desktop.

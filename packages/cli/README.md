@@ -16,6 +16,8 @@ npx --yes @codextheme/cli@0.2.3 apply-private <private-id>
 
 Private packages are downloaded only from the fixed `https://codextheme.tech` origin, bounded, integrity-checked, schema-validated, safety-linted, and cached locally with owner-only permissions. The temporary server link expires after 24 hours; `reapply` uses the validated local cache and works after that link expires.
 
+The CLI emits and applies only CodexTheme-owned package and renderer names. Historical cached packages are normalized by the runtime compatibility layer without exposing the former namespace in normal command output.
+
 ```sh
 npx --yes @codextheme/cli@0.2.3 reapply
 npx --yes @codextheme/cli@0.2.3 restore

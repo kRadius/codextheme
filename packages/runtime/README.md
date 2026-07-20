@@ -38,6 +38,8 @@ Type declarations are included for the root API and the `@codextheme/runtime/ada
 - Restore support is part of the runtime API.
 - This package has no install scripts, postinstall hooks, update notifier, or standalone executable.
 
+New packages are written as `codextheme-theme`, and new renderer state, DOM markers, CSS variables, errors, and backups use the CodexTheme namespace. Historical package files and backups remain readable through isolated migration adapters.
+
 ## Provenance
 
 This runtime is derived from CodeDrobe Core `v0.3.0` under Apache-2.0. The upstream license, notice, history, and exact imported commit are preserved in the repository. See [`UPSTREAM.md`](../../UPSTREAM.md) for the provenance record and local modification policy.

@@ -38,6 +38,8 @@ await restoreSkin({ adapter });
 - 运行时提供可恢复能力。
 - 本包没有安装脚本、postinstall、自动更新提示或独立可执行文件。
 
+新主题包统一写为 `codextheme-theme`，新的渲染状态、DOM 标记、CSS 变量、错误码与备份目录均使用 CodexTheme 命名。迁移前生成的主题包和备份仍可通过隔离的兼容层读取与恢复。
+
 ## 来源
 
 本运行时基于 Apache-2.0 许可的 CodeDrobe Core `v0.3.0` 派生，保留了上游许可证、NOTICE、Git 历史和精确导入 commit。完整来源记录与本地修改策略见仓库根目录的 [`UPSTREAM.md`](../../UPSTREAM.md)。

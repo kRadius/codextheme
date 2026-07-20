@@ -31,9 +31,9 @@ function legacyTheme(overrides = {}) {
   };
 }
 
-test("converts a legacy Codex package into a single-target CodeDrobe package", () => {
+test("converts a legacy Codex package into a single-target CodexTheme package", () => {
   const converted = convertLegacyThemePackage(legacyTheme());
-  assert.equal(converted.format, "codedrobe-theme");
+  assert.equal(converted.format, "codextheme-theme");
   assert.deepEqual(Object.keys(converted.targets), ["codex"]);
   assert.equal(converted.theme.copy.tagline, "Converted safely");
   assert.equal(converted.targets.codex.options.baseTheme.accent, "#b65cff");
