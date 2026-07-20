@@ -8,9 +8,14 @@ test("built-in adapters have unique ids and ports", () => {
   assert.equal(new Set(adapters.map((adapter) => adapter.defaultPort)).size, adapters.length);
 });
 
-test("Codex target matcher accepts only app pages", () => {
+test("Codex target matcher accepts workspace app pages and rejects auxiliary overlays", () => {
   const adapter = getAdapter("codex");
   assert.equal(adapter.matchTarget({ type: "page", url: "app://codex/home" }), true);
+  assert.equal(adapter.matchTarget({ type: "page", url: "app://-/index.html" }), true);
+  assert.equal(adapter.matchTarget({
+    type: "page",
+    url: "app://-/index.html?initialRoute=%2Favatar-overlay",
+  }), false);
   assert.equal(adapter.matchTarget({ type: "page", url: "file:///tmp/index.html" }), false);
   assert.equal(adapter.matchTarget({ type: "worker", url: "app://codex/worker" }), false);
 });
@@ -18,9 +23,9 @@ test("Codex target matcher accepts only app pages", () => {
 test("Codex verification keeps only current cross-route landmarks", () => {
   const adapter = getAdapter("codex");
   assert.deepEqual(adapter.lastVerified.darwin, {
-    appVersion: "26.707.72221",
-    build: "5307",
-    verifiedAt: "2026-07-16",
+    appVersion: "26.715.52143",
+    build: "5591",
+    verifiedAt: "2026-07-21",
   });
   assert.deepEqual(adapter.verification.rootAny, ["main.main-surface"]);
   assert.deepEqual(adapter.verification.required, [
