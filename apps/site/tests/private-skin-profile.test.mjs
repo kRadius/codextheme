@@ -208,9 +208,9 @@ test("recipes produce distinct complete surface systems", () => {
     positionX,
     positionY,
   })), [
-    { recipe: "cinematic", visibility: 84, overlay: 38, blur: 0, zoom: 108, positionX: 35, positionY: 65 },
-    { recipe: "glass", visibility: 76, overlay: 44, blur: 1, zoom: 110, positionX: 35, positionY: 65 },
-    { recipe: "focus", visibility: 48, overlay: 60, blur: 6, zoom: 112, positionX: 35, positionY: 65 },
+    { recipe: "cinematic", visibility: 92, overlay: 28, blur: 0, zoom: 108, positionX: 35, positionY: 65 },
+    { recipe: "glass", visibility: 90, overlay: 30, blur: 0, zoom: 110, positionX: 35, positionY: 65 },
+    { recipe: "focus", visibility: 78, overlay: 44, blur: 1, zoom: 112, positionX: 35, positionY: 65 },
   ]);
   assert.deepEqual(tokens.map((value) => value.recipe), ["cinematic", "glass", "focus"]);
   for (const key of ["sidebarAlpha", "mainAlpha", "composerAlpha", "selectionAlpha"]) {
@@ -245,15 +245,15 @@ test("recipe defaults treat non-finite luminance as neutral", () => {
   for (const luminance of [Number.NaN, Infinity, -Infinity]) {
     assert.deepEqual(deriveRecipeDefaults({ luminance }, "glass"), {
       recipe: "glass",
-      visibility: 76,
-      overlay: 44,
-      blur: 1,
+      visibility: 90,
+      overlay: 30,
+      blur: 0,
       zoom: 110,
       positionX: 50,
       positionY: 50,
     });
   }
-  assert.equal(deriveRecipeDefaults({ luminance: 120 }, "glass").overlay, 58);
+  assert.equal(deriveRecipeDefaults({ luminance: 120 }, "glass").overlay, 44);
 });
 
 test("skin tokens and compatibility palettes normalize invalid profiles", () => {
