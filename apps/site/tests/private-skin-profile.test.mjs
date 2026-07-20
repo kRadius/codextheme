@@ -222,9 +222,9 @@ test("recipes produce distinct complete surface systems", () => {
     headerBlur,
     composerBlur,
   }) => ({ sidebarBlur, mainBlur, headerBlur, composerBlur })), [
-    { sidebarBlur: 20, mainBlur: 8, headerBlur: 18, composerBlur: 22 },
-    { sidebarBlur: 26, mainBlur: 14, headerBlur: 24, composerBlur: 28 },
-    { sidebarBlur: 10, mainBlur: 6, headerBlur: 10, composerBlur: 12 },
+    { sidebarBlur: 20, mainBlur: 0, headerBlur: 18, composerBlur: 22 },
+    { sidebarBlur: 26, mainBlur: 0, headerBlur: 24, composerBlur: 28 },
+    { sidebarBlur: 10, mainBlur: 0, headerBlur: 10, composerBlur: 12 },
   ]);
   assert.equal(tokens[2].positionX, 35);
   assert.equal(tokens[2].positionY, 65);
