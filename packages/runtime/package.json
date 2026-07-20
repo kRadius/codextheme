@@ -1,6 +1,6 @@
 {
   "name": "@codextheme/runtime",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Auditable Codex Desktop theme runtime maintained by CodexTheme.",
   "type": "module",
   "license": "Apache-2.0",
