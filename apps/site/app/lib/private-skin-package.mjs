@@ -1,4 +1,4 @@
-import { THEME_FORMAT } from "@codextheme/runtime";
+import { THEME_FORMAT } from "@codextheme/runtime/theme";
 import { MAX_PRIVATE_PACKAGE_BYTES, normalizePrivateSkinSettings } from "./private-skin-schema.mjs";
 import { deriveSkinTokens } from "./private-skin-profile.mjs";
 
