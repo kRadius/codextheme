@@ -14,9 +14,10 @@ function declarationBlock(css, selector) {
 
 test("curated Home and Session artwork share the fixed window coordinate system", async () => {
   const css = await fs.readFile(path.join(themeRoot, "shared", "codex.css"), "utf8");
-  const homeWindow = declarationBlock(css, "html.codedrobe-codex-skin body:has(.dream-home)::before");
-  const homeSurface = declarationBlock(css, "html.codedrobe-codex-skin .dream-home");
+  const homeWindow = declarationBlock(css, "html.codextheme-codex-skin body:has(.dream-home)::before");
+  const homeSurface = declarationBlock(css, "html.codextheme-codex-skin .dream-home");
 
-  assert.match(homeWindow, /var\(--codedrobe-image-hero\)/);
-  assert.doesNotMatch(homeSurface, /var\(--codedrobe-image-hero\)/);
+  assert.match(homeWindow, /var\(--codextheme-image-hero\)/);
+  assert.doesNotMatch(homeSurface, /var\(--codextheme-image-hero\)/);
+  assert.doesNotMatch(css, /codedrobe/iu);
 });

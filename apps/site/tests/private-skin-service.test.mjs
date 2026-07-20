@@ -77,7 +77,8 @@ test("create stores one private package and returns no blob url", async () => {
   assert.match(result.command, /^npx --yes @codextheme\/cli@0\.2\.3 apply-private /);
   assert.equal(app.blobs.size, 1);
   const stored = JSON.parse([...app.blobs.values()][0]);
-  assert.equal(stored.format, "codedrobe-theme");
+  assert.equal(stored.format, "codextheme-theme");
+  assert.doesNotMatch(JSON.stringify(stored), /codedrobe/iu);
   const target = stored.targets.codex;
   assert.match(target.css, /filter: blur\(6px\)/u);
   assert.match(target.css, /var\(--codextheme-surface\) 94%/u);
@@ -242,7 +243,7 @@ test("retrieval returns a stored unexpired package and hides storage location", 
   const result = await app.service.retrieve(created.id, new Date("2026-07-19T02:00:00Z"));
   assert.deepEqual(Object.keys(result).sort(), ["serialized", "sha256"]);
   assert.match(result.sha256, /^[a-f0-9]{64}$/);
-  assert.equal(JSON.parse(result.serialized).format, "codedrobe-theme");
+  assert.equal(JSON.parse(result.serialized).format, "codextheme-theme");
 });
 
 test("retrieval maps absent storage to a stable not-found error", async () => {

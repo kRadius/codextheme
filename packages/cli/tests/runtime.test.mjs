@@ -81,7 +81,21 @@ html.codedrobe-codex-skin .dream-home {
   };
   const core = {
     getAdapter() { return { id: "codex" }; },
-    validateThemePackage() {},
+    validateThemePackage(value) {
+      return {
+        ...value,
+        format: "codextheme-theme",
+        targets: {
+          ...value.targets,
+          codex: {
+            ...value.targets.codex,
+            css: value.targets.codex.css
+              .replaceAll("codedrobe-codex-skin", "codextheme-codex-skin")
+              .replaceAll("--codedrobe-image-", "--codextheme-image-"),
+          },
+        },
+      };
+    },
     lintThemePackage() { return []; },
     resolveThemeTarget(value) { return value.targets.codex; },
   };
@@ -89,9 +103,10 @@ html.codedrobe-codex-skin .dream-home {
 
   const resolved = await runtime.loadThemeBundle(bundle);
 
-  assert.match(resolved.css, /body:has\(\.dream-home\)::before\s*\{[^}]*var\(--codedrobe-image-hero\)/s);
+  assert.match(resolved.css, /body:has\(\.dream-home\)::before\s*\{[^}]*var\(--codextheme-image-hero\)/s);
   const homeSurface = resolved.css.match(/\.dream-home\s*\{([^}]*)\}/s);
   assert.ok(homeSurface);
-  assert.doesNotMatch(homeSurface[1], /var\(--codedrobe-image-hero\)/);
+  assert.doesNotMatch(homeSurface[1], /var\(--codextheme-image-hero\)/);
+  assert.doesNotMatch(resolved.css, /codedrobe/iu);
   assert.equal(bundle.targets.codex.css, legacyCss);
 });

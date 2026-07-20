@@ -1,4 +1,4 @@
-:root.codedrobe-codex-skin {
+:root.codextheme-codex-skin {
   color-scheme: dark !important;
   --codextheme-accent: var(--color-token-primary, #9b7bff);
   --codextheme-surface: var(--color-token-bg-primary, #10111a);
@@ -7,12 +7,12 @@
   --codextheme-line: color-mix(in srgb, var(--codextheme-accent) 32%, transparent);
 }
 
-html.codedrobe-codex-skin body {
+html.codextheme-codex-skin body {
   background: #07080d !important;
   color: var(--color-token-text-primary, #f5f3ff) !important;
 }
 
-html.codedrobe-codex-skin body::before {
+html.codextheme-codex-skin body::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -20,66 +20,66 @@ html.codedrobe-codex-skin body::before {
   pointer-events: none;
   background-image:
     linear-gradient(90deg, rgba(5, 6, 10, .68) 0%, rgba(5, 6, 10, .28) 46%, rgba(5, 6, 10, .08) 100%),
-    var(--codedrobe-image-session-bg);
+    var(--codextheme-image-session-bg);
   background-position: center;
   background-size: cover;
   filter: saturate(.92) contrast(1.04);
 }
 
-html.codedrobe-codex-skin body:has(.dream-home)::before {
+html.codextheme-codex-skin body:has(.dream-home)::before {
   background-image:
     linear-gradient(90deg, color-mix(in srgb, var(--codextheme-surface) 94%, transparent), transparent 68%),
-    var(--codedrobe-image-hero);
+    var(--codextheme-image-hero);
 }
 
-html.codedrobe-codex-skin body > * {
+html.codextheme-codex-skin body > * {
   position: relative;
   z-index: 1;
 }
 
-html.codedrobe-codex-skin aside.app-shell-left-panel {
+html.codextheme-codex-skin aside.app-shell-left-panel {
   background: color-mix(in srgb, var(--codextheme-surface) 82%, transparent) !important;
   border-color: var(--codextheme-line) !important;
   box-shadow: 18px 0 42px rgba(0, 0, 0, .25) !important;
   backdrop-filter: blur(18px) saturate(1.08) !important;
 }
 
-html.codedrobe-codex-skin main.main-surface {
+html.codextheme-codex-skin main.main-surface {
   background: color-mix(in srgb, var(--codextheme-surface) 38%, transparent) !important;
   border-color: var(--codextheme-line) !important;
   box-shadow: inset 0 1px rgba(255, 255, 255, .035), -12px 0 40px rgba(0, 0, 0, .18) !important;
   backdrop-filter: blur(14px) saturate(1.03) !important;
 }
 
-html.codedrobe-codex-skin main.main-surface > header.app-header-tint {
+html.codextheme-codex-skin main.main-surface > header.app-header-tint {
   background: color-mix(in srgb, var(--codextheme-panel) 62%, transparent) !important;
   border-bottom-color: var(--codextheme-line) !important;
   backdrop-filter: blur(18px) !important;
 }
 
-html.codedrobe-codex-skin .composer-surface-chrome {
+html.codextheme-codex-skin .composer-surface-chrome {
   background: var(--codextheme-panel) !important;
   border: 1px solid var(--codextheme-line) !important;
   box-shadow: 0 18px 50px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .05) !important;
   backdrop-filter: blur(20px) saturate(1.08) !important;
 }
 
-html.codedrobe-codex-skin :is(pre, code, [data-language]) {
+html.codextheme-codex-skin :is(pre, code, [data-language]) {
   background-color: color-mix(in srgb, var(--codextheme-surface) 97%, black 3%) !important;
 }
 
-html.codedrobe-codex-skin :is(button, a, input, textarea, [tabindex]):focus-visible {
+html.codextheme-codex-skin :is(button, a, input, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--codextheme-accent) !important;
   outline-offset: 2px !important;
 }
 
-html.codedrobe-codex-skin .dream-home {
+html.codextheme-codex-skin .dream-home {
   position: relative;
   isolation: isolate;
   background: transparent !important;
 }
 
-html.codedrobe-codex-skin .dream-home::after {
+html.codextheme-codex-skin .dream-home::after {
   content: "";
   position: absolute;
   inset: 22px;
@@ -90,27 +90,27 @@ html.codedrobe-codex-skin .dream-home::after {
   box-shadow: inset 0 0 80px rgba(0, 0, 0, .18);
 }
 
-#codedrobe-codex-skin-chrome {
+#codextheme-codex-skin-chrome {
   pointer-events: none;
   color: var(--color-token-text-primary, #f5f3ff);
 }
 
-#codedrobe-codex-skin-chrome .dream-brand,
-#codedrobe-codex-skin-chrome .dream-signature {
+#codextheme-codex-skin-chrome .dream-brand,
+#codextheme-codex-skin-chrome .dream-signature {
   color: var(--codextheme-accent);
   text-shadow: 0 2px 18px rgba(0, 0, 0, .75);
 }
 
-#codedrobe-codex-skin-chrome .dream-polaroid,
-#codedrobe-codex-skin-chrome .dream-ribbon,
-#codedrobe-codex-skin-chrome .dream-sparkles {
+#codextheme-codex-skin-chrome .dream-polaroid,
+#codextheme-codex-skin-chrome .dream-ribbon,
+#codextheme-codex-skin-chrome .dream-sparkles {
   display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.codedrobe-codex-skin *,
-  html.codedrobe-codex-skin *::before,
-  html.codedrobe-codex-skin *::after {
+  html.codextheme-codex-skin *,
+  html.codextheme-codex-skin *::before,
+  html.codextheme-codex-skin *::after {
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;

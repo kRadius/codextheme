@@ -52,7 +52,7 @@ function splitSelectorList(prelude) {
 }
 
 function assertOwnedCssSelectors(css, label) {
-  const allowed = /^(?::root\.codedrobe-codex-skin|html\.codedrobe-codex-skin|#codedrobe-codex-skin-chrome)/u;
+  const allowed = /^(?::root\.codextheme-codex-skin|html\.codextheme-codex-skin|#codextheme-codex-skin-chrome)/u;
   for (const match of css.matchAll(/([^{}]+)\{/gu)) {
     const prelude = match[1].trim();
     if (prelude.startsWith("@media")) continue;
@@ -170,6 +170,8 @@ test("generated packages contain only local images and safe Codex CSS", () => {
     settings: normalizePrivateSkinSettings({}),
   });
   const bundle = validateThemePackage(JSON.parse(serialized));
+  assert.equal(bundle.format, "codextheme-theme");
+  assert.doesNotMatch(serialized, /codedrobe/iu);
   assert.deepEqual(lintThemePackage(bundle), []);
   const target = resolveThemeTarget(bundle, "codex");
   assert.deepEqual(bundle.targets.codex.options.baseTheme, {
@@ -207,13 +209,13 @@ test("generated packages contain only local images and safe Codex CSS", () => {
   const homeSurface = target.css.match(/\.dream-home\s*\{([^}]*)\}/s);
   assert.ok(homeWindow, "Home must select its image on the fixed window layer.");
   assert.ok(homeSurface, "Home must retain its route-specific surface rule.");
-  assert.match(homeWindow[1], /var\(--codedrobe-image-hero\)/);
-  assert.doesNotMatch(homeSurface[1], /var\(--codedrobe-image-hero\)/);
+  assert.match(homeWindow[1], /var\(--codextheme-image-hero\)/);
+  assert.doesNotMatch(homeSurface[1], /var\(--codextheme-image-hero\)/);
 });
 
 test("owned selector audit rejects an unowned branch in a multiline selector list", () => {
   assert.throws(
-    () => assertOwnedCssSelectors(`body,\n#codedrobe-codex-skin-chrome .dream-signature { color: red; }`, "probe"),
+    () => assertOwnedCssSelectors(`body,\n#codextheme-codex-skin-chrome .dream-signature { color: red; }`, "probe"),
     /unowned selector: body/u,
   );
 });
@@ -410,14 +412,14 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const sessionWindow = css.match(/body::before\s*\{([^}]*)\}/s);
     assert.ok(sessionWindow, "Session must retain the fixed window layer.");
     assert.match(sessionWindow[1], /position:\s*fixed;[^}]*inset:\s*-5%;/s);
-    assert.match(sessionWindow[1], /var\(--codedrobe-image-session-bg\)/);
+    assert.match(sessionWindow[1], /var\(--codextheme-image-session-bg\)/);
     assert.match(sessionWindow[1], new RegExp(`filter: blur\\(${expected.artworkBlur}px\\) saturate\\(${expected.saturation}\\) contrast\\(${expected.imageContrast}\\)`));
     const homeWindow = css.match(/body:has\(\.dream-home\)::before\s*\{([^}]*)\}/s);
     const homeSurface = css.match(/\.dream-home\s*\{([^}]*)\}/s);
     assert.ok(homeWindow, "Home must select its image on the fixed window layer.");
     assert.ok(homeSurface, "Home must retain its route-specific surface rule.");
-    assert.match(homeWindow[1], /var\(--codedrobe-image-hero\)/);
-    assert.doesNotMatch(homeSurface[1], /var\(--codedrobe-image-hero\)/);
+    assert.match(homeWindow[1], /var\(--codextheme-image-hero\)/);
+    assert.doesNotMatch(homeSurface[1], /var\(--codextheme-image-hero\)/);
 
     const baseTheme = bundle.targets.codex.options.baseTheme;
     assert.match(css, new RegExp(`--codextheme-accent: ${baseTheme.accent}`));

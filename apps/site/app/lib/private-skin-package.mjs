@@ -1,3 +1,4 @@
+import { THEME_FORMAT } from "@codextheme/runtime";
 import { MAX_PRIVATE_PACKAGE_BYTES, normalizePrivateSkinSettings } from "./private-skin-schema.mjs";
 import { deriveSkinTokens } from "./private-skin-profile.mjs";
 
@@ -27,7 +28,7 @@ function buildCss(tokens) {
   const zoom = (tokens.zoom / 100).toFixed(2);
   const saturation = (tokens.saturation / 100).toFixed(2);
   const imageContrast = (tokens.imageContrast / 100).toFixed(2);
-  return `:root.codedrobe-codex-skin {
+  return `:root.codextheme-codex-skin {
   color-scheme: dark !important;
   --codextheme-accent: ${tokens.accent};
   --codextheme-accent-soft: ${tokens.accentSoft};
@@ -43,53 +44,53 @@ function buildCss(tokens) {
   --codextheme-icon-glyph: ${tokens.iconGlyphOnAccent ? "var(--codextheme-surface)" : "var(--codextheme-accent)"};
 }
 
-html.codedrobe-codex-skin body {
+html.codextheme-codex-skin body {
   background: var(--codextheme-surface) !important;
   color: var(--codextheme-ink) !important;
 }
 
-html.codedrobe-codex-skin body::before {
+html.codextheme-codex-skin body::before {
   content: "";
   position: fixed;
   inset: -5%;
   z-index: 0;
   pointer-events: none;
   opacity: ${visibility};
-  background-image: linear-gradient(rgba(5, 6, 10, ${overlay}), rgba(5, 6, 10, ${overlay})), var(--codedrobe-image-session-bg);
+  background-image: linear-gradient(rgba(5, 6, 10, ${overlay}), rgba(5, 6, 10, ${overlay})), var(--codextheme-image-session-bg);
   background-position: ${tokens.positionX}% ${tokens.positionY}%;
   background-size: cover;
   filter: blur(${tokens.blur}px) saturate(${saturation}) contrast(${imageContrast});
   transform: scale(${zoom});
 }
 
-html.codedrobe-codex-skin body:has(.dream-home)::before {
-  background-image: linear-gradient(rgba(5, 6, 10, ${overlay}), rgba(5, 6, 10, ${overlay})), var(--codedrobe-image-hero);
+html.codextheme-codex-skin body:has(.dream-home)::before {
+  background-image: linear-gradient(rgba(5, 6, 10, ${overlay}), rgba(5, 6, 10, ${overlay})), var(--codextheme-image-hero);
 }
 
-html.codedrobe-codex-skin body > * {
+html.codextheme-codex-skin body > * {
   position: relative;
   z-index: 1;
 }
 
-html.codedrobe-codex-skin aside.app-shell-left-panel {
+html.codextheme-codex-skin aside.app-shell-left-panel {
   background: color-mix(in srgb, var(--codextheme-surface) ${tokens.sidebarAlpha}%, transparent) !important;
   border-color: color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
   backdrop-filter: blur(${tokens.sidebarBlur}px) saturate(1.08) !important;
 }
 
-html.codedrobe-codex-skin main.main-surface {
+html.codextheme-codex-skin main.main-surface {
   background: color-mix(in srgb, var(--codextheme-surface) ${tokens.mainAlpha}%, transparent) !important;
   border-color: color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
   backdrop-filter: blur(${tokens.mainBlur}px) saturate(1.03) !important;
 }
 
-html.codedrobe-codex-skin main.main-surface > header.app-header-tint {
+html.codextheme-codex-skin main.main-surface > header.app-header-tint {
   background: color-mix(in srgb, var(--codextheme-surface-raised) ${tokens.headerAlpha}%, transparent) !important;
   border-bottom-color: color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
   backdrop-filter: blur(${tokens.headerBlur}px) !important;
 }
 
-html.codedrobe-codex-skin .composer-surface-chrome {
+html.codextheme-codex-skin .composer-surface-chrome {
   background: color-mix(in srgb, var(--codextheme-surface-raised) ${tokens.composerAlpha}%, transparent) !important;
   border: 1px solid color-mix(in srgb, var(--codextheme-accent) ${tokens.borderAlpha}%, transparent) !important;
   border-radius: var(--codextheme-radius) !important;
@@ -97,24 +98,24 @@ html.codedrobe-codex-skin .composer-surface-chrome {
   backdrop-filter: blur(${tokens.composerBlur}px) saturate(1.08) !important;
 }
 
-html.codedrobe-codex-skin aside.app-shell-left-panel :is([aria-current="page"], [aria-selected="true"], [data-state="active"]) {
+html.codextheme-codex-skin aside.app-shell-left-panel :is([aria-current="page"], [aria-selected="true"], [data-state="active"]) {
   background: color-mix(in srgb, var(--codextheme-accent-soft) ${tokens.selectionAlpha}%, transparent) !important;
   border-color: color-mix(in srgb, var(--codextheme-accent) 44%, transparent) !important;
   border-radius: var(--codextheme-radius) !important;
   box-shadow: inset 3px 0 0 var(--codextheme-accent) !important;
 }
 
-html.codedrobe-codex-skin aside.app-shell-left-panel :is(button, a, [role="button"]) svg {
+html.codextheme-codex-skin aside.app-shell-left-panel :is(button, a, [role="button"]) svg {
   color: var(--codextheme-accent) !important;
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
 }
 
-html.codedrobe-codex-skin [data-message-author-role="assistant"] svg {
+html.codextheme-codex-skin [data-message-author-role="assistant"] svg {
   color: var(--codextheme-accent) !important;
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
 }
 
-html.codedrobe-codex-skin .dream-home :is(button, [role="button"]) svg {
+html.codextheme-codex-skin .dream-home :is(button, [role="button"]) svg {
   color: var(--codextheme-icon-glyph) !important;
   background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
   border-radius: 50% !important;
@@ -124,7 +125,7 @@ html.codedrobe-codex-skin .dream-home :is(button, [role="button"]) svg {
     0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
 }
 
-html.codedrobe-codex-skin .composer-surface-chrome :is(button, [role="button"]) svg {
+html.codextheme-codex-skin .composer-surface-chrome :is(button, [role="button"]) svg {
   color: var(--codextheme-icon-glyph) !important;
   background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
   border-radius: 50% !important;
@@ -134,42 +135,42 @@ html.codedrobe-codex-skin .composer-surface-chrome :is(button, [role="button"]) 
     0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
 }
 
-html.codedrobe-codex-skin :is(pre, code, [data-language]) {
+html.codextheme-codex-skin :is(pre, code, [data-language]) {
   background-color: color-mix(in srgb, var(--codextheme-surface) ${tokens.codeAlpha}%, transparent) !important;
 }
 
-html.codedrobe-codex-skin :is(button, a, input, textarea, [tabindex]):focus-visible {
+html.codextheme-codex-skin :is(button, a, input, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--codextheme-accent) !important;
   outline-offset: 2px !important;
 }
 
-html.codedrobe-codex-skin .dream-home {
+html.codextheme-codex-skin .dream-home {
   position: relative;
   isolation: isolate;
   background: transparent !important;
 }
 
-#codedrobe-codex-skin-chrome {
+#codextheme-codex-skin-chrome {
   pointer-events: none;
   color: var(--codextheme-ink);
 }
 
-#codedrobe-codex-skin-chrome .dream-brand,
-#codedrobe-codex-skin-chrome .dream-signature {
+#codextheme-codex-skin-chrome .dream-brand,
+#codextheme-codex-skin-chrome .dream-signature {
   color: var(--codextheme-accent);
   text-shadow: 0 2px 18px rgba(0, 0, 0, .75);
 }
 
-#codedrobe-codex-skin-chrome .dream-polaroid,
-#codedrobe-codex-skin-chrome .dream-ribbon,
-#codedrobe-codex-skin-chrome .dream-sparkles {
+#codextheme-codex-skin-chrome .dream-polaroid,
+#codextheme-codex-skin-chrome .dream-ribbon,
+#codextheme-codex-skin-chrome .dream-sparkles {
   display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.codedrobe-codex-skin *,
-  html.codedrobe-codex-skin *::before,
-  html.codedrobe-codex-skin *::after {
+  html.codextheme-codex-skin *,
+  html.codextheme-codex-skin *::before,
+  html.codextheme-codex-skin *::after {
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
@@ -192,7 +193,7 @@ export function buildPrivateSkinPackage({ id, exportedAt, image, settings, profi
   const base64 = Buffer.from(image).toString("base64");
   const randomPart = id.split(".")[1].slice(0, 20).toLowerCase();
   const bundle = {
-    format: "codedrobe-theme",
+    format: THEME_FORMAT,
     schemaVersion: 1,
     exportedAt,
     theme: {

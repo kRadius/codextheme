@@ -8,7 +8,7 @@ const id = "n0z6o000.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 function privateBundle() {
   const image = Buffer.from("image").toString("base64");
   return {
-    format: "codedrobe-theme",
+    format: "codextheme-theme",
     schemaVersion: 1,
     exportedAt: "2026-07-19T00:00:00.000Z",
     theme: {
@@ -27,7 +27,7 @@ function privateBundle() {
     },
     targets: {
       codex: {
-        css: "html.codedrobe-codex-skin body { background: #07080d !important; }",
+        css: "html.codextheme-codex-skin body { background: #07080d !important; }",
         options: {
           rendererProfile: "codex-theme-v1",
           baseTheme: {
@@ -75,7 +75,8 @@ test("private source uses the fixed route and validates a bounded package", asyn
   });
   const result = await source.download(id);
   assert.equal(result.sha256, createHash("sha256").update(result.serialized).digest("hex"));
-  assert.equal(result.bundle.format, "codedrobe-theme");
+  assert.equal(result.bundle.format, "codextheme-theme");
+  assert.doesNotMatch(result.serialized, /codedrobe/iu);
   assert.equal(calls[0][0], `https://codextheme.test/api/private-skins/${id}`);
   assert.equal(calls[0][1].redirect, "error");
 });
