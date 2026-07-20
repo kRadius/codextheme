@@ -102,8 +102,8 @@ test("successful apply prints pinned reapply and restore commands", async () => 
   const app = harness();
   assert.equal(await run(["apply", "cathedral-nocturne"], app.deps), 0);
   assert.match(app.stdout.text(), /主题已应用并通过验证/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.4 reapply/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.4 restore/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.5 reapply/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.5 restore/);
 });
 
 test("restart-required apply reports a detached handoff instead of completed application", async () => {
@@ -142,7 +142,7 @@ test("unsupported platforms fail before a theme is loaded", async () => {
   const app = harness();
   assert.equal(await run(["apply", "midnight-circuit"], { ...app.deps, platform: "linux" }), 1);
   assert.match(app.stderr.text(), /E_PLATFORM/);
-  assert.match(app.stderr.text(), /0\.2\.4/);
+  assert.match(app.stderr.text(), /0\.2\.5/);
   assert.doesNotMatch(app.stderr.text(), /0\.2\.0/);
   assert.equal(app.calls.length, 0);
 });
@@ -150,7 +150,7 @@ test("unsupported platforms fail before a theme is loaded", async () => {
 test("version is available without constructing runtime state", async () => {
   const app = harness();
   assert.equal(await run(["--version"], app.deps), 0);
-  assert.equal(app.stdout.text(), "0.2.4\n");
+  assert.equal(app.stdout.text(), "0.2.5\n");
   assert.equal(app.calls.length, 0);
 });
 

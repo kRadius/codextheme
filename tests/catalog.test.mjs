@@ -38,7 +38,7 @@ test("catalog contains only the three finished gothic flagship themes", async ()
     assert.equal(theme.previewHome, `themes/${theme.slug}/previews/home-v012.png`);
     assert.equal(theme.previewSession, `themes/${theme.slug}/previews/session-v012.png`);
     assert.equal(theme.source, `themes/${theme.slug}/theme.json`);
-    assert.equal(theme.command, `npx --yes @codextheme/cli@0.2.3 apply ${theme.slug}`);
+    assert.equal(theme.command, `npx --yes @codextheme/cli@0.2.5 apply ${theme.slug}`);
   }
 });
 
