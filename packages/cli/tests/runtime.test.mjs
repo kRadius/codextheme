@@ -12,7 +12,7 @@ function coreHarness({ running = false, restore } = {}) {
     async restoreSkin() {
       calls.push(["restoreSkin"]);
       return restore ?? {
-        renderer: { restored: false, code: "CODEDROBE_TARGET_TIMEOUT" },
+        renderer: { restored: false, code: "CODEXTHEME_TARGET_TIMEOUT" },
         host: { restored: false, reason: "missing-backup" },
       };
     },

@@ -26,7 +26,7 @@ export async function waitForTargets(adapter, port, timeoutMs = 30000) {
     if (remaining > 0) await delay(Math.min(350, remaining));
   }
   const error = new Error(`No ${adapter.displayName} renderer target on 127.0.0.1:${port} within ${timeoutMs}ms: ${lastError?.message ?? "timed out"}`);
-  error.code = "CODEDROBE_TARGET_TIMEOUT";
+  error.code = "CODEXTHEME_TARGET_TIMEOUT";
   error.appId = adapter.id;
   error.port = port;
   error.timeoutMs = timeoutMs;
@@ -52,7 +52,7 @@ function compatibilityError(adapter, results) {
     .map((item) => `${item.scope}${item.context ? `:${item.context}` : ""}:${item.name} (${item.selectors.join(" | ")})`)
     .join("; ");
   const error = new Error(`${adapter.displayName} DOM preflight failed${detail ? `: ${detail}` : "."}`);
-  error.code = "CODEDROBE_DOM_INCOMPATIBLE";
+  error.code = "CODEXTHEME_DOM_INCOMPATIBLE";
   error.missing = missing;
   error.results = results;
   return error;

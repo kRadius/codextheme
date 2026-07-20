@@ -11,7 +11,7 @@ import { applySkin, restoreSkin } from "../src/runtime/skin.mjs";
 const original = `model = "gpt"\n\n[desktop]\nappearanceTheme = "dark"\nunrelated = true\n`;
 const targetTheme = {
   theme: { id: "legacy-dream", displayName: "Legacy Dream", version: "1.0.0" },
-  css: ":root.codedrobe-codex-skin { color: #432; }",
+  css: ":root.codextheme-codex-skin { color: #432; }",
   options: {
     rendererProfile: "codex-theme-v1",
     baseTheme: { mode: "light", accent: "#b65cff" },
@@ -72,7 +72,7 @@ test("skin application requires an explicit restart when live host settings chan
   await assert.rejects(
     applySkin({ adapter, targetTheme, port }),
     (error) => {
-      assert.equal(error.code, "CODEDROBE_RESTART_REQUIRED");
+      assert.equal(error.code, "CODEXTHEME_RESTART_REQUIRED");
       assert.equal(error.port, port);
       return true;
     },
@@ -81,10 +81,10 @@ test("skin application requires an explicit restart when live host settings chan
 });
 
 test("skin application rolls back Codex host settings when renderer injection fails", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-skin-rollback-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-skin-rollback-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const configPath = path.join(directory, "config.toml");
-  const backupPath = path.join(directory, "state", "config.before-codedrobe.toml");
+  const backupPath = path.join(directory, "state", "config.before-codextheme.toml");
   await fs.writeFile(configPath, original, "utf8");
   const port = await emptyCdpServer(t);
 
@@ -97,7 +97,7 @@ test("skin application rolls back Codex host settings when renderer injection fa
       timeoutMs: 250,
       hostOptions: { configPath, backupPath },
     }),
-    (error) => error.code === "CODEDROBE_TARGET_TIMEOUT",
+    (error) => error.code === "CODEXTHEME_TARGET_TIMEOUT",
   );
 
   assert.equal(await fs.readFile(configPath, "utf8"), original);
@@ -105,10 +105,10 @@ test("skin application rolls back Codex host settings when renderer injection fa
 });
 
 test("skin restore recovers Codex settings even when no renderer is available", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-skin-restore-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-skin-restore-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const configPath = path.join(directory, "config.toml");
-  const backupPath = path.join(directory, "state", "config.before-codedrobe.toml");
+  const backupPath = path.join(directory, "state", "config.before-codextheme.toml");
   await fs.writeFile(configPath, original, "utf8");
   await applyCodexBaseTheme({
     targetTheme,

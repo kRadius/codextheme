@@ -157,7 +157,7 @@ export async function launchApp({ adapter, port = adapter.defaultPort, appPath =
 
   if (!readyTargets.length && await isPortOccupied(port)) {
     const error = new Error(`Port ${port} is already occupied by another process.`);
-    error.code = "CODEDROBE_PORT_OCCUPIED";
+    error.code = "CODEXTHEME_PORT_OCCUPIED";
     error.port = port;
     throw error;
   }
@@ -173,14 +173,14 @@ export async function launchApp({ adapter, port = adapter.defaultPort, appPath =
   const runningPids = await findRunningPids(adapter, process.platform, discovered.executable);
   if (runningPids.length) {
     if (!restartExisting) {
-      throw new Error(`${adapter.displayName} is already running without CodeDrobe on port ${port}. Close it or pass --restart-existing.`);
+      throw new Error(`${adapter.displayName} is already running without CodexTheme on port ${port}. Close it or pass --restart-existing.`);
     }
     await stopExisting(adapter, runningPids, process.platform, discovered.executable);
   }
 
   if (await isPortOccupied(port)) {
     const error = new Error(`Port ${port} is still occupied after stopping ${adapter.displayName}.`);
-    error.code = "CODEDROBE_PORT_OCCUPIED";
+    error.code = "CODEXTHEME_PORT_OCCUPIED";
     error.port = port;
     throw error;
   }

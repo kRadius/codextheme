@@ -26,13 +26,23 @@ const targetTheme = {
   },
 };
 
-test("Codex settings keep the legacy CodeDrobe backup location for migration", () => {
+test("Codex settings write to CodexTheme and expose the historical fallback", () => {
+  const mac = defaultCodexSettingsPaths({ platform: "darwin", home: "/Users/example" });
   assert.equal(
-    defaultCodexSettingsPaths({ platform: "darwin", home: "/Users/example" }).backupPath,
-    "/Users/example/Library/Application Support/CodeDrobe/config.before-codedrobe.toml",
+    mac.backupPath,
+    "/Users/example/Library/Application Support/CodexTheme/config.before-codextheme.toml",
   );
   assert.equal(
-    defaultCodexSettingsPaths({ platform: "win32", home: "C:\\Users\\example", env: { LOCALAPPDATA: "C:\\Local" } }).backupPath,
+    mac.legacyBackupPath,
+    "/Users/example/Library/Application Support/CodeDrobe/config.before-codedrobe.toml",
+  );
+  const windows = defaultCodexSettingsPaths({ platform: "win32", home: "C:\\Users\\example", env: { LOCALAPPDATA: "C:\\Local" } });
+  assert.equal(
+    windows.backupPath,
+    path.join("C:\\Local", "CodexTheme", "config.before-codextheme.toml"),
+  );
+  assert.equal(
+    windows.legacyBackupPath,
     path.join("C:\\Local", "CodeDrobe", "config.before-codedrobe.toml"),
   );
 });
@@ -77,10 +87,10 @@ test("Codex settings preserve unrelated tables and expanded Chrome theme tables"
 });
 
 test("Codex base theme apply is transactional and restore consumes the backup", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-codex-settings-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-codex-settings-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const configPath = path.join(directory, "config.toml");
-  const backupPath = path.join(directory, "state", "config.before-codedrobe.toml");
+  const backupPath = path.join(directory, "state", "config.before-codextheme.toml");
   await fs.writeFile(configPath, original, "utf8");
 
   const transaction = await applyCodexBaseTheme({
@@ -103,6 +113,30 @@ test("Codex base theme apply is transactional and restore consumes the backup", 
   assert.match(await fs.readFile(configPath, "utf8"), /appearanceTheme = "dark"/);
   assert.match(await fs.readFile(configPath, "utf8"), /unrelated = true/);
   await assert.rejects(() => fs.access(backupPath), /ENOENT/);
+});
+
+test("Codex restore falls back to and consumes a historical backup", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-legacy-restore-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const configPath = path.join(directory, "config.toml");
+  const backupPath = path.join(directory, "CodexTheme", "config.before-codextheme.toml");
+  const legacyBackupPath = path.join(directory, "CodeDrobe", "config.before-codedrobe.toml");
+  await fs.mkdir(path.dirname(legacyBackupPath), { recursive: true });
+  await fs.writeFile(configPath, applyCodexSettings(original, buildCodexBaseThemeSettings(targetTheme.options.baseTheme)), "utf8");
+  await fs.writeFile(legacyBackupPath, original, "utf8");
+
+  const result = await restoreCodexBaseTheme({
+    platform: "darwin",
+    options: { configPath, backupPath, legacyBackupPath },
+  });
+
+  assert.equal(result.restored, true);
+  assert.equal(result.legacyBackup, true);
+  const restored = await fs.readFile(configPath, "utf8");
+  assert.match(restored, /appearanceTheme = "dark"/);
+  assert.match(restored, /\[other\]\nkeep = "yes"/);
+  assert.doesNotMatch(restored, /appearanceTheme = "light"/);
+  await assert.rejects(() => fs.access(legacyBackupPath), /ENOENT/);
 });
 
 test("Codex settings keep the desktop table terminated when the backup has no managed keys", () => {

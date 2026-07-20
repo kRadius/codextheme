@@ -8,7 +8,7 @@ import { getAdapter } from "../src/adapters/index.mjs";
 import { discoverApp, launchApp } from "../src/runtime/launcher.mjs";
 
 test("custom app path accepts a macOS app bundle or executable", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-app-path-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-app-path-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
 
   const appPath = path.join(directory, "Custom WorkBuddy.app");
@@ -35,7 +35,7 @@ test("custom app path does not fall back to default discovery", async () => {
 });
 
 test("launcher reports an occupied custom CDP port before spawning", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codedrobe-port-conflict-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-port-conflict-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const executable = path.join(directory, "WorkBuddy");
   await fs.writeFile(executable, "test executable");
@@ -51,7 +51,7 @@ test("launcher reports an occupied custom CDP port before spawning", async (t) =
   await assert.rejects(
     launchApp({ adapter: getAdapter("workbuddy"), appPath: executable, port, timeoutMs: 500 }),
     (error) => {
-      assert.equal(error.code, "CODEDROBE_PORT_OCCUPIED");
+      assert.equal(error.code, "CODEXTHEME_PORT_OCCUPIED");
       assert.equal(error.port, port);
       assert.match(error.message, new RegExp(`Port ${port} is already occupied`));
       return true;

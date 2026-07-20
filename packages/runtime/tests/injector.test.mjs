@@ -23,7 +23,7 @@ test("target wait respects a short timeout and returns structured diagnostics", 
   await assert.rejects(
     waitForTargets(getAdapter("workbuddy"), address.port, 300),
     (error) => {
-      assert.equal(error.code, "CODEDROBE_TARGET_TIMEOUT");
+      assert.equal(error.code, "CODEXTHEME_TARGET_TIMEOUT");
       assert.equal(error.port, address.port);
       assert.equal(error.timeoutMs, 300);
       assert.match(error.message, /within 300ms/);

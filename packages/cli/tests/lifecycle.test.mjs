@@ -104,7 +104,7 @@ test("runtime restart-required result hands off instead of restarting in the for
   const app = harness({
     apply: async () => {
       attempts += 1;
-      throw Object.assign(new Error("restart"), { code: "CODEDROBE_RESTART_REQUIRED" });
+      throw Object.assign(new Error("restart"), { code: "CODEXTHEME_RESTART_REQUIRED" });
     },
   });
   let prompts = 0;
@@ -126,7 +126,7 @@ test("authorized worker without a handoff coordinator retries with restart", asy
   const app = harness({
     apply: async () => {
       attempts += 1;
-      if (attempts === 1) throw Object.assign(new Error("restart"), { code: "CODEDROBE_RESTART_REQUIRED" });
+      if (attempts === 1) throw Object.assign(new Error("restart"), { code: "CODEXTHEME_RESTART_REQUIRED" });
       return { targets: [{ result: { pass: true } }] };
     },
   });
@@ -196,7 +196,7 @@ test("private reapply reads only the local cache and never downloads", async () 
 test("complete and already-absent restore remove state", async () => {
   for (const restore of [
     { renderer: { restored: true }, host: { restored: true } },
-    { renderer: { restored: false, code: "CODEDROBE_TARGET_TIMEOUT" }, host: { restored: false, reason: "missing-backup" } },
+    { renderer: { restored: false, code: "CODEXTHEME_TARGET_TIMEOUT" }, host: { restored: false, reason: "missing-backup" } },
   ]) {
     const app = harness({
       state: { schemaVersion: 1, themeSlug: "crimson-eclipse", appliedAt: timestamp },

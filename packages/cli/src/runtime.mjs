@@ -1,7 +1,7 @@
 import * as runtimeCore from "@codextheme/runtime";
 import { themeFilename } from "./catalog.mjs";
 
-const RENDERER_ABSENT_CODES = new Set(["CODEDROBE_TARGET_TIMEOUT", "ECONNREFUSED"]);
+const RENDERER_ABSENT_CODES = new Set(["CODEXTHEME_TARGET_TIMEOUT", "ECONNREFUSED"]);
 const PRIVATE_THEME_ID = /^private-[a-z0-9]{20}$/;
 const LEGACY_PRIVATE_HOME_RULE = /html\.codedrobe-codex-skin \.dream-home \{\n  position: relative;\n  isolation: isolate;\n  background-image: (linear-gradient\(rgba\(5, 6, 10, (?:0|1)\.\d{2}\), rgba\(5, 6, 10, (?:0|1)\.\d{2}\)\), var\(--codedrobe-image-hero\)) !important;\n  background-position: \d{1,3}% \d{1,3}% !important;\n  background-size: cover !important;\n\}/;
 const PRIVATE_WINDOW_RULE = /html\.codedrobe-codex-skin body::before \{[\s\S]*?\n\}/;

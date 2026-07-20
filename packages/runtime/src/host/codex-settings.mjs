@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { defaultHistoricalCodexBackupPath } from "./historical-codex-settings.mjs";
 
 export const CODEX_MANAGED_SETTINGS = [
   "appearanceTheme",
@@ -132,14 +133,21 @@ export function defaultCodexSettingsPaths({
   home = os.homedir(),
   env = process.env,
   stateRoot = null,
+  legacyStateRoot = null,
 } = {}) {
   let root = stateRoot;
-  if (!root && platform === "darwin") root = path.join(home, "Library", "Application Support", "CodeDrobe");
-  if (!root && platform === "win32") root = path.join(env.LOCALAPPDATA || path.join(home, "AppData", "Local"), "CodeDrobe");
-  if (!root) root = path.join(env.XDG_STATE_HOME || path.join(home, ".local", "state"), "codedrobe", "codex");
+  if (!root && platform === "darwin") root = path.join(home, "Library", "Application Support", "CodexTheme");
+  if (!root && platform === "win32") root = path.join(env.LOCALAPPDATA || path.join(home, "AppData", "Local"), "CodexTheme");
+  if (!root) root = path.join(env.XDG_STATE_HOME || path.join(home, ".local", "state"), "codextheme", "codex");
   return {
     configPath: path.join(home, ".codex", "config.toml"),
-    backupPath: path.join(root, "config.before-codedrobe.toml"),
+    backupPath: path.join(root, "config.before-codextheme.toml"),
+    legacyBackupPath: defaultHistoricalCodexBackupPath({
+      platform,
+      home,
+      env,
+      stateRoot: legacyStateRoot,
+    }),
   };
 }
 
@@ -201,18 +209,37 @@ export async function restoreCodexBaseTheme({ platform = process.platform, optio
   const defaults = defaultCodexSettingsPaths({ platform, ...options });
   const configPath = path.resolve(options.configPath ?? defaults.configPath);
   const backupPath = path.resolve(options.backupPath ?? defaults.backupPath);
+  const legacyBackupPath = path.resolve(options.legacyBackupPath ?? defaults.legacyBackupPath);
   let backup;
+  let restoredBackupPath = backupPath;
+  let legacyBackup = false;
   try {
     backup = await fs.readFile(backupPath, "utf8");
   } catch (error) {
-    if (error.code === "ENOENT") return { supported: true, restored: false, configPath, backupPath, reason: "missing-backup" };
-    throw error;
+    if (error.code !== "ENOENT") throw error;
+    try {
+      backup = await fs.readFile(legacyBackupPath, "utf8");
+      restoredBackupPath = legacyBackupPath;
+      legacyBackup = true;
+    } catch (legacyError) {
+      if (legacyError.code === "ENOENT") {
+        return { supported: true, restored: false, configPath, backupPath, legacyBackupPath, reason: "missing-backup" };
+      }
+      throw legacyError;
+    }
   }
   const current = await fs.readFile(configPath, "utf8");
   const restored = restoreCodexSettings(current, backup);
   if (restored !== current) await writeAtomic(configPath, restored);
-  await fs.rm(backupPath, { force: true });
-  return { supported: true, restored: true, changed: restored !== current, configPath, backupPath };
+  await fs.rm(restoredBackupPath, { force: true });
+  return {
+    supported: true,
+    restored: true,
+    changed: restored !== current,
+    configPath,
+    backupPath: restoredBackupPath,
+    legacyBackup,
+  };
 }
 
 export const codexHostSettings = {

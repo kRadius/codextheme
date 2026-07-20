@@ -9,11 +9,11 @@ export class CliError extends Error {
 function mappedError(error) {
   if (error instanceof CliError || String(error?.code ?? "").startsWith("E_")) return error;
   switch (error?.code) {
-    case "CODEDROBE_RESTART_REQUIRED":
+    case "CODEXTHEME_RESTART_REQUIRED":
       return new CliError("E_RESTART_REQUIRED", "需要得到你的确认后才能重新打开 Codex。");
-    case "CODEDROBE_DOM_INCOMPATIBLE":
+    case "CODEXTHEME_DOM_INCOMPATIBLE":
       return new CliError("E_DOM_INCOMPATIBLE", "当前 Codex 界面结构与该主题暂不兼容。");
-    case "CODEDROBE_VERIFY_FAILED":
+    case "CODEXTHEME_VERIFY_FAILED":
       return new CliError("E_CORE_VERIFY", "主题应用后的完整性验证失败，已尝试回滚。");
     default:
       return new CliError("E_DOM_INCOMPATIBLE", "Codex 主题运行时未能完成本次操作。");
@@ -62,7 +62,7 @@ async function applyResolvedTheme({ theme, nextState, runtime, stateStore, promp
   try {
     result = await runtime.apply({ theme, restartExisting });
   } catch (error) {
-    if (error?.code === "CODEDROBE_RESTART_REQUIRED" && !restartExisting) {
+    if (error?.code === "CODEXTHEME_RESTART_REQUIRED" && !restartExisting) {
       await requireRestartConsent(promptRestart);
       if (restartHandoff) return delegateRestart({ theme, nextState, restartHandoff });
       restartExisting = true;
@@ -141,7 +141,7 @@ export async function reapplyTheme(options) {
 }
 
 const RENDERER_ABSENT_CODES = new Set([
-  "CODEDROBE_TARGET_TIMEOUT",
+  "CODEXTHEME_TARGET_TIMEOUT",
   "ECONNREFUSED",
 ]);
 

@@ -9,7 +9,7 @@ function verificationError(results) {
     .map((item) => `${item.scope}${item.context ? `:${item.context}` : ""}:${item.name} (${item.selectors.join(" | ")})`)
     .join("; ");
   const error = new Error(`Theme application verification failed for ${failures.length} renderer target(s)${detail ? `: ${detail}` : "."}`);
-  error.code = "CODEDROBE_VERIFY_FAILED";
+  error.code = "CODEXTHEME_VERIFY_FAILED";
   error.missing = missing;
   error.results = results;
   return error;
@@ -17,7 +17,7 @@ function verificationError(results) {
 
 function restartRequiredError(adapter, port) {
   const error = new Error(`${adapter.displayName} is already running, but its host appearance settings changed. Close it or pass --restart-existing so the complete skin can load.`);
-  error.code = "CODEDROBE_RESTART_REQUIRED";
+  error.code = "CODEXTHEME_RESTART_REQUIRED";
   error.appId = adapter.id;
   error.port = port;
   return error;
