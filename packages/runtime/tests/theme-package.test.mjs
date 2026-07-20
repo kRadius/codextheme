@@ -5,8 +5,11 @@ import os from "node:os";
 import path from "node:path";
 import {
   THEME_EXTENSION,
+  THEME_FORMAT,
+  HISTORICAL_THEME_FORMAT,
   buildThemePackage,
   lintThemePackage,
+  normalizeThemePackage,
   readThemePackage,
   resolveThemeTarget,
   validateThemePackage,
@@ -17,11 +20,12 @@ const exampleManifest = new URL("../examples/dream/theme.json", import.meta.url)
 
 test("publishes the codextheme-owned artifact extension", () => {
   assert.equal(THEME_EXTENSION, ".codextheme-theme");
+  assert.equal(THEME_FORMAT, "codextheme-theme");
 });
 
 test("builds one portable theme for multiple app targets", async () => {
   const { bundle, serialized } = await buildThemePackage(exampleManifest.pathname);
-  assert.equal(bundle.format, "codedrobe-theme");
+  assert.equal(bundle.format, THEME_FORMAT);
   assert.equal(bundle.theme.id, "dream");
   assert.deepEqual(Object.keys(bundle.targets), ["codex", "workbuddy"]);
   assert.match(bundle.targets.codex.css, /codedrobe-host-codex/);
@@ -30,6 +34,26 @@ test("builds one portable theme for multiple app targets", async () => {
   assert.equal(bundle.targets.workbuddy.verification.recommended[0].name, "conversation-list");
   assert.equal(bundle.targets.codex.verification.contexts[0].name, "home");
   assert.ok(serialized.endsWith("\n"));
+});
+
+test("normalizes historical package input without mutating the source", () => {
+  const legacyBundle = {
+    format: "codedrobe-theme",
+    schemaVersion: 1,
+    theme: { id: "legacy", displayName: "Legacy", version: "1.0.0" },
+    targets: { codex: { css: ":root { color: red; }" } },
+  };
+
+  assert.equal(HISTORICAL_THEME_FORMAT, "codedrobe-theme");
+  const normalized = normalizeThemePackage(legacyBundle);
+  assert.equal(normalized.format, THEME_FORMAT);
+  assert.notEqual(normalized, legacyBundle);
+  assert.equal(legacyBundle.format, HISTORICAL_THEME_FORMAT);
+  assert.equal(validateThemePackage(legacyBundle).format, THEME_FORMAT);
+  assert.throws(
+    () => normalizeThemePackage({ ...legacyBundle, format: "unknown-theme" }),
+    /Unsupported theme format/,
+  );
 });
 
 test("writes, reads, and resolves a .codextheme-theme package", async () => {
@@ -157,7 +181,7 @@ test("accepts recommended-only checks and reports brittle selector warnings", ()
       },
     },
   };
-  assert.equal(validateThemePackage(bundle), bundle);
+  assert.equal(validateThemePackage(bundle).format, THEME_FORMAT);
   const warnings = lintThemePackage(bundle);
   assert.deepEqual(new Set(warnings.map((warning) => warning.code)), new Set([
     "positional-selector",

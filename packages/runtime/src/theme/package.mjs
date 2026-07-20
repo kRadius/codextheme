@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export const THEME_FORMAT = "codedrobe-theme";
+export const THEME_FORMAT = "codextheme-theme";
+export const HISTORICAL_THEME_FORMAT = "codedrobe-theme";
 export const THEME_EXTENSION = ".codextheme-theme";
 export const THEME_SCHEMA_VERSION = 1;
 export const MAX_THEME_PACKAGE_BYTES = 30 * 1024 * 1024;
@@ -18,6 +19,12 @@ const MAX_SELECTOR_LENGTH = 1024;
 const SELECTOR_WARNING_LENGTH = 180;
 const MAX_LINT_WARNINGS = 100;
 const MAX_LINT_SELECTOR_DISPLAY_LENGTH = 240;
+
+export function normalizeThemePackage(bundle) {
+  if (bundle?.format === THEME_FORMAT) return bundle;
+  if (bundle?.format === HISTORICAL_THEME_FORMAT) return { ...bundle, format: THEME_FORMAT };
+  throw new Error(`Unsupported theme format '${bundle?.format ?? "missing"}'.`);
+}
 
 function assertString(value, label) {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${label} must be a non-empty string.`);
@@ -191,9 +198,9 @@ function verificationSelectors(verification, prefix) {
 }
 
 export function lintThemePackage(bundle) {
-  validateThemePackage(bundle);
+  const normalized = validateThemePackage(bundle);
   const warnings = [];
-  for (const [appId, target] of Object.entries(bundle.targets)) {
+  for (const [appId, target] of Object.entries(normalized.targets)) {
     for (const selector of extractCssSelectorBlocks(target.css)) {
       warnings.push(...lintSelector(selector, { appId, location: `targets.${appId}.css` }));
     }
@@ -235,7 +242,7 @@ function validateTarget(target, appId) {
 
 export function validateThemePackage(bundle) {
   if (!bundle || typeof bundle !== "object") throw new Error("Theme package must be a JSON object.");
-  if (bundle.format !== THEME_FORMAT) throw new Error(`Unsupported theme format '${bundle.format ?? "missing"}'.`);
+  bundle = normalizeThemePackage(bundle);
   if (bundle.schemaVersion !== THEME_SCHEMA_VERSION) {
     throw new Error(`Unsupported theme schemaVersion '${bundle.schemaVersion ?? "missing"}'.`);
   }
@@ -288,18 +295,18 @@ export async function readThemePackage(filename) {
 }
 
 export function resolveThemeTarget(bundle, appId) {
-  validateThemePackage(bundle);
-  const target = bundle.targets[appId];
+  const normalized = validateThemePackage(bundle);
+  const target = normalized.targets[appId];
   if (!target) {
-    throw new Error(`Theme '${bundle.theme.id}' does not support app '${appId}'.`);
+    throw new Error(`Theme '${normalized.theme.id}' does not support app '${appId}'.`);
   }
-  const imageAssets = resolvedImageAssets(bundle);
+  const imageAssets = resolvedImageAssets(normalized);
   const imageDataUrls = Object.fromEntries(Object.entries(imageAssets).map(([name, image]) => [
     name,
     `data:${image.mimeType};base64,${image.base64}`,
   ]));
   return {
-    theme: bundle.theme,
+    theme: normalized.theme,
     css: target.css,
     options: target.options ?? {},
     verification: target.verification ?? null,
