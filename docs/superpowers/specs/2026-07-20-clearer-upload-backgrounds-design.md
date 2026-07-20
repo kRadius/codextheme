@@ -24,12 +24,14 @@ Brightness correction may still increase overlay darkness for unusually bright u
 - Switching recipes applies the clearer defaults for the selected recipe.
 - Reset automatic settings restores the clearer defaults.
 - Preview cards, the full Codex mockup, and the generated private theme use the same normalized settings.
+- The full-size main content surface must not apply backdrop blur to the uploaded artwork. Smaller chrome surfaces and the sidebar may retain recipe-specific glass blur.
 - Existing sliders remain available so users can darken, blur, zoom, or reposition the image manually.
 - No face detection, focal-point detection, or new UI is introduced.
 
 ## Verification
 
 - Unit tests assert the exact defaults for all three recipes and confirm brightness correction still works.
+- Token tests assert `mainBlur: 0` for every recipe so a full-window material cannot erase image detail.
 - Site tests confirm recipe switching and reset use the updated values.
 - Runtime/package generation tests confirm the chosen settings are preserved in the generated theme.
 - A local preview verifies that uploaded character artwork remains sharp while Codex controls remain readable.

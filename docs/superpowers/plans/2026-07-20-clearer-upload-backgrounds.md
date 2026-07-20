@@ -130,3 +130,26 @@ git status --short
 ```
 
 Expected: no output.
+
+### Task 4: Remove full-window backdrop blur
+
+**Files:**
+- Modify: `apps/site/tests/private-skin-profile.test.mjs`
+- Modify: `apps/site/tests/private-skin-schema.test.mjs`
+- Modify: `apps/site/app/lib/private-skin-profile.mjs`
+
+- [ ] **Step 1: Change the profile test to require `mainBlur: 0` for Cinematic, Glass, and Focus**
+
+Run `node --test apps/site/tests/private-skin-profile.test.mjs` and expect the surface-system assertion to fail with the current `8`, `14`, and `6` values.
+
+- [ ] **Step 2: Set only each recipe's `mainBlur` token to `0`**
+
+Keep sidebar, header, composer, card, alpha, overlay, and image tokens unchanged.
+
+- [ ] **Step 3: Update the generated-package expectations and run the site suite**
+
+Change the three `mainBlur` expectations in `apps/site/tests/private-skin-schema.test.mjs` to `0`, then run `npm test -w @codextheme/site` and expect all 70 tests to pass.
+
+- [ ] **Step 4: Run `npm run check` and verify the uploaded image locally**
+
+The current upload must render with `filter: blur(0px)` on the artwork and `backdrop-filter: blur(0px)` on the full main content surface.
