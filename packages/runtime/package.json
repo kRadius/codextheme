@@ -1,7 +1,7 @@
 {
   "name": "@codextheme/runtime",
   "version": "0.1.0",
-  "description": "Auditable Codex Desktop theme runtime derived from CodeDrobe Core 0.3.0.",
+  "description": "Auditable Codex Desktop theme runtime maintained by CodexTheme.",
   "type": "module",
   "license": "Apache-2.0",
   "repository": {

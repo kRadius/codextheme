@@ -13,6 +13,12 @@ const packages = [
 const requiredFiles = new Set(["LICENSE", "NOTICE", "README.md", "package.json"]);
 const forbiddenScripts = new Set(["preinstall", "install", "postinstall"]);
 const textExtensions = new Set([".css", ".js", ".json", ".md", ".mjs", ".ts"]);
+const attributionFiles = new Set(["LICENSE", "NOTICE", "README.md", "README_zh.md"]);
+const compatibilityFiles = new Set([
+  "src/host/historical-codex-settings.mjs",
+  "src/runtime/legacy-namespace.mjs",
+  "src/theme/historical-package.mjs",
+]);
 
 function fail(message) {
   throw new Error(`Package check failed: ${message}`);
@@ -97,6 +103,9 @@ function scanText(packageName, filename, source) {
   ];
   for (const [label, pattern] of checks) {
     if (pattern.test(source)) fail(`${packageName} ships ${label} in ${filename}.`);
+  }
+  if (!attributionFiles.has(filename) && !compatibilityFiles.has(filename) && /codedrobe/i.test(source)) {
+    fail(`${packageName} leaks the historical product namespace in ${filename}.`);
   }
 }
 
