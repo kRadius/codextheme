@@ -74,7 +74,7 @@ test("create stores one private package and returns no blob url", async () => {
   });
   assert.match(result.id, /^[a-z0-9]+\.[A-Za-z0-9_-]{32}$/);
   assert.deepEqual(Object.keys(result).sort(), ["command", "expiresAt", "id"]);
-  assert.match(result.command, /^npx --yes @codextheme\/cli@0\.2\.4 apply-private /);
+  assert.match(result.command, /^npx --yes @codextheme\/cli@0\.2\.6 apply-private /);
   assert.equal(app.blobs.size, 1);
   const stored = JSON.parse([...app.blobs.values()][0]);
   assert.equal(stored.format, "codextheme-theme");

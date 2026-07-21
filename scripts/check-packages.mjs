@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 const execFileAsync = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packages = [
-  { name: "@codextheme/runtime", version: "0.1.1", directory: "packages/runtime" },
-  { name: "@codextheme/cli", version: "0.2.4", directory: "packages/cli" },
+  { name: "@codextheme/runtime", version: "0.1.2", directory: "packages/runtime" },
+  { name: "@codextheme/cli", version: "0.2.6", directory: "packages/cli" },
 ];
 const requiredFiles = new Set(["LICENSE", "NOTICE", "README.md", "package.json"]);
 const forbiddenScripts = new Set(["preinstall", "install", "postinstall"]);
@@ -50,8 +50,8 @@ function checkManifest(expected, manifest) {
     fail("runtime must not ship an executable.");
   }
   if (expected.name === "@codextheme/cli") {
-    if (manifest.dependencies?.["@codextheme/runtime"] !== "0.1.1") {
-      fail("CLI must depend on the exact @codextheme/runtime 0.1.1 release.");
+    if (manifest.dependencies?.["@codextheme/runtime"] !== "0.1.2") {
+      fail("CLI must depend on the exact @codextheme/runtime 0.1.2 release.");
     }
     if (Object.keys(manifest.dependencies ?? {}).length !== 1) {
       fail("CLI must not add undeclared runtime dependencies.");

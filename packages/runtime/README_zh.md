@@ -7,7 +7,7 @@
 ## 安装
 
 ```sh
-npm install @codextheme/runtime@0.1.1
+npm install @codextheme/runtime@0.1.2
 ```
 
 ## API

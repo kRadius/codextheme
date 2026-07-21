@@ -7,9 +7,9 @@ import { confirmRestart } from "./prompt.mjs";
 import { runtime as productionRuntime } from "./runtime.mjs";
 import { createStateStore } from "./state.mjs";
 
-export const VERSION = "0.2.4";
-const REAPPLY = "npx --yes @codextheme/cli@0.2.4 reapply";
-const RESTORE = "npx --yes @codextheme/cli@0.2.4 restore";
+export const VERSION = "0.2.6";
+const REAPPLY = "npx --yes @codextheme/cli@0.2.6 reapply";
+const RESTORE = "npx --yes @codextheme/cli@0.2.6 restore";
 
 const HELP = `CodexTheme ${VERSION}
 
@@ -51,7 +51,7 @@ function safePublicError(error) {
 function writeApplyResult(stdout, result, name, successMessage, { showReapply = true } = {}) {
   if (result.handoff?.queued) {
     stdout.write(
-      `✓ ${name} 已交给独立任务处理\n`
+      `⏳ ${name} 正在后台应用，当前尚未完成\n`
       + "Codex 将自动关闭并重新打开一次，随后完成主题应用和验证。\n"
       + "当前 Codex task 可能结束；最终结果会通过 macOS 通知显示。\n",
     );

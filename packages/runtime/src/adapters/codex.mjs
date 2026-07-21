@@ -6,7 +6,7 @@ const codex = {
   displayName: "OpenAI Codex",
   defaultPort: 9335,
   lastVerified: {
-    darwin: { appVersion: "26.707.72221", build: "5307", verifiedAt: "2026-07-16" },
+    darwin: { appVersion: "26.715.52143", build: "5591", verifiedAt: "2026-07-21" },
   },
   rendererProfiles: {
     [codexThemeV1Profile.id]: codexThemeV1Profile,
@@ -26,7 +26,13 @@ const codex = {
     },
   },
   matchTarget(target) {
-    return target?.type === "page" && String(target.url ?? "").startsWith("app://");
+    const rawUrl = String(target?.url ?? "");
+    if (target?.type !== "page" || !rawUrl.startsWith("app://")) return false;
+    try {
+      return new URL(rawUrl).searchParams.get("initialRoute") !== "/avatar-overlay";
+    } catch {
+      return false;
+    }
   },
   verification: {
     rootAny: ["main.main-surface"],

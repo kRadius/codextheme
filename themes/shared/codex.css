@@ -5,6 +5,12 @@
   --codextheme-panel: color-mix(in srgb, var(--codextheme-surface) 94%, white 6%);
   --codextheme-panel-soft: color-mix(in srgb, var(--codextheme-surface) 88%, transparent);
   --codextheme-line: color-mix(in srgb, var(--codextheme-accent) 32%, transparent);
+  --codextheme-line-strong: color-mix(in srgb, var(--codextheme-accent) 48%, transparent);
+  --codextheme-hover: color-mix(in srgb, var(--codextheme-accent) 16%, transparent);
+  --codextheme-selected: color-mix(in srgb, var(--codextheme-accent) 21%, transparent);
+  --codextheme-glow: color-mix(in srgb, var(--codextheme-accent) 14%, transparent);
+  --color-token-list-hover-background: var(--codextheme-hover);
+  --vscode-list-hoverBackground: var(--codextheme-hover);
 }
 
 html.codextheme-codex-skin body {
@@ -39,27 +45,39 @@ html.codextheme-codex-skin body > * {
 
 html.codextheme-codex-skin aside.app-shell-left-panel {
   background: color-mix(in srgb, var(--codextheme-surface) 82%, transparent) !important;
-  border-color: var(--codextheme-line) !important;
+  border-color: var(--codextheme-line-strong) !important;
   box-shadow: 18px 0 42px rgba(0, 0, 0, .25) !important;
   backdrop-filter: blur(18px) saturate(1.08) !important;
 }
 
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> span.font-openai-sans.font-semibold) > span.font-openai-sans.font-semibold {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px var(--codextheme-glow));
+  transition: color .16s ease, filter .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> span.font-openai-sans.font-semibold) > svg {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px var(--codextheme-glow));
+  transition: color .16s ease, filter .16s ease;
+}
+
 html.codextheme-codex-skin main.main-surface {
   background: color-mix(in srgb, var(--codextheme-surface) 38%, transparent) !important;
-  border-color: var(--codextheme-line) !important;
+  border-color: var(--codextheme-line-strong) !important;
   box-shadow: inset 0 1px rgba(255, 255, 255, .035), -12px 0 40px rgba(0, 0, 0, .18) !important;
-  backdrop-filter: blur(14px) saturate(1.03) !important;
+  backdrop-filter: blur(0px) saturate(1.03) !important;
 }
 
 html.codextheme-codex-skin main.main-surface > header.app-header-tint {
   background: color-mix(in srgb, var(--codextheme-panel) 62%, transparent) !important;
-  border-bottom-color: var(--codextheme-line) !important;
+  border-bottom-color: var(--codextheme-line-strong) !important;
   backdrop-filter: blur(18px) !important;
 }
 
 html.codextheme-codex-skin .composer-surface-chrome {
   background: var(--codextheme-panel) !important;
-  border: 1px solid var(--codextheme-line) !important;
+  border: 1px solid var(--codextheme-line-strong) !important;
   box-shadow: 0 18px 50px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .05) !important;
   backdrop-filter: blur(20px) saturate(1.08) !important;
 }
@@ -73,6 +91,88 @@ html.codextheme-codex-skin :is(button, a, input, textarea, [tabindex]):focus-vis
   outline-offset: 2px !important;
 }
 
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, [aria-current=page], [aria-selected=true], [data-state=active]) {
+  --codextheme-sidebar-nav-color: var(--codextheme-accent);
+  --codextheme-sidebar-nav-icon-filter: drop-shadow(0 0 7px var(--codextheme-glow));
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, [aria-current=page], [aria-selected=true], [data-state=active]) {
+  --codextheme-sidebar-nav-color: var(--codextheme-accent);
+  --codextheme-sidebar-nav-icon-filter: drop-shadow(0 0 7px var(--codextheme-glow));
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground) > .text-token-foreground {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  transition: color .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground) > .text-token-foreground svg {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  filter: var(--codextheme-sidebar-nav-icon-filter, none);
+  transition: color .16s ease, filter .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground) .text-token-foreground {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  transition: color .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground) .text-token-foreground svg {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  filter: var(--codextheme-sidebar-nav-icon-filter, none);
+  transition: color .16s ease, filter .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground) span button svg {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-icon-foreground, currentColor)) !important;
+  filter: var(--codextheme-sidebar-nav-icon-filter, none);
+  transition: color .16s ease, filter .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group {
+  border: 1px solid transparent !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group svg {
+  transition: color .16s ease, filter .16s ease;
+}
+
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *) {
+  border: 1px solid transparent !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:hover {
+  background: var(--codextheme-hover) !important;
+  border-color: var(--codextheme-line-strong) !important;
+  box-shadow: inset 3px 0 0 var(--codextheme-accent), 0 0 18px var(--codextheme-glow) !important;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:hover svg {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px var(--codextheme-glow));
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group[aria-current="page"] {
+  background: var(--codextheme-selected) !important;
+  border: 1px solid var(--codextheme-line-strong) !important;
+  border-color: var(--codextheme-line-strong) !important;
+  box-shadow: inset 3px 0 0 var(--codextheme-accent), 0 0 22px var(--codextheme-glow) !important;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group[aria-current="page"] svg {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px var(--codextheme-glow));
+}
+
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):hover {
+  background: var(--codextheme-hover) !important;
+  border-color: var(--codextheme-line-strong) !important;
+  box-shadow: 0 0 22px var(--codextheme-glow), 0 12px 28px rgba(0, 0, 0, .28) !important;
+  transform: translateY(-1px);
+}
+
 html.codextheme-codex-skin .dream-home {
   position: relative;
   isolation: isolate;
@@ -84,7 +184,7 @@ html.codextheme-codex-skin .dream-home::after {
   position: absolute;
   inset: 22px;
   z-index: -1;
-  border: 1px solid var(--codextheme-line);
+  border: 1px solid var(--codextheme-line-strong);
   border-radius: 28px;
   pointer-events: none;
   box-shadow: inset 0 0 80px rgba(0, 0, 0, .18);

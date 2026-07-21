@@ -102,8 +102,8 @@ test("successful apply prints pinned reapply and restore commands", async () => 
   const app = harness();
   assert.equal(await run(["apply", "cathedral-nocturne"], app.deps), 0);
   assert.match(app.stdout.text(), /主题已应用并通过验证/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.4 reapply/);
-  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.4 restore/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.6 reapply/);
+  assert.match(app.stdout.text(), /npx --yes @codextheme\/cli@0\.2\.6 restore/);
 });
 
 test("restart-required apply reports a detached handoff instead of completed application", async () => {
@@ -121,7 +121,8 @@ test("restart-required apply reports a detached handoff instead of completed app
 
   assert.equal(await run(["apply", "cathedral-nocturne"], app.deps), 0);
   assert.equal(queued.length, 1);
-  assert.match(app.stdout.text(), /独立任务/);
+  assert.match(app.stdout.text(), /正在后台应用/);
+  assert.doesNotMatch(app.stdout.text(), /已交给独立任务处理/);
   assert.match(app.stdout.text(), /Codex 将自动关闭并重新打开一次/);
   assert.match(app.stdout.text(), /当前 Codex task 可能结束/);
   assert.doesNotMatch(app.stdout.text(), /主题已应用并通过验证/);
@@ -141,7 +142,7 @@ test("unsupported platforms fail before a theme is loaded", async () => {
   const app = harness();
   assert.equal(await run(["apply", "midnight-circuit"], { ...app.deps, platform: "linux" }), 1);
   assert.match(app.stderr.text(), /E_PLATFORM/);
-  assert.match(app.stderr.text(), /0\.2\.4/);
+  assert.match(app.stderr.text(), /0\.2\.6/);
   assert.doesNotMatch(app.stderr.text(), /0\.2\.0/);
   assert.equal(app.calls.length, 0);
 });
@@ -149,7 +150,7 @@ test("unsupported platforms fail before a theme is loaded", async () => {
 test("version is available without constructing runtime state", async () => {
   const app = harness();
   assert.equal(await run(["--version"], app.deps), 0);
-  assert.equal(app.stdout.text(), "0.2.4\n");
+  assert.equal(app.stdout.text(), "0.2.6\n");
   assert.equal(app.calls.length, 0);
 });
 
