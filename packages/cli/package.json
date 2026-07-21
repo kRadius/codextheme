@@ -1,6 +1,6 @@
 {
   "name": "@codextheme/cli",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "One-command curated and private custom skins for Codex Desktop on macOS.",
   "type": "module",
   "license": "Apache-2.0",

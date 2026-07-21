@@ -79,7 +79,11 @@ html.codextheme-codex-skin :is(button, a, input, textarea, [tabindex]):focus-vis
   outline-offset: 2px !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group,
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group {
+  border: 1px solid transparent !important;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
 html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *) {
   border: 1px solid transparent !important;
   transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;

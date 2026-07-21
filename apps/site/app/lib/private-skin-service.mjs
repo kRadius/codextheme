@@ -186,7 +186,7 @@ export function createPrivateSkinService({
       return {
         id,
         expiresAt: expiresAt.toISOString(),
-        command: `npx --yes @codextheme/cli@0.2.5 apply-private ${id}`,
+        command: `npx --yes @codextheme/cli@0.2.6 apply-private ${id}`,
       };
     },
 

@@ -7,9 +7,9 @@ import { confirmRestart } from "./prompt.mjs";
 import { runtime as productionRuntime } from "./runtime.mjs";
 import { createStateStore } from "./state.mjs";
 
-export const VERSION = "0.2.5";
-const REAPPLY = "npx --yes @codextheme/cli@0.2.5 reapply";
-const RESTORE = "npx --yes @codextheme/cli@0.2.5 restore";
+export const VERSION = "0.2.6";
+const REAPPLY = "npx --yes @codextheme/cli@0.2.6 reapply";
+const RESTORE = "npx --yes @codextheme/cli@0.2.6 restore";
 
 const HELP = `CodexTheme ${VERSION}
 
