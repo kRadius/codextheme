@@ -32,3 +32,11 @@ test("preview generator writes every catalog preview to the requested public roo
     await rm(outputRoot, { recursive: true, force: true });
   }
 });
+
+test("preview generator uses the approved B-strength interaction hierarchy", async () => {
+  const source = await readFile(path.join(repoRoot, "themes/scripts/generate-previews.mjs"), "utf8");
+
+  assert.match(source, /const INTERACTION = Object\.freeze\(\{\s*line: "\.48",\s*hover: "\.16",\s*selected: "\.21",\s*glow: "\.14",\s*\}\);/s);
+  assert.match(source, /fill-opacity="\$\{INTERACTION\.selected\}" stroke="\$\{accent\}" stroke-opacity="\$\{INTERACTION\.line\}"/);
+  assert.match(source, /fill-opacity="\$\{INTERACTION\.hover\}" stroke="\$\{accent\}" stroke-opacity="\$\{INTERACTION\.line\}"/);
+});

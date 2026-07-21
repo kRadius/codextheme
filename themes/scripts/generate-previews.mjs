@@ -12,6 +12,12 @@ const catalog = JSON.parse(await fs.readFile(path.join(themeRoot, "catalog.json"
 
 const WIDTH = 1600;
 const HEIGHT = 1000;
+const INTERACTION = Object.freeze({
+  line: ".48",
+  hover: ".16",
+  selected: ".21",
+  glow: ".14",
+});
 
 function escapeXml(value) {
   return String(value)
@@ -53,6 +59,9 @@ function chrome(theme, body, backgroundData, mode) {
         <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#000" flood-opacity=".58"/>
       </filter>
       <filter id="soft"><feGaussianBlur stdDeviation="24"/></filter>
+      <filter id="interaction-glow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="0" stdDeviation="12" flood-color="${accent}" flood-opacity="${INTERACTION.glow}"/>
+      </filter>
       <clipPath id="window"><rect x="18" y="18" width="1564" height="964" rx="24"/></clipPath>
     </defs>
 
@@ -63,9 +72,9 @@ function chrome(theme, body, backgroundData, mode) {
       <circle cx="1110" cy="330" r="340" fill="${accent}" fill-opacity=".08" filter="url(#soft)"/>
 
       <rect x="18" y="18" width="286" height="964" fill="url(#side)"/>
-      <line x1="304" y1="18" x2="304" y2="982" stroke="#fff" stroke-opacity=".09"/>
+      <line x1="304" y1="18" x2="304" y2="982" stroke="${accent}" stroke-opacity="${INTERACTION.line}"/>
       <rect x="304" y="18" width="1278" height="54" fill="#090a0b" fill-opacity=".7"/>
-      <line x1="304" y1="72" x2="1582" y2="72" stroke="#fff" stroke-opacity=".08"/>
+      <line x1="304" y1="72" x2="1582" y2="72" stroke="${accent}" stroke-opacity="${INTERACTION.line}"/>
 
       <circle cx="47" cy="45" r="7" fill="#ff5f57"/>
       <circle cx="70" cy="45" r="7" fill="#febc2e"/>
@@ -80,7 +89,7 @@ function chrome(theme, body, backgroundData, mode) {
       ${navIcon(289, accent)}<text x="70" y="289" fill="#d9d5ce" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Plugins</text>
 
       <text x="38" y="350" fill="#fff" fill-opacity=".46" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" letter-spacing="1.3">PROJECTS</text>
-      <rect x="29" y="372" width="246" height="46" rx="11" fill="${accent}" fill-opacity=".12" stroke="${accent}" stroke-opacity=".44"/>
+      <rect x="29" y="372" width="246" height="46" rx="11" fill="${accent}" fill-opacity="${INTERACTION.selected}" stroke="${accent}" stroke-opacity="${INTERACTION.line}" filter="url(#interaction-glow)"/>
       <path d="M45 389 h10 l4 4 h14 v13 H45 Z" fill="none" stroke="${accent}" stroke-width="1.5"/>
       <text x="82" y="401" fill="#f2eee5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="15">${escapeXml(project)}</text>
 
@@ -97,7 +106,7 @@ function chrome(theme, body, backgroundData, mode) {
 
       ${body}
     </g>
-    <rect x="18.5" y="18.5" width="1563" height="963" rx="23.5" fill="none" stroke="${accent}" stroke-opacity=".34"/>
+    <rect x="18.5" y="18.5" width="1563" height="963" rx="23.5" fill="none" stroke="${accent}" stroke-opacity="${INTERACTION.line}"/>
   </svg>`;
 }
 
@@ -111,8 +120,11 @@ function homeBody(theme, manifest) {
   ];
   const cardMarkup = cards.map(([title, subtitle], index) => {
     const x = 350 + index * 292;
+    const cardRect = index === 0
+      ? `<rect x="${x}" y="585" width="270" height="145" rx="16" fill="${accent}" fill-opacity="${INTERACTION.hover}" stroke="${accent}" stroke-opacity="${INTERACTION.line}" filter="url(#interaction-glow)"/>`
+      : `<rect x="${x}" y="585" width="270" height="145" rx="16" fill="#0a0b0c" fill-opacity=".79" stroke="${accent}" stroke-opacity=".3" filter="url(#shadow)"/>`;
     return `<g>
-      <rect x="${x}" y="585" width="270" height="145" rx="16" fill="#0a0b0c" fill-opacity=".79" stroke="${accent}" stroke-opacity=".3" filter="url(#shadow)"/>
+      ${cardRect}
       <circle cx="${x + 38}" cy="625" r="18" fill="${accent}" fill-opacity=".13" stroke="${accent}" stroke-opacity=".55"/>
       <path d="M${x + 31} ${625} h14 M${x + 38} ${618} v14" stroke="${accent}" stroke-width="1.5"/>
       <text x="${x + 24}" y="674" fill="#f3efe7" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="17" font-weight="600">${title}</text>
@@ -127,7 +139,7 @@ function homeBody(theme, manifest) {
     <line x1="350" y1="328" x2="498" y2="328" stroke="${accent}" stroke-width="2" stroke-opacity=".72"/>
     ${cardMarkup}
 
-    <rect x="424" y="792" width="1038" height="133" rx="20" fill="url(#composer)" stroke="${accent}" stroke-opacity=".46" filter="url(#shadow)"/>
+    <rect x="424" y="792" width="1038" height="133" rx="20" fill="url(#composer)" stroke="${accent}" stroke-opacity="${INTERACTION.line}" filter="url(#shadow)"/>
     <text x="454" y="835" fill="#fff" fill-opacity=".43" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Ask Codex to build, review, or explain...</text>
     <line x1="448" y1="864" x2="1438" y2="864" stroke="#fff" stroke-opacity=".08"/>
     <circle cx="461" cy="894" r="12" fill="none" stroke="${accent}" stroke-width="1.5"/>
@@ -165,7 +177,7 @@ function sessionBody(theme) {
     <text x="500" y="597" fill="#f0ede6" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">&lt;InstallCommand theme={theme} /&gt;</text>
     <text x="470" y="633" fill="#f0ede6" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">);</text>
 
-    <rect x="424" y="760" width="1038" height="165" rx="20" fill="url(#composer)" stroke="${accent}" stroke-opacity=".46" filter="url(#shadow)"/>
+    <rect x="424" y="760" width="1038" height="165" rx="20" fill="url(#composer)" stroke="${accent}" stroke-opacity="${INTERACTION.line}" filter="url(#shadow)"/>
     <text x="454" y="805" fill="#fff" fill-opacity=".43" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="16">Continue the task...</text>
     <line x1="448" y1="846" x2="1438" y2="846" stroke="#fff" stroke-opacity=".08"/>
     <text x="454" y="892" fill="#fff" fill-opacity=".52" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14">Custom</text>
