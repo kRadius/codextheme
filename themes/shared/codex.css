@@ -91,34 +91,42 @@ html.codextheme-codex-skin :is(button, a, input, textarea, [tabindex]):focus-vis
   outline-offset: 2px !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> div.text-token-foreground) > div.text-token-foreground,
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> div.text-token-foreground) > div.text-token-foreground svg {
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, [aria-current=page], [aria-selected=true], [data-state=active]) {
+  --codextheme-sidebar-nav-color: var(--codextheme-accent);
+  --codextheme-sidebar-nav-icon-filter: drop-shadow(0 0 7px var(--codextheme-glow));
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, [aria-current=page], [aria-selected=true], [data-state=active]) {
+  --codextheme-sidebar-nav-color: var(--codextheme-accent);
+  --codextheme-sidebar-nav-icon-filter: drop-shadow(0 0 7px var(--codextheme-glow));
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground) > .text-token-foreground {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  transition: color .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground) > .text-token-foreground svg {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  filter: var(--codextheme-sidebar-nav-icon-filter, none);
   transition: color .16s ease, filter .16s ease;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> div.text-token-foreground):is(:hover, [aria-current="page"], [aria-selected="true"], [data-state="active"]) > div.text-token-foreground {
-  color: var(--codextheme-accent) !important;
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground) .text-token-foreground {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  transition: color .16s ease;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> div.text-token-foreground):is(:hover, [aria-current="page"], [aria-selected="true"], [data-state="active"]) > div.text-token-foreground svg {
-  color: var(--codextheme-accent) !important;
-  filter: drop-shadow(0 0 7px var(--codextheme-glow));
-}
-
-html.codextheme-codex-skin aside.app-shell-left-panel div.group:has(> button > div.text-token-foreground) > button > div.text-token-foreground,
-html.codextheme-codex-skin aside.app-shell-left-panel div.group:has(> button > div.text-token-foreground) > button > div.text-token-foreground svg,
-html.codextheme-codex-skin aside.app-shell-left-panel div.group:has(> button > div.text-token-foreground) > span > button > svg {
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground) .text-token-foreground svg {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-foreground)) !important;
+  filter: var(--codextheme-sidebar-nav-icon-filter, none);
   transition: color .16s ease, filter .16s ease;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel div.group:has(> button > div.text-token-foreground):is(:hover, [aria-current="page"], [aria-selected="true"], [data-state="active"]) > button > div.text-token-foreground {
-  color: var(--codextheme-accent) !important;
-}
-
-html.codextheme-codex-skin aside.app-shell-left-panel div.group:has(> button > div.text-token-foreground):is(:hover, [aria-current="page"], [aria-selected="true"], [data-state="active"]) > button > div.text-token-foreground svg,
-html.codextheme-codex-skin aside.app-shell-left-panel div.group:has(> button > div.text-token-foreground):is(:hover, [aria-current="page"], [aria-selected="true"], [data-state="active"]) > span > button > svg {
-  color: var(--codextheme-accent) !important;
-  filter: drop-shadow(0 0 7px var(--codextheme-glow));
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground) span button svg {
+  color: var(--codextheme-sidebar-nav-color, var(--color-token-icon-foreground, currentColor)) !important;
+  filter: var(--codextheme-sidebar-nav-icon-filter, none);
+  transition: color .16s ease, filter .16s ease;
 }
 
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group {
