@@ -84,6 +84,10 @@ html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="b
   transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group svg {
+  transition: color .16s ease, filter .16s ease;
+}
+
 html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *) {
   border: 1px solid transparent !important;
   transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
@@ -95,11 +99,21 @@ html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="b
   box-shadow: inset 3px 0 0 var(--codextheme-accent), 0 0 18px var(--codextheme-glow) !important;
 }
 
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:hover svg {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px var(--codextheme-glow));
+}
+
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group[aria-current="page"] {
   background: var(--codextheme-selected) !important;
   border: 1px solid var(--codextheme-line-strong) !important;
   border-color: var(--codextheme-line-strong) !important;
   box-shadow: inset 3px 0 0 var(--codextheme-accent), 0 0 22px var(--codextheme-glow) !important;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group[aria-current="page"] svg {
+  color: var(--codextheme-accent) !important;
+  filter: drop-shadow(0 0 7px var(--codextheme-glow));
 }
 
 html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):hover {

@@ -55,6 +55,14 @@ test("curated interaction rules stay scoped to observed Codex surfaces", async (
     css,
     'html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):hover',
   );
+  const sidebarHoverIcon = declarationBlock(
+    css,
+    'html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:hover svg',
+  );
+  const sidebarSelectedIcon = declarationBlock(
+    css,
+    'html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group[aria-current="page"] svg',
+  );
 
   for (const block of [sidebarHover, sidebarSelected, homeHover]) {
     assert.match(block, /border-color:\s*var\(--codextheme-line-strong\)/);
@@ -62,5 +70,10 @@ test("curated interaction rules stay scoped to observed Codex surfaces", async (
   }
   assert.match(sidebarHover, /background:\s*var\(--codextheme-hover\)/);
   assert.match(sidebarSelected, /background:\s*var\(--codextheme-selected\)/);
+  for (const block of [sidebarHoverIcon, sidebarSelectedIcon]) {
+    assert.match(block, /color:\s*var\(--codextheme-accent\)/);
+    assert.match(block, /filter:\s*drop-shadow\(0 0 7px var\(--codextheme-glow\)\)/);
+  }
   assert.doesNotMatch(css, /codextheme-codex-skin\s+:is\([^}]*\):hover/);
+  assert.doesNotMatch(css, /codextheme-codex-skin\s+svg\s*\{/);
 });
