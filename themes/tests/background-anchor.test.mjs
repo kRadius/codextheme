@@ -21,3 +21,10 @@ test("curated Home and Session artwork share the fixed window coordinate system"
   assert.doesNotMatch(homeSurface, /var\(--codextheme-image-hero\)/);
   assert.doesNotMatch(css, /codedrobe/iu);
 });
+
+test("curated artwork stays sharp behind the main Codex surface", async () => {
+  const css = await fs.readFile(path.join(themeRoot, "shared", "codex.css"), "utf8");
+  const mainSurface = declarationBlock(css, "html.codextheme-codex-skin main.main-surface");
+
+  assert.match(mainSurface, /backdrop-filter:\s*blur\(0px\)/);
+});
