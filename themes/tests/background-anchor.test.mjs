@@ -49,7 +49,7 @@ test("curated interaction rules stay scoped to observed Codex surfaces", async (
   );
   const sidebarSelected = declarationBlock(
     css,
-    'html.codextheme-codex-skin aside.app-shell-left-panel [role="button"][aria-current="page"]',
+    'html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group[aria-current="page"]',
   );
   const homeHover = declarationBlock(
     css,

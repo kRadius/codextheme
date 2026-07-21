@@ -95,7 +95,7 @@ html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="b
   box-shadow: inset 3px 0 0 var(--codextheme-accent), 0 0 18px var(--codextheme-glow) !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel [role="button"][aria-current="page"] {
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group[aria-current="page"] {
   background: var(--codextheme-selected) !important;
   border: 1px solid var(--codextheme-line-strong) !important;
   border-color: var(--codextheme-line-strong) !important;
