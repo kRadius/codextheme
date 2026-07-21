@@ -18,5 +18,10 @@ test("bundled theme packages use only the CodexTheme product namespace", async (
     assert.doesNotMatch(serialized, /codedrobe/iu, filename);
     assert.match(bundle.targets.codex.css, /html\.codextheme-codex-skin/u, filename);
     assert.match(bundle.targets.codex.css, /--codextheme-image-hero/u, filename);
+    assert.match(
+      bundle.targets.codex.css,
+      new RegExp(`--codextheme-accent: ${bundle.targets.codex.options.baseTheme.accent};`, "u"),
+      `${filename} must render with its packaged accent instead of Codex's global primary color`,
+    );
   }
 });
