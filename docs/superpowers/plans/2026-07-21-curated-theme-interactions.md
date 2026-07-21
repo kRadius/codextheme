@@ -55,7 +55,7 @@ test("curated interaction rules stay scoped to observed Codex surfaces", async (
   );
   const homeHover = declarationBlock(
     css,
-    'html.codextheme-codex-skin .dream-home button:hover',
+    'html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):hover',
   );
 
   for (const block of [sidebarHover, sidebarSelected, homeHover]) {
@@ -95,7 +95,7 @@ Use `var(--codextheme-line-strong)` for the sidebar boundary, main boundary, hea
 
 ```css
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group,
-html.codextheme-codex-skin .dream-home button {
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *) {
   border: 1px solid transparent !important;
   transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
@@ -112,7 +112,7 @@ html.codextheme-codex-skin aside.app-shell-left-panel [role="button"][aria-curre
   box-shadow: inset 3px 0 0 var(--codextheme-accent), 0 0 22px var(--codextheme-glow) !important;
 }
 
-html.codextheme-codex-skin .dream-home button:hover {
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):hover {
   background: var(--codextheme-hover) !important;
   border-color: var(--codextheme-line-strong) !important;
   box-shadow: 0 0 22px var(--codextheme-glow), 0 12px 28px rgba(0, 0, 0, .28) !important;
