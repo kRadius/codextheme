@@ -24,6 +24,14 @@ function declarationValues(ruleText, property) {
   return [...ruleText.matchAll(pattern)].map((match) => match[1].trim());
 }
 
+function assertAllowedIdleBorderValue(property, value, selector) {
+  assert.doesNotMatch(value, /[a-z][\w-]*\s*\(/iu, `${selector} ${property} must not use a color-producing function`);
+  const allowedValue = property === "border-color"
+    ? /^transparent$/u
+    : /^(?:0|none|1px solid transparent)$/u;
+  assert.match(value, allowedValue, `${selector} ${property} must remain transparent`);
+}
+
 function assertNoPermanentIdleMaterial(selector) {
   const idleRules = idleRulesFor(selector);
   assert.notEqual(idleRules, "", `${selector} must have an idle rule`);
@@ -34,7 +42,7 @@ function assertNoPermanentIdleMaterial(selector) {
   }
   for (const property of ["border", "border-color"]) {
     for (const value of declarationValues(idleRules, property)) {
-      assert.match(value, /^(?:0|none)$|transparent/u, `${selector} ${property} must remain transparent`);
+      assertAllowedIdleBorderValue(property, value, selector);
     }
   }
   for (const value of declarationValues(idleRules, "box-shadow")) {
@@ -42,6 +50,24 @@ function assertNoPermanentIdleMaterial(selector) {
   }
   assert.doesNotMatch(idleRules, /drop-shadow\s*\(/u, `${selector} must not have an idle drop-shadow`);
 }
+
+test("idle border validation rejects visible transparent color mixes", () => {
+  for (const [property, value] of [
+    ["border-color", "transparent"],
+    ["border", "0"],
+    ["border", "none"],
+    ["border", "1px solid transparent"],
+  ]) {
+    assert.doesNotThrow(() => assertAllowedIdleBorderValue(property, value, ".synthetic-idle-icon"));
+  }
+  assert.throws(() => {
+    assertAllowedIdleBorderValue(
+      "border",
+      "1px solid color-mix(in srgb, var(--studio-accent) 40%, transparent)",
+      ".synthetic-idle-icon",
+    );
+  });
+});
 
 test("recipe material slices use the current image and focal treatment", () => {
   assert.match(component, /imageUrl=\{imageUrl\}/);
