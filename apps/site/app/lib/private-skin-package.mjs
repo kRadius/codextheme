@@ -109,14 +109,27 @@ html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .tex
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group,
 html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *),
 html.codextheme-codex-skin .composer-surface-chrome button.border-token-border {
-  transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease, filter .16s ease;
+  transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]),
-html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]),
-html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]),
-html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible),
-html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]) {
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group svg,
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *) svg,
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border svg {
+  transition: color .16s ease, filter .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]):not(:has(> button:is(:disabled, [aria-disabled="true"]) > .text-token-foreground)):not(:has(button:hover:is(:disabled, [aria-disabled="true"]))),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]):not(:has(button:hover:is(:disabled, [aria-disabled="true"]))),
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]),
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]):not(:disabled, [aria-disabled="true"]),
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is([aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border[data-state="open"],
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible):not(:disabled, [aria-disabled="true"]):not(:has(> button:is(:disabled, [aria-disabled="true"]) > .text-token-foreground)):not(:has(button:focus-visible:is(:disabled, [aria-disabled="true"]))) {
   color: var(--codextheme-accent) !important;
   background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-surface-alpha), transparent) !important;
   border-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-border-alpha), transparent) !important;
@@ -125,11 +138,16 @@ html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:i
     0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-glow-alpha), transparent) !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
-html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
-html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]) svg,
-html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible) svg,
-html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]) svg {
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]):not(:has(> button:is(:disabled, [aria-disabled="true"]) > .text-token-foreground)):not(:has(button:hover:is(:disabled, [aria-disabled="true"]))) :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]):not(:has(button:hover:is(:disabled, [aria-disabled="true"]))) svg:not(button:is(:disabled, [aria-disabled="true"]) *),
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) svg,
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]):not(:disabled, [aria-disabled="true"]) svg,
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) svg,
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border[data-state="open"] svg,
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible):not(:disabled, [aria-disabled="true"]):not(:has(> button:is(:disabled, [aria-disabled="true"]) > .text-token-foreground)):not(:has(button:focus-visible:is(:disabled, [aria-disabled="true"]))) :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg) {
   color: var(--codextheme-accent) !important;
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-glow-alpha), transparent));
 }

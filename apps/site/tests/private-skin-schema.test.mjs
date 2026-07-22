@@ -62,12 +62,20 @@ function assertOwnedCssSelectors(css, label) {
   }
 }
 
-function assertStateScopedSvgSelectors(css, label) {
-  const permanentSvgSelectors = [...css.matchAll(/([^{}]+)\{/gu)]
-    .flatMap((match) => splitSelectorList(match[1].trim()))
-    .filter((selector) => /\bsvg\b/u.test(selector))
-    .filter((selector) => !/:hover|:focus-visible|\[aria-current="page"\]|\[aria-selected="true"\]|\[data-state="active"\]|\[data-state="open"\]/u.test(selector));
-  assert.deepEqual(permanentSvgSelectors, [], `${label} CSS must not style SVGs outside interaction state.`);
+function declarationNames(block) {
+  return [...new Set(block
+    .split(";")
+    .map((declaration) => declaration.match(/^\s*([a-z-]+)\s*:/u)?.[1])
+    .filter(Boolean))].sort();
+}
+
+function cssRuleBlockForSelector(css, selector) {
+  const ownedSelector = `html.codextheme-codex-skin ${selector}`;
+  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
+    const selectors = splitSelectorList(match[1].trim()).map((item) => item.replace(/\s+/gu, " "));
+    if (selectors.includes(ownedSelector)) return match[2];
+  }
+  return null;
 }
 
 const PRIVATE_SKIN_BASE_ICON_SELECTORS = [
@@ -78,7 +86,11 @@ const PRIVATE_SKIN_BASE_ICON_SELECTORS = [
   ".composer-surface-chrome button.border-token-border",
 ];
 
-const PRIVATE_SKIN_STATE_ICON_SELECTORS = [
+const PRIVATE_SKIN_BASE_GLYPH_SELECTORS = PRIVATE_SKIN_BASE_ICON_SELECTORS.map((selector, index) => (
+  `${selector}${index < 2 ? " :is(.text-token-foreground, svg)" : " svg"}`
+));
+
+const PRIVATE_SKIN_REQUIRED_STATE_SELECTOR_COVERAGE = [
   "aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
@@ -86,14 +98,70 @@ const PRIVATE_SKIN_STATE_ICON_SELECTORS = [
   ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"])",
 ];
 
-const PRIVATE_SKIN_STATE_GLYPH_SELECTORS = PRIVATE_SKIN_STATE_ICON_SELECTORS.map((selector, index) => (
-  `${selector}${index < 2 ? " :is(.text-token-foreground, svg)" : " svg"}`
-));
+const PRIVATE_SKIN_STATE_ICON_SELECTORS = [
+  "aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"])",
+  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"]):not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground)):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
+  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"]):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
+  ".dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled=\"true\"])",
+  ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"]):not(:disabled, [aria-disabled=\"true\"])",
+  "aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  ".composer-surface-chrome button.border-token-border[data-state=\"open\"]",
+  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible):not(:disabled, [aria-disabled=\"true\"]):not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground)):not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))",
+];
+
+const PRIVATE_SKIN_STATE_GLYPH_SELECTORS = [
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[0]} :is(.text-token-foreground, svg)`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[1]} :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg)`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[2]} svg:not(button:is(:disabled, [aria-disabled="true"]) *)`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[3]} svg`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[4]} svg`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[5]} :is(.text-token-foreground, svg)`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[6]} :is(.text-token-foreground, svg)`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[7]} svg`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[8]} svg`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[9]} :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg)`,
+];
+
+function assertPrivateSkinIconRuleScopes(css, label) {
+  const prefix = "html.codextheme-codex-skin ";
+  const baseIconSelectors = new Set(PRIVATE_SKIN_BASE_ICON_SELECTORS.map((selector) => `${prefix}${selector}`));
+  const baseGlyphSelectors = new Set(PRIVATE_SKIN_BASE_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
+  const stateIconSelectors = new Set(PRIVATE_SKIN_STATE_ICON_SELECTORS.map((selector) => `${prefix}${selector}`));
+  const stateGlyphSelectors = new Set(PRIVATE_SKIN_STATE_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
+  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
+    const block = match[2];
+    for (const selector of splitSelectorList(match[1].trim())) {
+      const targetsPrivateIcon = /aside\.app-shell-left-panel .*(?:text-token-foreground|\[role="listitem"\] \[role="button"\]\.group)|\.dream-home button|\.composer-surface-chrome button/u.test(selector);
+      if (baseIconSelectors.has(selector)) {
+        assert.deepEqual(declarationNames(block), ["transition"], `${label} base icon roots must be transition-only.`);
+        assert.match(block, /transition:\s*color \.16s ease, background-color \.16s ease, border-color \.16s ease, box-shadow \.16s ease;/u);
+      } else if (baseGlyphSelectors.has(selector)) {
+        assert.deepEqual(declarationNames(block), ["transition"], `${label} base glyph rules must be transition-only.`);
+        assert.match(block, /transition:\s*color \.16s ease, filter \.16s ease;/u);
+      } else if (stateIconSelectors.has(selector)) {
+        assert.deepEqual(
+          declarationNames(block),
+          ["background-color", "border-color", "box-shadow", "color"],
+          `${label} state icon roots must contain only interaction material.`,
+        );
+      } else if (stateGlyphSelectors.has(selector)) {
+        assert.deepEqual(declarationNames(block), ["color", "filter"], `${label} state glyph rules must contain only accent material.`);
+      } else if (/\bsvg\b/u.test(selector) || targetsPrivateIcon) {
+        assert.fail(`${label} CSS contains an unapproved private icon selector: ${selector}`);
+      } else if (/var\(--codextheme-icon-hover-(?:surface|border|glow)-alpha\)/u.test(block)) {
+        assert.fail(`${label} CSS contains icon material outside an approved state selector: ${selector}`);
+      }
+    }
+  }
+}
 
 function assertPrivateSkinLint(bundle) {
   const prefix = "html.codextheme-codex-skin ";
   const expectedPreludes = [
     PRIVATE_SKIN_BASE_ICON_SELECTORS,
+    PRIVATE_SKIN_BASE_GLYPH_SELECTORS,
     PRIVATE_SKIN_STATE_ICON_SELECTORS,
     PRIVATE_SKIN_STATE_GLYPH_SELECTORS,
   ].map((selectors) => selectors.map((selector) => `${prefix}${selector}`).join(", "));
@@ -277,9 +345,40 @@ test("owned selector audit rejects an unowned branch in a multiline selector lis
 
 test("SVG scope audit rejects a permanent branch hidden by a stateful sibling", () => {
   assert.throws(
-    () => assertStateScopedSvgSelectors(`html.codextheme-codex-skin :hover svg,
+    () => assertPrivateSkinIconRuleScopes(`html.codextheme-codex-skin :hover svg,
 html.codextheme-codex-skin svg { color: red; }`, "probe"),
-    /must not style SVGs outside interaction state/u,
+    /unapproved private icon selector/u,
+  );
+});
+
+test("SVG scope audit rejects negated hover as a positive interaction state", () => {
+  assert.throws(
+    () => assertPrivateSkinIconRuleScopes(
+      "html.codextheme-codex-skin svg:not(:hover) { color: red; }",
+      "probe",
+    ),
+    /unapproved private icon selector/u,
+  );
+});
+
+test("SVG scope audit rejects a permissive state pseudo-class branch", () => {
+  assert.throws(
+    () => assertPrivateSkinIconRuleScopes(
+      "html.codextheme-codex-skin :is(*, :hover) svg { color: red; }",
+      "probe",
+    ),
+    /unapproved private icon selector/u,
+  );
+});
+
+test("icon rule audit rejects same-line material appended to a transition-only rule", () => {
+  const selector = `html.codextheme-codex-skin ${PRIVATE_SKIN_BASE_GLYPH_SELECTORS[4]}`;
+  assert.throws(
+    () => assertPrivateSkinIconRuleScopes(
+      `${selector} { transition: color .16s ease, filter .16s ease; color: red; }`,
+      "probe",
+    ),
+    /transition-only/u,
   );
 });
 
@@ -412,9 +511,10 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const composer = css.match(/\.composer-surface-chrome\s*\{([^}]*)\}/s);
     const selected = css.match(/aside\.app-shell-left-panel\s+:is\(\[aria-current="page"\],\s*\[aria-selected="true"\],\s*\[data-state="active"\]\)\s*\{([^}]*)\}/s);
     const code = css.match(/:is\(pre, code, \[data-language\]\)\s*\{([^}]*)\}/s);
-    const baseTransition = css.match(/\.composer-surface-chrome button\.border-token-border\s*\{([^}]*)\}/s);
-    const stateMaterial = css.match(/button\.border-token-border:is\(:hover, :focus-visible, \[data-state="open"\]\)\s*\{([^}]*)\}/s);
-    const stateGlyph = css.match(/button\.border-token-border:is\(:hover, :focus-visible, \[data-state="open"\]\) svg\s*\{([^}]*)\}/s);
+    const baseTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_ICON_SELECTORS[4]);
+    const baseGlyphTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_GLYPH_SELECTORS[4]);
+    const stateMaterial = cssRuleBlockForSelector(css, PRIVATE_SKIN_STATE_ICON_SELECTORS[4]);
+    const stateGlyph = cssRuleBlockForSelector(css, PRIVATE_SKIN_STATE_GLYPH_SELECTORS[4]);
     assert.ok(sidebar, `${recipe} CSS must include the owned sidebar rule.`);
     assert.ok(main, `${recipe} CSS must include the main surface rule.`);
     assert.ok(header, `${recipe} CSS must include the header rule.`);
@@ -424,9 +524,29 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS) {
       assert.ok(css.includes(selector), `${recipe} CSS must scope icon material to ${selector}.`);
     }
+    for (const selector of PRIVATE_SKIN_REQUIRED_STATE_SELECTOR_COVERAGE) {
+      assert.ok(css.includes(selector), `${recipe} CSS must preserve required state coverage for ${selector}.`);
+    }
     assert.ok(baseTransition, `${recipe} CSS must transition secondary composer controls.`);
+    assert.ok(baseGlyphTransition, `${recipe} CSS must transition secondary composer glyphs.`);
     assert.ok(stateMaterial, `${recipe} CSS must materialize only secondary composer controls on interaction.`);
     assert.ok(stateGlyph, `${recipe} CSS must accent secondary composer glyphs on interaction.`);
+    assert.ok(
+      css.includes("aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible)"),
+      `${recipe} CSS must materialize grouped rows when a child button receives keyboard focus.`,
+    );
+    for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS.slice(0, 5)) {
+      assert.match(selector, /:not\([^)]*(?:disabled|aria-disabled)/u, `${recipe} interaction selector must exclude disabled controls: ${selector}`);
+    }
+    for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS.slice(1, 3)) {
+      assert.ok(
+        selector.includes(":not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))"),
+        `${recipe} grouped interaction selector must exclude a hovered disabled child: ${selector}`,
+      );
+    }
+    for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS.slice(5, 9)) {
+      assert.doesNotMatch(selector, /:not\([^)]*(?:disabled|aria-disabled)/u, `${recipe} persistent selector must retain disabled selected/open states: ${selector}`);
+    }
     assert.match(sidebar[1], new RegExp(`surface\\) ${expected.sidebarAlpha}%`));
     assert.match(sidebar[1], new RegExp(`accent\\) ${expected.borderAlpha}%`));
     assert.match(sidebar[1], new RegExp(`blur\\(${expected.sidebarBlur}px\\) saturate\\(1\\.08\\)`));
@@ -446,17 +566,19 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(selected[1], /inset 3px 0 0 var\(--codextheme-accent\)/);
     assert.match(selected[1], /border-radius:\s*var\(--codextheme-radius\)/);
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
-    assert.match(stateMaterial[1], /color:\s*var\(--codextheme-accent\)\s*!important;/);
-    assert.match(stateMaterial[1], /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-surface-alpha\), transparent\)/);
-    assert.match(stateMaterial[1], /border-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\)\s*!important;/);
-    assert.match(stateMaterial[1], /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\),\s*0 0 18px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)/s);
-    assert.match(baseTransition[1], /transition:\s*color \.16s ease, background-color \.16s ease, border-color \.16s ease, box-shadow \.16s ease, filter \.16s ease;/);
-    assert.match(stateGlyph[1], /color:\s*var\(--codextheme-accent\)\s*!important;/);
-    assert.match(stateGlyph[1], /filter:\s*drop-shadow\(0 0 7px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)\);/);
+    assert.match(stateMaterial, /color:\s*var\(--codextheme-accent\)\s*!important;/);
+    assert.match(stateMaterial, /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-surface-alpha\), transparent\)/);
+    assert.match(stateMaterial, /border-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\)\s*!important;/);
+    assert.match(stateMaterial, /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\),\s*0 0 18px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)/s);
+    assert.match(baseTransition, /transition:\s*color \.16s ease, background-color \.16s ease, border-color \.16s ease, box-shadow \.16s ease;/);
+    assert.doesNotMatch(baseTransition, /filter/u);
+    assert.match(baseGlyphTransition, /transition:\s*color \.16s ease, filter \.16s ease;/);
+    assert.match(stateGlyph, /color:\s*var\(--codextheme-accent\)\s*!important;/);
+    assert.match(stateGlyph, /filter:\s*drop-shadow\(0 0 7px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)\);/);
     assert.doesNotMatch(css, /(?:\.dream-home|\.composer-surface-chrome) :is\(button, \[role="button"\]\) svg\s*\{/u);
     assert.doesNotMatch(css, /aside\.app-shell-left-panel :is\(button, a, \[role="button"\]\) svg\s*\{/u);
     assert.doesNotMatch(css, /\[data-message-author-role="assistant"\] svg\s*\{/u);
-    assertStateScopedSvgSelectors(css, recipe);
+    assertPrivateSkinIconRuleScopes(css, recipe);
     assert.doesNotMatch(css, /\.size-token-button-composer/u);
     assert.deepEqual(
       [...css.matchAll(/--codextheme-icon-[a-z-]+:/gu)].map((match) => match[0]),
