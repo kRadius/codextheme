@@ -62,7 +62,7 @@ All three private-skin recipes share the same state model. They differ only in i
 
 Selected-row strength continues to use the existing recipe values of 24%, 16%, and 10% respectively.
 
-The existing generic names become `iconHoverSurfaceAlpha`, `iconHoverBorderAlpha`, `iconHoverGlowAlpha`, and `iconHoverGlyphOnAccent` so their purpose cannot be misread as a permanent default treatment. Cinematic uses the dark surface color for its glyph over the stronger hover fill; Glass and Focus use the derived accent for their glyph over lighter fills.
+The existing generic alpha names become `iconHoverSurfaceAlpha`, `iconHoverBorderAlpha`, and `iconHoverGlowAlpha` so their purpose cannot be misread as a permanent default treatment. Interactive glyphs always use the contrast-corrected derived accent; recipes vary the material strength, not the glyph color contract.
 
 ## Surface Rules
 
