@@ -38,10 +38,9 @@ function buildCss(tokens) {
   --codextheme-muted-ink: ${tokens.mutedInk};
   --codextheme-line: color-mix(in srgb, ${tokens.accent} ${tokens.borderAlpha}%, transparent);
   --codextheme-radius: ${tokens.radius}px;
-  --codextheme-icon-surface-alpha: ${tokens.iconSurfaceAlpha}%;
-  --codextheme-icon-border-alpha: ${tokens.iconBorderAlpha}%;
-  --codextheme-icon-glow-alpha: ${tokens.iconGlowAlpha}%;
-  --codextheme-icon-glyph: ${tokens.iconGlyphOnAccent ? "var(--codextheme-surface)" : "var(--codextheme-accent)"};
+  --codextheme-icon-hover-surface-alpha: ${tokens.iconHoverSurfaceAlpha}%;
+  --codextheme-icon-hover-border-alpha: ${tokens.iconHoverBorderAlpha}%;
+  --codextheme-icon-hover-glow-alpha: ${tokens.iconHoverGlowAlpha}%;
 }
 
 html.codextheme-codex-skin body {
@@ -105,34 +104,34 @@ html.codextheme-codex-skin aside.app-shell-left-panel :is([aria-current="page"],
   box-shadow: inset 3px 0 0 var(--codextheme-accent) !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel :is(button, a, [role="button"]) svg {
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group,
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *),
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border {
+  transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible),
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]) {
   color: var(--codextheme-accent) !important;
-  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
+  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-surface-alpha), transparent) !important;
+  border-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-border-alpha), transparent) !important;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-border-alpha), transparent),
+    0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-glow-alpha), transparent) !important;
 }
 
-html.codextheme-codex-skin [data-message-author-role="assistant"] svg {
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]) svg,
+html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible) svg,
+html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]) svg {
   color: var(--codextheme-accent) !important;
-  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
-}
-
-html.codextheme-codex-skin .dream-home :is(button, [role="button"]) svg {
-  color: var(--codextheme-icon-glyph) !important;
-  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
-  border-radius: 50% !important;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
-    0 0 0 5px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-border-alpha), transparent),
-    0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
-}
-
-html.codextheme-codex-skin .composer-surface-chrome :is(button, [role="button"]) svg {
-  color: var(--codextheme-icon-glyph) !important;
-  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
-  border-radius: 50% !important;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
-    0 0 0 5px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-border-alpha), transparent),
-    0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-hover-glow-alpha), transparent));
 }
 
 html.codextheme-codex-skin :is(pre, code, [data-language]) {

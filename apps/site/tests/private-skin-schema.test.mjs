@@ -62,8 +62,55 @@ function assertOwnedCssSelectors(css, label) {
   }
 }
 
-function declarationNames(block) {
-  return [...new Set([...block.matchAll(/^\s*([a-z-]+)\s*:/gmu)].map((match) => match[1]))].sort();
+const PRIVATE_SKIN_BASE_ICON_SELECTORS = [
+  "aside.app-shell-left-panel button:has(> .text-token-foreground)",
+  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground)",
+  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group",
+  ".dream-home button:not(header *, .composer-surface-chrome *)",
+  ".composer-surface-chrome button.border-token-border",
+];
+
+const PRIVATE_SKIN_STATE_ICON_SELECTORS = [
+  "aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  ".dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible)",
+  ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"])",
+];
+
+const PRIVATE_SKIN_STATE_GLYPH_SELECTORS = PRIVATE_SKIN_STATE_ICON_SELECTORS.map((selector, index) => (
+  `${selector}${index < 2 ? " :is(.text-token-foreground, svg)" : " svg"}`
+));
+
+function assertPrivateSkinLint(bundle) {
+  const prefix = "html.codextheme-codex-skin ";
+  const expectedPreludes = [
+    PRIVATE_SKIN_BASE_ICON_SELECTORS,
+    PRIVATE_SKIN_STATE_ICON_SELECTORS,
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS,
+  ].map((selectors) => selectors.map((selector) => `${prefix}${selector}`).join(", "));
+  const actualPreludes = [...bundle.targets.codex.css.matchAll(/([^{}]+)\{/gu)]
+    .map((match) => match[1].trim().replace(/\s+/gu, " "));
+  for (const prelude of expectedPreludes) {
+    assert.ok(actualPreludes.includes(prelude), `Private skin CSS must retain the exact selector prelude: ${prelude}`);
+  }
+  const expected = expectedPreludes.flatMap((prelude) => [
+    {
+      code: "long-selector",
+      appId: "codex",
+      location: "targets.codex.css",
+      selector: prelude.slice(0, 240),
+      message: `Selector is ${prelude.length} characters long and may be coupled to DOM structure.`,
+    },
+    {
+      code: "deep-child-chain",
+      appId: "codex",
+      location: "targets.codex.css",
+      selector: prelude.slice(0, 240),
+      message: "Deep direct-child chains are sensitive to wrapper changes.",
+    },
+  ]);
+  assert.deepEqual(lintThemePackage(bundle), expected);
 }
 
 test("settings clamp to the four editor controls", () => {
@@ -172,7 +219,7 @@ test("generated packages contain only local images and safe Codex CSS", () => {
   const bundle = validateThemePackage(JSON.parse(serialized));
   assert.equal(bundle.format, "codextheme-theme");
   assert.doesNotMatch(serialized, /codedrobe/iu);
-  assert.deepEqual(lintThemePackage(bundle), []);
+  assertPrivateSkinLint(bundle);
   const target = resolveThemeTarget(bundle, "codex");
   assert.deepEqual(bundle.targets.codex.options.baseTheme, {
     mode: "dark",
@@ -246,10 +293,9 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       composerBlur: 22,
       borderAlpha: 38,
       radius: 12,
-      iconSurfaceAlpha: 92,
-      iconBorderAlpha: 58,
-      iconGlowAlpha: 42,
-      iconGlyph: "var(--codextheme-surface)",
+      iconHoverSurfaceAlpha: 30,
+      iconHoverBorderAlpha: 52,
+      iconHoverGlowAlpha: 28,
       artworkBlur: 0,
       saturation: "1.04",
       imageContrast: "1.06",
@@ -268,10 +314,9 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       composerBlur: 28,
       borderAlpha: 30,
       radius: 16,
-      iconSurfaceAlpha: 24,
-      iconBorderAlpha: 44,
-      iconGlowAlpha: 24,
-      iconGlyph: "var(--codextheme-accent)",
+      iconHoverSurfaceAlpha: 20,
+      iconHoverBorderAlpha: 40,
+      iconHoverGlowAlpha: 18,
       artworkBlur: 0,
       saturation: "1.08",
       imageContrast: "1.02",
@@ -290,10 +335,9 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       composerBlur: 12,
       borderAlpha: 18,
       radius: 8,
-      iconSurfaceAlpha: 12,
-      iconBorderAlpha: 26,
-      iconGlowAlpha: 0,
-      iconGlyph: "var(--codextheme-accent)",
+      iconHoverSurfaceAlpha: 10,
+      iconHoverBorderAlpha: 28,
+      iconHoverGlowAlpha: 0,
       artworkBlur: 1,
       saturation: "0.92",
       imageContrast: "1.00",
@@ -311,7 +355,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       profile,
     });
     const bundle = validateThemePackage(JSON.parse(serialized));
-    assert.deepEqual(lintThemePackage(bundle), []);
+    assertPrivateSkinLint(bundle);
     const target = resolveThemeTarget(bundle, "codex");
     const { css } = target;
     cssByRecipe.push(css);
@@ -339,10 +383,9 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
       "--codextheme-muted-ink",
       "--codextheme-line",
       "--codextheme-radius",
-      "--codextheme-icon-surface-alpha",
-      "--codextheme-icon-border-alpha",
-      "--codextheme-icon-glow-alpha",
-      "--codextheme-icon-glyph",
+      "--codextheme-icon-hover-surface-alpha",
+      "--codextheme-icon-hover-border-alpha",
+      "--codextheme-icon-hover-glow-alpha",
     ]) {
       assert.ok(css.includes(`${variable}:`), `${recipe} CSS must define ${variable}.`);
     }
@@ -353,20 +396,17 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const composer = css.match(/\.composer-surface-chrome\s*\{([^}]*)\}/s);
     const selected = css.match(/aside\.app-shell-left-panel\s+:is\(\[aria-current="page"\],\s*\[aria-selected="true"\],\s*\[data-state="active"\]\)\s*\{([^}]*)\}/s);
     const code = css.match(/:is\(pre, code, \[data-language\]\)\s*\{([^}]*)\}/s);
-    const navigationIcons = css.match(/aside\.app-shell-left-panel :is\(button, a, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
-    const assistantIcons = css.match(/\[data-message-author-role="assistant"\] svg\s*\{([^}]*)\}/s);
-    const homeIcons = css.match(/\.dream-home :is\(button, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
-    const composerIcons = css.match(/\.composer-surface-chrome :is\(button, \[role="button"\]\) svg\s*\{([^}]*)\}/s);
+    const stateMaterial = css.match(/button\.border-token-border:is\(:hover, :focus-visible, \[data-state="open"\]\)\s*\{([^}]*)\}/s);
     assert.ok(sidebar, `${recipe} CSS must include the owned sidebar rule.`);
     assert.ok(main, `${recipe} CSS must include the main surface rule.`);
     assert.ok(header, `${recipe} CSS must include the header rule.`);
     assert.ok(composer, `${recipe} CSS must include the composer rule.`);
     assert.ok(selected, `${recipe} CSS must scope selected states to the owned sidebar.`);
     assert.ok(code, `${recipe} CSS must include the code surface rule.`);
-    assert.ok(navigationIcons, `${recipe} CSS must color native navigation icons.`);
-    assert.ok(assistantIcons, `${recipe} CSS must color native assistant message icons.`);
-    assert.ok(homeIcons, `${recipe} CSS must materialize native Home action icons.`);
-    assert.ok(composerIcons, `${recipe} CSS must materialize native composer icons.`);
+    for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS) {
+      assert.ok(css.includes(selector), `${recipe} CSS must scope icon material to ${selector}.`);
+    }
+    assert.ok(stateMaterial, `${recipe} CSS must materialize only secondary composer controls on interaction.`);
     assert.match(sidebar[1], new RegExp(`surface\\) ${expected.sidebarAlpha}%`));
     assert.match(sidebar[1], new RegExp(`accent\\) ${expected.borderAlpha}%`));
     assert.match(sidebar[1], new RegExp(`blur\\(${expected.sidebarBlur}px\\) saturate\\(1\\.08\\)`));
@@ -386,28 +426,30 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(selected[1], /inset 3px 0 0 var\(--codextheme-accent\)/);
     assert.match(selected[1], /border-radius:\s*var\(--codextheme-radius\)/);
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
-    assert.match(navigationIcons[1], /color:\s*var\(--codextheme-accent\)/);
-    assert.match(navigationIcons[1], /drop-shadow/);
-    assert.match(assistantIcons[1], /color:\s*var\(--codextheme-accent\)/);
-    assert.match(assistantIcons[1], /drop-shadow/);
-    assert.deepEqual(declarationNames(navigationIcons[1]), ["color", "filter"]);
-    assert.deepEqual(declarationNames(assistantIcons[1]), ["color", "filter"]);
-    for (const material of [homeIcons[1], composerIcons[1]]) {
-      assert.match(material, /color:\s*var\(--codextheme-icon-glyph\)/);
-      assert.match(material, /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-surface-alpha\), transparent\)/);
-      assert.match(material, /border-radius:\s*50%/);
-      assert.match(material, /box-shadow:/);
-      assert.doesNotMatch(material, /(?:width|height|padding|margin):/);
-      assert.deepEqual(declarationNames(material), ["background-color", "border-radius", "box-shadow", "color"]);
-    }
-    assert.match(css, new RegExp(`--codextheme-icon-surface-alpha: ${expected.iconSurfaceAlpha}%`));
-    assert.match(css, new RegExp(`--codextheme-icon-border-alpha: ${expected.iconBorderAlpha}%`));
-    assert.match(css, new RegExp(`--codextheme-icon-glow-alpha: ${expected.iconGlowAlpha}%`));
-    assert.ok(css.includes(`--codextheme-icon-glyph: ${expected.iconGlyph}`));
+    assert.match(stateMaterial[1], /color:\s*var\(--codextheme-accent\)/);
+    assert.match(stateMaterial[1], /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-surface-alpha\), transparent\)/);
+    assert.match(stateMaterial[1], /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\),\s*0 0 18px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)/s);
+    assert.match(css, /transition:\s*color \.16s ease, background-color \.16s ease/);
+    assert.doesNotMatch(css, /(?:\.dream-home|\.composer-surface-chrome) :is\(button, \[role="button"\]\) svg\s*\{/u);
+    assert.doesNotMatch(css, /aside\.app-shell-left-panel :is\(button, a, \[role="button"\]\) svg\s*\{/u);
+    assert.doesNotMatch(css, /\[data-message-author-role="assistant"\] svg\s*\{/u);
+    const permanentSvgPreludes = [...css.matchAll(/([^{}]*\bsvg\b[^{}]*)\{/gu)]
+      .map((match) => match[1].trim())
+      .filter((prelude) => !/:hover|:focus-visible|\[aria-current="page"\]|\[aria-selected="true"\]|\[data-state="active"\]|\[data-state="open"\]/u.test(prelude));
+    assert.deepEqual(permanentSvgPreludes, [], `${recipe} CSS must not style SVGs outside interaction state.`);
+    assert.doesNotMatch(css, /\.size-token-button-composer/u);
+    assert.deepEqual(
+      [...css.matchAll(/--codextheme-icon-[a-z-]+:/gu)].map((match) => match[0]),
+      [
+        "--codextheme-icon-hover-surface-alpha:",
+        "--codextheme-icon-hover-border-alpha:",
+        "--codextheme-icon-hover-glow-alpha:",
+      ],
+    );
+    assert.match(css, new RegExp(`--codextheme-icon-hover-surface-alpha: ${expected.iconHoverSurfaceAlpha}%`));
+    assert.match(css, new RegExp(`--codextheme-icon-hover-border-alpha: ${expected.iconHoverBorderAlpha}%`));
+    assert.match(css, new RegExp(`--codextheme-icon-hover-glow-alpha: ${expected.iconHoverGlowAlpha}%`));
     assert.match(css, new RegExp(`--codextheme-radius: ${expected.radius}px`));
-    assert.equal((css.match(/\[aria-current="page"\]/gu) ?? []).length, 1);
-    assert.equal((css.match(/\[aria-selected="true"\]/gu) ?? []).length, 1);
-    assert.equal((css.match(/\[data-state="active"\]/gu) ?? []).length, 1);
 
     const sessionWindow = css.match(/body::before\s*\{([^}]*)\}/s);
     assert.ok(sessionWindow, "Session must retain the fixed window layer.");
