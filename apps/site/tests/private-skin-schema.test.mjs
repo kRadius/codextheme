@@ -62,6 +62,14 @@ function assertOwnedCssSelectors(css, label) {
   }
 }
 
+function assertStateScopedSvgSelectors(css, label) {
+  const permanentSvgSelectors = [...css.matchAll(/([^{}]+)\{/gu)]
+    .flatMap((match) => splitSelectorList(match[1].trim()))
+    .filter((selector) => /\bsvg\b/u.test(selector))
+    .filter((selector) => !/:hover|:focus-visible|\[aria-current="page"\]|\[aria-selected="true"\]|\[data-state="active"\]|\[data-state="open"\]/u.test(selector));
+  assert.deepEqual(permanentSvgSelectors, [], `${label} CSS must not style SVGs outside interaction state.`);
+}
+
 const PRIVATE_SKIN_BASE_ICON_SELECTORS = [
   "aside.app-shell-left-panel button:has(> .text-token-foreground)",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground)",
@@ -267,6 +275,14 @@ test("owned selector audit rejects an unowned branch in a multiline selector lis
   );
 });
 
+test("SVG scope audit rejects a permanent branch hidden by a stateful sibling", () => {
+  assert.throws(
+    () => assertStateScopedSvgSelectors(`html.codextheme-codex-skin :hover svg,
+html.codextheme-codex-skin svg { color: red; }`, "probe"),
+    /must not style SVGs outside interaction state/u,
+  );
+});
+
 test("recipe profiles generate distinct complete adaptive surface systems", () => {
   const profile = analyzeImagePixels({
     data: new Uint8Array([
@@ -396,7 +412,9 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const composer = css.match(/\.composer-surface-chrome\s*\{([^}]*)\}/s);
     const selected = css.match(/aside\.app-shell-left-panel\s+:is\(\[aria-current="page"\],\s*\[aria-selected="true"\],\s*\[data-state="active"\]\)\s*\{([^}]*)\}/s);
     const code = css.match(/:is\(pre, code, \[data-language\]\)\s*\{([^}]*)\}/s);
+    const baseTransition = css.match(/\.composer-surface-chrome button\.border-token-border\s*\{([^}]*)\}/s);
     const stateMaterial = css.match(/button\.border-token-border:is\(:hover, :focus-visible, \[data-state="open"\]\)\s*\{([^}]*)\}/s);
+    const stateGlyph = css.match(/button\.border-token-border:is\(:hover, :focus-visible, \[data-state="open"\]\) svg\s*\{([^}]*)\}/s);
     assert.ok(sidebar, `${recipe} CSS must include the owned sidebar rule.`);
     assert.ok(main, `${recipe} CSS must include the main surface rule.`);
     assert.ok(header, `${recipe} CSS must include the header rule.`);
@@ -406,7 +424,9 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS) {
       assert.ok(css.includes(selector), `${recipe} CSS must scope icon material to ${selector}.`);
     }
+    assert.ok(baseTransition, `${recipe} CSS must transition secondary composer controls.`);
     assert.ok(stateMaterial, `${recipe} CSS must materialize only secondary composer controls on interaction.`);
+    assert.ok(stateGlyph, `${recipe} CSS must accent secondary composer glyphs on interaction.`);
     assert.match(sidebar[1], new RegExp(`surface\\) ${expected.sidebarAlpha}%`));
     assert.match(sidebar[1], new RegExp(`accent\\) ${expected.borderAlpha}%`));
     assert.match(sidebar[1], new RegExp(`blur\\(${expected.sidebarBlur}px\\) saturate\\(1\\.08\\)`));
@@ -426,17 +446,17 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(selected[1], /inset 3px 0 0 var\(--codextheme-accent\)/);
     assert.match(selected[1], /border-radius:\s*var\(--codextheme-radius\)/);
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
-    assert.match(stateMaterial[1], /color:\s*var\(--codextheme-accent\)/);
+    assert.match(stateMaterial[1], /color:\s*var\(--codextheme-accent\)\s*!important;/);
     assert.match(stateMaterial[1], /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-surface-alpha\), transparent\)/);
+    assert.match(stateMaterial[1], /border-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\)\s*!important;/);
     assert.match(stateMaterial[1], /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\),\s*0 0 18px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)/s);
-    assert.match(css, /transition:\s*color \.16s ease, background-color \.16s ease/);
+    assert.match(baseTransition[1], /transition:\s*color \.16s ease, background-color \.16s ease, border-color \.16s ease, box-shadow \.16s ease, filter \.16s ease;/);
+    assert.match(stateGlyph[1], /color:\s*var\(--codextheme-accent\)\s*!important;/);
+    assert.match(stateGlyph[1], /filter:\s*drop-shadow\(0 0 7px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)\);/);
     assert.doesNotMatch(css, /(?:\.dream-home|\.composer-surface-chrome) :is\(button, \[role="button"\]\) svg\s*\{/u);
     assert.doesNotMatch(css, /aside\.app-shell-left-panel :is\(button, a, \[role="button"\]\) svg\s*\{/u);
     assert.doesNotMatch(css, /\[data-message-author-role="assistant"\] svg\s*\{/u);
-    const permanentSvgPreludes = [...css.matchAll(/([^{}]*\bsvg\b[^{}]*)\{/gu)]
-      .map((match) => match[1].trim())
-      .filter((prelude) => !/:hover|:focus-visible|\[aria-current="page"\]|\[aria-selected="true"\]|\[data-state="active"\]|\[data-state="open"\]/u.test(prelude));
-    assert.deepEqual(permanentSvgPreludes, [], `${recipe} CSS must not style SVGs outside interaction state.`);
+    assertStateScopedSvgSelectors(css, recipe);
     assert.doesNotMatch(css, /\.size-token-button-composer/u);
     assert.deepEqual(
       [...css.matchAll(/--codextheme-icon-[a-z-]+:/gu)].map((match) => match[0]),
