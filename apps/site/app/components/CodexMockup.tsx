@@ -64,10 +64,9 @@ export function CodexMockup({
     "--studio-composer-blur": `${tokens.composerBlur}px`,
     "--studio-border-alpha": `${tokens.borderAlpha}%`,
     "--studio-radius": `${tokens.radius}px`,
-    "--studio-icon-surface-alpha": `${tokens.iconSurfaceAlpha}%`,
-    "--studio-icon-border-alpha": `${tokens.iconBorderAlpha}%`,
-    "--studio-icon-glow-alpha": `${tokens.iconGlowAlpha}%`,
-    "--studio-icon-glyph": tokens.iconGlyphOnAccent ? tokens.surface : tokens.accent,
+    "--studio-icon-hover-surface-alpha": `${tokens.iconHoverSurfaceAlpha}%`,
+    "--studio-icon-hover-border-alpha": `${tokens.iconHoverBorderAlpha}%`,
+    "--studio-icon-hover-glow-alpha": `${tokens.iconHoverGlowAlpha}%`,
     "--studio-shadow": tokens.shadow,
     "--studio-saturation": tokens.saturation / 100,
     "--studio-image-contrast": tokens.imageContrast / 100,
@@ -120,7 +119,10 @@ export function CodexMockup({
             </div>
           </div>
         )}
-        <div className="mockup-composer"><span>Ask Codex anything</span><b>↑</b></div>
+        <div className="mockup-composer">
+          <span>Ask Codex anything</span>
+          <span className="mockup-composer-actions"><i>⌁</i><b>↑</b></span>
+        </div>
       </main>
       <figcaption><span>LIVE BROWSER PREVIEW · {tokens.recipe.toUpperCase()} SKIN</span><b>{mode === "home" ? "CODEX HOME" : "CODEX SESSION"}</b></figcaption>
     </figure>

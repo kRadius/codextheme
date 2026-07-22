@@ -31,19 +31,30 @@ test("preview code inherits readable ink instead of forcing the adaptive accent"
   assert.match(css, /\.mockup-thread pre \{[^}]*color: var\(--studio-ink\)/s);
 });
 
-test("preview uses the same closed icon-material tokens as generated skins", () => {
+test("preview mirrors private icon interaction states", () => {
   for (const property of [
-    "--studio-icon-surface-alpha",
-    "--studio-icon-border-alpha",
-    "--studio-icon-glow-alpha",
-    "--studio-icon-glyph",
+    "--studio-icon-hover-surface-alpha",
+    "--studio-icon-hover-border-alpha",
+    "--studio-icon-hover-glow-alpha",
   ]) {
     assert.ok(mockup.includes(`\"${property}\"`), `mockup must expose ${property}`);
   }
-  assert.match(mockup, /tokens\.iconGlyphOnAccent \? tokens\.surface : tokens\.accent/);
-  assert.match(mockup, /<nav><span><i>＋<\/i> New chat<\/span>/);
-  assert.match(css, /\.mockup-sidebar nav i \{[^}]*var\(--studio-accent\)/s);
-  assert.match(css, /\.mockup-prompts i \{[^}]*var\(--studio-icon-glyph\)[^}]*var\(--studio-icon-surface-alpha\)[^}]*var\(--studio-icon-glow-alpha\)/s);
-  assert.match(css, /\.mockup-agent > i \{[^}]*var\(--studio-accent\)/s);
-  assert.match(css, /\.mockup-composer b \{[^}]*var\(--studio-icon-glyph\)[^}]*var\(--studio-icon-surface-alpha\)[^}]*var\(--studio-icon-glow-alpha\)/s);
+  for (const removed of [
+    "--studio-icon-surface-alpha",
+    "--studio-icon-border-alpha",
+    "--studio-icon-glow-alpha",
+  ]) {
+    assert.equal(mockup.includes(`\"${removed}\"`), false, `${removed} must be removed`);
+  }
+
+  assert.doesNotMatch(mockup, /iconHoverGlyphOnAccent/);
+  assert.match(mockup, /className="mockup-composer-actions"/);
+  assert.match(mockup, /<i>⌁<\/i><b>↑<\/b>/);
+  assert.match(
+    css,
+    /\.mockup-sidebar nav span:hover,\s*\.mockup-prompts > span:hover,\s*\.mockup-composer-actions i:hover\s*\{[^}]*background:/s,
+  );
+  assert.match(css, /\.mockup-composer-actions b \{[^}]*background: var\(--studio-ink\)/s);
+  assert.doesNotMatch(css, /\.mockup-prompts i \{[^}]*background:/s);
+  assert.doesNotMatch(css, /\.mockup-agent > i \{[^}]*drop-shadow/s);
 });
