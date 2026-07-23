@@ -353,55 +353,136 @@ function sidebarSelectorParts(selector) {
   return { root: normalized, targets: new Set(["surface"]) };
 }
 
-function sidebarSelectorMatches(selector, scenario, element) {
-  const { root, targets } = sidebarSelectorParts(selector);
-  if (!root.startsWith("aside.app-shell-left-panel ") || !targets.has(element)) return false;
+const SIDEBAR_PERSISTENT_STATE_SELECTORS = {
+  "aria-current": "[aria-current=\"page\"]",
+  "aria-selected": "[aria-selected=\"true\"]",
+  "data-state-active": "[data-state=\"active\"]",
+};
 
-  const rootPersistent = scenario.persistentOwner === "root";
-  const primaryPersistent = scenario.persistentOwner === "primary";
-  const rootDisabled = scenario.disabledTarget === "root" && (scenario.disabled || scenario.ariaDisabled);
-  const primaryDisabled = scenario.disabledTarget === "primary" && (scenario.disabled || scenario.ariaDisabled);
-  const quickDisabled = scenario.disabledTarget === "quick" && (scenario.disabled || scenario.ariaDisabled);
-
-  let structuralMatch = false;
-  if (root.startsWith("aside.app-shell-left-panel :is([aria-current=\"page\"]")) {
-    structuralMatch = rootPersistent;
-  } else if (root.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")) {
-    structuralMatch = scenario.kind === "standalone";
-  } else if (root.startsWith("aside.app-shell-left-panel .group:has(> button")) {
-    structuralMatch = scenario.kind === "group";
-  } else if (root.startsWith("aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group")) {
-    structuralMatch = scenario.kind === "listitem";
+function topLevelPseudoArguments(selector, name) {
+  const argumentsList = [];
+  let depth = 0;
+  let quote = "";
+  for (let index = 0; index < selector.length; index += 1) {
+    const character = selector[index];
+    if (quote) {
+      if (character === quote && selector[index - 1] !== "\\") quote = "";
+      continue;
+    }
+    if (character === "\"" || character === "'") {
+      quote = character;
+    } else if (character === "[") {
+      index = matchingDelimiter(selector, index, "[", "]");
+    } else if (character === "(") {
+      depth += 1;
+    } else if (character === ")") {
+      depth -= 1;
+    } else if (depth === 0 && selector.startsWith(`:${name}(`, index)) {
+      const start = index + name.length + 2;
+      const end = matchingDelimiter(selector, start - 1, "(", ")");
+      argumentsList.push(selector.slice(start, end));
+      index = end;
+    }
   }
-  if (!structuralMatch) return false;
+  return argumentsList;
+}
 
-  const childPersistentOwner = root.includes(":has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)");
-  const positiveChildPersistentOwner = childPersistentOwner
-    && !root.includes(":not(:has(> button:is([aria-current=\"page\"]");
-  if (positiveChildPersistentOwner && !primaryPersistent) return false;
+function sidebarScenarioRootIdentity(scenario) {
+  return {
+    standalone: "standalone-button",
+    group: "group-row",
+    listitem: "project-task-row",
+  }[scenario.kind];
+}
 
-  let positiveState = root.startsWith("aside.app-shell-left-panel :is([aria-current=\"page\"]")
-    || positiveChildPersistentOwner;
-  if (root.includes(":is(:hover, :focus-visible")) {
-    positiveState ||= scenario.kind === "standalone"
+function sidebarSurfaceCandidates(root, scenario) {
+  if (root.startsWith("aside.app-shell-left-panel :is(")) {
+    return [sidebarScenarioRootIdentity(scenario)];
+  }
+  if (
+    root.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
+    || root.startsWith("aside.app-shell-left-panel .group > button")
+  ) {
+    if (scenario.kind === "standalone") return ["standalone-button"];
+    if (
+      scenario.kind === "group"
+      && !root.includes(":not(:where(.group > button))")
+      && !root.includes(":not(.group > button)")
+    ) return ["group-primary-button"];
+    return [];
+  }
+  if (root.startsWith("aside.app-shell-left-panel .group:has(> button")) {
+    return scenario.kind === "group" ? ["group-row"] : [];
+  }
+  if (root.startsWith("aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group")) {
+    return scenario.kind === "listitem" ? ["project-task-row"] : [];
+  }
+  return [];
+}
+
+function sidebarSurfaceSelectorMatches(root, scenario, identity) {
+  const persistentStateSelector = SIDEBAR_PERSISTENT_STATE_SELECTORS[scenario.persistentState];
+  const rootPersistent = scenario.persistentOwner === "root" && persistentStateSelector;
+  const primaryPersistent = scenario.persistentOwner === "primary" && persistentStateSelector;
+  const targetPersistent = identity === "group-primary-button" ? primaryPersistent : rootPersistent;
+  const positiveRootState = Boolean(
+    targetPersistent
+    && topLevelPseudoArguments(root, "is").some((argument) => argument.includes(persistentStateSelector)),
+  );
+  const positiveChildState = Boolean(
+    identity === "group-row"
+    && primaryPersistent
+    && topLevelPseudoArguments(root, "has").some((argument) => (
+      argument.includes("> button:is(")
+      && argument.includes(persistentStateSelector)
+      && argument.includes("> .text-token-foreground")
+    )),
+  );
+
+  let positiveState = positiveRootState || positiveChildState;
+  const rootInteraction = topLevelPseudoArguments(root, "is").some((argument) => (
+    argument.includes(":hover") || argument.includes(":focus-visible")
+  ));
+  if (rootInteraction) {
+    positiveState ||= identity === "standalone-button" || identity === "group-primary-button"
       ? ["primary-hover", "primary-focus"].includes(scenario.transient)
-      : scenario.kind === "group"
+      : identity === "group-row"
         ? ["root-hover", "root-focus", "primary-hover", "quick-hover"].includes(scenario.transient)
         : ["root-hover", "root-focus"].includes(scenario.transient);
-    if (root.includes(":is(:hover, :focus-visible, [aria-current=\"page\"]")) positiveState ||= rootPersistent;
   }
-  if (root.includes(":has(button:focus-visible)")) {
+  const descendantFocus = topLevelPseudoArguments(root, "has")
+    .some((argument) => argument === "button:focus-visible");
+  if (identity === "group-row" && descendantFocus) {
     positiveState ||= ["primary-focus", "quick-focus"].includes(scenario.transient);
-  }
-  if (root.includes("):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])")) {
-    positiveState ||= rootPersistent;
   }
   if (!positiveState) return false;
 
-  if (rootPersistent && root.includes(":not(:is([aria-current=\"page\"]")) return false;
-  if (primaryPersistent && root.includes(":not(:has(> button:is([aria-current=\"page\"]")) return false;
-  if (rootDisabled && root.includes(":not(:disabled, [aria-disabled=\"true\"])")) return false;
-  if (primaryDisabled && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground))")) return false;
+  const negations = topLevelPseudoArguments(root, "not");
+  if (
+    targetPersistent
+    && negations.some((argument) => argument.startsWith(":is(") && argument.includes(persistentStateSelector))
+  ) return false;
+  if (
+    primaryPersistent
+    && negations.some((argument) => (
+      argument.startsWith(":has(> button:is(")
+      && argument.includes(persistentStateSelector)
+    ))
+  ) return false;
+
+  const disabled = scenario.disabled || scenario.ariaDisabled;
+  const targetDisabled = disabled && (
+    (scenario.disabledTarget === "root" && identity !== "group-primary-button")
+    || (scenario.disabledTarget === "primary" && identity === "group-primary-button")
+  );
+  const primaryDisabled = disabled && scenario.disabledTarget === "primary";
+  const quickDisabled = disabled && scenario.disabledTarget === "quick";
+  if (targetDisabled && root.includes(":not(:disabled, [aria-disabled=\"true\"])")) return false;
+  if (
+    primaryDisabled
+    && identity === "group-row"
+    && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground))")
+  ) return false;
   if (
     primaryDisabled
     && scenario.transient === "primary-hover"
@@ -420,12 +501,23 @@ function sidebarSelectorMatches(selector, scenario, element) {
   return true;
 }
 
+function sidebarSelectorTargets(selector, scenario, element) {
+  const { root, targets } = sidebarSelectorParts(selector);
+  if (!root.startsWith("aside.app-shell-left-panel ") || !targets.has(element)) return [];
+  const matchingSurfaces = sidebarSurfaceCandidates(root, scenario)
+    .filter((identity) => sidebarSurfaceSelectorMatches(root, scenario, identity));
+  if (element === "surface") return matchingSurfaces;
+  return matchingSurfaces.length > 0
+    ? [`${sidebarScenarioRootIdentity(scenario)}-${element}`]
+    : [];
+}
+
+function sidebarSelectorMatches(selector, scenario, element) {
+  return sidebarSelectorTargets(selector, scenario, element).length > 0;
+}
+
 function sidebarCascadeWinners(css, scenario) {
-  const rootIdentity = {
-    standalone: "standalone-button",
-    group: "group-row",
-    listitem: "project-task-row",
-  }[scenario.kind];
+  const rootIdentity = sidebarScenarioRootIdentity(scenario);
   const winners = new Map();
   let sourceOrder = 0;
 
@@ -434,28 +526,28 @@ function sidebarCascadeWinners(css, scenario) {
       sourceOrder += 1;
       const specificity = selectorSpecificity(selector);
       for (const element of ["surface", "label", "glyph"]) {
-        if (!sidebarSelectorMatches(selector, scenario, element)) continue;
-        for (const declaration of cssDeclarations(rule[2]).flatMap(expandedCascadeDeclarations)) {
-          const relevant = element === "surface"
-            ? isMaterialPaintDeclaration(declaration.name) || ["color", "border-radius"].includes(declaration.name)
-            : ["color", "filter"].includes(declaration.name);
-          if (!relevant) continue;
-          const identity = element === "surface" ? rootIdentity : `${rootIdentity}-${element}`;
-          const key = `${identity}:${declaration.name}`;
-          const current = winners.get(key);
-          const wins = !current
-            || Number(declaration.important) > Number(current.important)
-            || (
-              declaration.important === current.important
-              && (
-                compareSpecificity(specificity, current.specificity) > 0
-                || (
-                  compareSpecificity(specificity, current.specificity) === 0
-                  && sourceOrder > current.sourceOrder
+        for (const identity of sidebarSelectorTargets(selector, scenario, element)) {
+          for (const declaration of cssDeclarations(rule[2]).flatMap(expandedCascadeDeclarations)) {
+            const relevant = element === "surface"
+              ? isMaterialPaintDeclaration(declaration.name) || ["color", "border-radius"].includes(declaration.name)
+              : ["color", "filter"].includes(declaration.name);
+            if (!relevant) continue;
+            const key = `${identity}:${declaration.name}`;
+            const current = winners.get(key);
+            const wins = !current
+              || Number(declaration.important) > Number(current.important)
+              || (
+                declaration.important === current.important
+                && (
+                  compareSpecificity(specificity, current.specificity) > 0
+                  || (
+                    compareSpecificity(specificity, current.specificity) === 0
+                    && sourceOrder > current.sourceOrder
+                  )
                 )
-              )
-            );
-          if (wins) winners.set(key, { ...declaration, selector, sourceOrder, specificity });
+              );
+            if (wins) winners.set(key, { ...declaration, selector, sourceOrder, specificity });
+          }
         }
       }
     }
@@ -598,6 +690,61 @@ function assertTransientCascade(cascade) {
   assert.match(cascade.declaration("surface", "box-shadow")?.value ?? "", /--codextheme-icon-hover-glow-alpha/u);
 }
 
+test("sidebar cascade model distinguishes each persistent attribute", () => {
+  const persistentSelectors = {
+    "aria-current": "[aria-current=\"page\"]",
+    "aria-selected": "[aria-selected=\"true\"]",
+    "data-state-active": "[data-state=\"active\"]",
+  };
+
+  for (const [selectorState, stateSelector] of Object.entries(persistentSelectors)) {
+    const selector = `html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is(${stateSelector})`;
+    for (const scenarioState of Object.keys(persistentSelectors)) {
+      assert.equal(
+        sidebarSelectorMatches(selector, {
+          kind: "standalone",
+          persistentOwner: "root",
+          persistentState: scenarioState,
+        }, "surface"),
+        scenarioState === selectorState,
+        `${selectorState} selectors must match only the corresponding persistent scenario.`,
+      );
+    }
+  }
+});
+
+test("sidebar cascade model rejects a nested child material mutation", () => {
+  const bundle = validateThemePackage(JSON.parse(buildPrivateSkinPackage({
+    id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    exportedAt: "2026-07-19T00:00:00.000Z",
+    image: Buffer.from("safe-image"),
+    settings: normalizePrivateSkinSettings({}),
+  })));
+  const { css } = resolveThemeTarget(bundle, "codex");
+  const rogueChildMaterial = `
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current="page"]) {
+  background: color-mix(in srgb, red 50%, transparent) !important;
+  border: 1px solid red !important;
+  box-shadow: 0 0 4px red !important;
+}`;
+  const mutated = sidebarCascadeWinners(`${css}\n${rogueChildMaterial}`, {
+    kind: "group",
+    persistentOwner: "primary",
+    persistentState: "aria-current",
+    transient: "primary-hover",
+  });
+  assert.deepEqual(
+    mutated.paintedRoots(),
+    ["group-row", "group-primary-button"],
+    "A child material mutation must expose both nested physical paint roots.",
+  );
+  assert.throws(
+    () => assertSelectedCascade(mutated),
+    /Only the selected physical root may own surface paint/u,
+    "The selected-root invariant must reject a mutation that paints the grouped child.",
+  );
+});
+
 test("sidebar cascade keeps selected material persistent and transient material ephemeral", () => {
   const bundle = validateThemePackage(JSON.parse(buildPrivateSkinPackage({
     id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -619,7 +766,7 @@ test("sidebar cascade keeps selected material persistent and transient material 
         transient,
       }));
     }
-    for (const transient of [undefined, "root-hover", "root-focus", "primary-focus", "quick-focus"]) {
+    for (const transient of [undefined, "root-hover", "root-focus", "primary-hover", "primary-focus", "quick-focus"]) {
       assertSelectedCascade(sidebarCascadeWinners(css, {
         kind: "group",
         persistentOwner: "root",
@@ -672,16 +819,24 @@ test("sidebar cascade keeps selected material persistent and transient material 
         `Disabled and aria-disabled controls must not receive transient material: ${JSON.stringify({ ...scenario, ...disabledState })}`,
       );
     }
-    for (const scenario of [
-      { kind: "standalone", persistentOwner: "root", disabledTarget: "root" },
-      { kind: "group", persistentOwner: "primary", disabledTarget: "primary" },
-      { kind: "listitem", persistentOwner: "root", disabledTarget: "root" },
-    ]) {
-      assertSelectedCascade(sidebarCascadeWinners(css, {
-        ...scenario,
-        persistentState: "aria-current",
-        ...disabledState,
-      }));
+    for (const persistentState of persistentStates) {
+      for (const scenario of [
+        { kind: "standalone", persistentOwner: "root", transient: "primary-hover", disabledTarget: "root" },
+        { kind: "standalone", persistentOwner: "root", transient: "primary-focus", disabledTarget: "root" },
+        { kind: "group", persistentOwner: "primary", transient: "primary-hover", disabledTarget: "primary" },
+        { kind: "group", persistentOwner: "primary", transient: "primary-focus", disabledTarget: "primary" },
+        { kind: "group", persistentOwner: "primary", transient: "quick-focus", disabledTarget: "quick" },
+        { kind: "group", persistentOwner: "root", transient: "primary-hover", disabledTarget: "root" },
+        { kind: "group", persistentOwner: "root", transient: "primary-focus", disabledTarget: "root" },
+        { kind: "listitem", persistentOwner: "root", transient: "root-hover", disabledTarget: "root" },
+        { kind: "listitem", persistentOwner: "root", transient: "root-focus", disabledTarget: "root" },
+      ]) {
+        assertSelectedCascade(sidebarCascadeWinners(css, {
+          ...scenario,
+          persistentState,
+          ...disabledState,
+        }));
+      }
     }
   }
 
