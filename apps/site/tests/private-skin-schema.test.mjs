@@ -91,7 +91,7 @@ const PRIVATE_SKIN_BASE_GLYPH_SELECTORS = PRIVATE_SKIN_BASE_ICON_SELECTORS.map((
 ));
 
 const PRIVATE_SKIN_REQUIRED_STATE_SELECTOR_COVERAGE = [
-  "aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel button:has(> .text-token-foreground):not(.group > button):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   ".dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible)",
@@ -99,12 +99,12 @@ const PRIVATE_SKIN_REQUIRED_STATE_SELECTOR_COVERAGE = [
 ];
 
 const PRIVATE_SKIN_STATE_ICON_SELECTORS = [
-  "aside.app-shell-left-panel button:has(> .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"])",
+  "aside.app-shell-left-panel button:has(> .text-token-foreground):not(.group > button):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"])",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"]):not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground)):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"]):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
   ".dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled=\"true\"])",
   ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"]):not(:disabled, [aria-disabled=\"true\"])",
-  "aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel button:has(> .text-token-foreground):not(.group > button):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   ".composer-surface-chrome button.border-token-border[data-state=\"open\"]",
@@ -170,7 +170,12 @@ function assertPrivateSkinLint(bundle) {
   for (const prelude of expectedPreludes) {
     assert.ok(actualPreludes.includes(prelude), `Private skin CSS must retain the exact selector prelude: ${prelude}`);
   }
-  const expected = expectedPreludes.flatMap((prelude) => [
+  assert.equal(
+    expectedPreludes[2].slice(0, 240),
+    expectedPreludes[3].slice(0, 240),
+    "State material and glyph preludes must retain the exact shared lint display selector.",
+  );
+  const expected = [expectedPreludes[0], expectedPreludes[1], expectedPreludes[3]].flatMap((prelude) => [
     {
       code: "long-selector",
       appId: "codex",
@@ -187,6 +192,38 @@ function assertPrivateSkinLint(bundle) {
     },
   ]);
   assert.deepEqual(lintThemePackage(bundle), expected);
+}
+
+function privateSkinMaterialSelectors(css, declaration) {
+  const selectors = [];
+  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
+    if (!declarationNames(match[2]).includes(declaration)) continue;
+    if (!match[2].includes("--codextheme-icon-hover-")) continue;
+    selectors.push(...splitSelectorList(match[1].trim()).map((selector) => selector.replace(/^html\.codextheme-codex-skin /u, "")));
+  }
+  return selectors;
+}
+
+function capturedSidebarRowMaterialRoots(css, { grouped, state }) {
+  const materialSelectors = privateSkinMaterialSelectors(css, "background-color");
+  const standaloneTransient = materialSelectors.find((selector) => (
+    selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
+      && selector.includes(":is(:hover, :focus-visible,")
+  ));
+  const groupTransient = materialSelectors.find((selector) => (
+    selector.startsWith("aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible,")
+  ));
+  const groupDescendantFocus = materialSelectors.find((selector) => (
+    selector.startsWith("aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible)")
+  ));
+  const roots = [];
+  if (standaloneTransient && (!grouped || !standaloneTransient.includes(":not(.group > button)"))) {
+    roots.push("button");
+  }
+  if (grouped && ((state === "hover" && groupTransient) || (state === "focus-visible" && groupDescendantFocus))) {
+    roots.push("group");
+  }
+  return roots;
 }
 
 test("settings clamp to the four editor controls", () => {
@@ -283,6 +320,72 @@ test("palette preserves the legacy compatibility colors", () => {
     ink: "#f4f1eb",
     contrast: 74,
   });
+});
+
+test("grouped sidebar primary states paint exactly one outer material root", () => {
+  const bundle = validateThemePackage(JSON.parse(buildPrivateSkinPackage({
+    id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    exportedAt: "2026-07-19T00:00:00.000Z",
+    image: Buffer.from("safe-image"),
+    settings: normalizePrivateSkinSettings({}),
+  })));
+  const { css } = resolveThemeTarget(bundle, "codex");
+  const materialSelectors = privateSkinMaterialSelectors(css, "background-color");
+  const glyphSelectors = privateSkinMaterialSelectors(css, "filter");
+  const standaloneMaterial = materialSelectors.filter((selector) => (
+    selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
+  ));
+  const groupedMaterial = materialSelectors.filter((selector) => (
+    selector.startsWith("aside.app-shell-left-panel .group:has(> button > .text-token-foreground)")
+  ));
+  const standaloneGlyph = glyphSelectors.filter((selector) => (
+    selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
+  ));
+  const groupedGlyph = glyphSelectors.filter((selector) => (
+    selector.startsWith("aside.app-shell-left-panel .group:has(> button > .text-token-foreground)")
+  ));
+
+  assert.deepEqual(standaloneMaterial, [
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[0],
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[5],
+  ], "Transient and persistent standalone material must exclude direct children of .group.");
+  assert.deepEqual(groupedMaterial, [
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[1],
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[6],
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[9],
+  ], "Grouped material must retain hover, persistent, and descendant keyboard-focus coverage.");
+  assert.deepEqual(standaloneGlyph, [
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[0],
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[5],
+  ], "Standalone glyph states must carry the direct-group-child exclusion.");
+  assert.deepEqual(groupedGlyph, [
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[1],
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[6],
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[9],
+  ], "Grouped glyph states must remain on the outer group material root.");
+
+  for (const state of ["hover", "focus-visible"]) {
+    assert.deepEqual(
+      capturedSidebarRowMaterialRoots(css, { grouped: true, state }),
+      ["group"],
+      `Captured .group > button row must paint only the outer group on child ${state}.`,
+    );
+    assert.deepEqual(
+      capturedSidebarRowMaterialRoots(css, { grouped: false, state }),
+      ["button"],
+      `Ordinary standalone primary button must remain covered on ${state}.`,
+    );
+  }
+
+  assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[0].includes(":not(:disabled, [aria-disabled=\"true\"])"));
+  assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[1].includes(":not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))"));
+  assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[9].includes(":not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))"));
+  assert.equal(
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[4],
+    ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"]):not(:disabled, [aria-disabled=\"true\"])",
+    "Composer coverage must remain limited to enabled secondary controls, excluding Send.",
+  );
+  assert.doesNotMatch(css, /\.size-token-button-composer/u, "Send must remain outside private icon material selectors.");
 });
 
 test("generated packages contain only local images and safe Codex CSS", () => {
