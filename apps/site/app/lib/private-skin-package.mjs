@@ -97,7 +97,8 @@ html.codextheme-codex-skin .composer-surface-chrome {
   backdrop-filter: blur(${tokens.composerBlur}px) saturate(1.08) !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel :is([aria-current="page"], [aria-selected="true"], [data-state="active"]) {
+html.codextheme-codex-skin aside.app-shell-left-panel :is([aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:where(.group > button)),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) > .text-token-foreground) {
   background: color-mix(in srgb, var(--codextheme-accent-soft) ${tokens.selectionAlpha}%, transparent) !important;
   border-color: color-mix(in srgb, var(--codextheme-accent) 44%, transparent) !important;
   border-radius: var(--codextheme-radius) !important;

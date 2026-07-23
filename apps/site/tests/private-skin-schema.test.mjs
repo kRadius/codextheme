@@ -99,6 +99,11 @@ const PRIVATE_SKIN_REQUIRED_STATE_SELECTOR_COVERAGE = [
   ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"])",
 ];
 
+const PRIVATE_SKIN_GENERIC_SELECTED_SELECTORS = [
+  "aside.app-shell-left-panel :is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:where(.group > button))",
+  "aside.app-shell-left-panel .group:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)",
+];
+
 const PRIVATE_SKIN_STATE_ICON_SELECTORS = [
   "aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"])",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"]):not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground)):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
@@ -131,6 +136,7 @@ function assertPrivateSkinIconRuleScopes(css, label) {
   const prefix = "html.codextheme-codex-skin ";
   const baseIconSelectors = new Set(PRIVATE_SKIN_BASE_ICON_SELECTORS.map((selector) => `${prefix}${selector}`));
   const baseGlyphSelectors = new Set(PRIVATE_SKIN_BASE_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
+  const genericSelectedSelectors = new Set(PRIVATE_SKIN_GENERIC_SELECTED_SELECTORS.map((selector) => `${prefix}${selector}`));
   const stateIconSelectors = new Set(PRIVATE_SKIN_STATE_ICON_SELECTORS.map((selector) => `${prefix}${selector}`));
   const stateGlyphSelectors = new Set(PRIVATE_SKIN_STATE_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
   for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
@@ -143,6 +149,12 @@ function assertPrivateSkinIconRuleScopes(css, label) {
       } else if (baseGlyphSelectors.has(selector)) {
         assert.deepEqual(declarationNames(block), ["transition"], `${label} base glyph rules must be transition-only.`);
         assert.match(block, /transition:\s*color \.16s ease, filter \.16s ease;/u);
+      } else if (genericSelectedSelectors.has(selector) && declarationNames(block).includes("background")) {
+        assert.deepEqual(
+          declarationNames(block),
+          ["background", "border-color", "border-radius", "box-shadow"],
+          `${label} generic selected roots must contain only selection material.`,
+        );
       } else if (stateIconSelectors.has(selector)) {
         assert.deepEqual(
           declarationNames(block),
@@ -162,6 +174,9 @@ function assertPrivateSkinIconRuleScopes(css, label) {
 
 function assertPrivateSkinLint(bundle) {
   const prefix = "html.codextheme-codex-skin ";
+  const genericSelectedPrelude = PRIVATE_SKIN_GENERIC_SELECTED_SELECTORS
+    .map((selector) => `${prefix}${selector}`)
+    .join(", ");
   const expectedPreludes = [
     PRIVATE_SKIN_BASE_ICON_SELECTORS,
     PRIVATE_SKIN_BASE_GLYPH_SELECTORS,
@@ -170,7 +185,7 @@ function assertPrivateSkinLint(bundle) {
   ].map((selectors) => selectors.map((selector) => `${prefix}${selector}`).join(", "));
   const actualPreludes = [...bundle.targets.codex.css.matchAll(/([^{}]+)\{/gu)]
     .map((match) => match[1].trim().replace(/\s+/gu, " "));
-  for (const prelude of expectedPreludes) {
+  for (const prelude of [genericSelectedPrelude, ...expectedPreludes]) {
     assert.ok(actualPreludes.includes(prelude), `Private skin CSS must retain the exact selector prelude: ${prelude}`);
   }
   assert.equal(
@@ -178,7 +193,7 @@ function assertPrivateSkinLint(bundle) {
     expectedPreludes[3].slice(0, 240),
     "State material and glyph preludes must retain the exact shared lint display selector.",
   );
-  const expected = [expectedPreludes[0], expectedPreludes[1], expectedPreludes[3]].flatMap((prelude) => [
+  const expected = [genericSelectedPrelude, expectedPreludes[0], expectedPreludes[1], expectedPreludes[3]].flatMap((prelude) => [
     {
       code: "long-selector",
       appId: "codex",
@@ -197,11 +212,15 @@ function assertPrivateSkinLint(bundle) {
   assert.deepEqual(lintThemePackage(bundle), expected);
 }
 
-function privateSkinMaterialSelectors(css, declaration) {
+function privateSkinLayerSelectors(css, layer) {
+  const materialDeclarations = new Set(["background", "background-color", "border-color", "box-shadow"]);
   const selectors = [];
   for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
-    if (!declarationNames(match[2]).includes(declaration)) continue;
-    if (!match[2].includes("--codextheme-icon-hover-")) continue;
+    const declarations = declarationNames(match[2]);
+    const containsLayer = layer === "material"
+      ? declarations.some((declaration) => materialDeclarations.has(declaration))
+      : declarations.includes("filter");
+    if (!containsLayer) continue;
     selectors.push(...splitSelectorList(match[1].trim()).map((selector) => selector.replace(/^html\.codextheme-codex-skin /u, "")));
   }
   return selectors;
@@ -223,19 +242,29 @@ function capturedSidebarStateRoots(css, {
     "aria-selected": "[aria-selected=\"true\"]",
     "data-state-active": "[data-state=\"active\"]",
   }[state]));
-  const selectors = privateSkinMaterialSelectors(css, layer === "material" ? "background-color" : "filter")
+  const selectors = privateSkinLayerSelectors(css, layer)
     .filter((selector) => (
-      selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
+      selector.startsWith("aside.app-shell-left-panel :is([aria-current=\"page\"]")
+        || selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
         || selector.startsWith("aside.app-shell-left-panel .group:has(> button")
     ));
   const roots = new Set();
 
   for (const selector of selectors) {
-    const root = selector.startsWith("aside.app-shell-left-panel button:") ? "button" : "group";
+    const genericSelected = selector.startsWith("aside.app-shell-left-panel :is([aria-current=\"page\"]");
+    const root = genericSelected
+      ? persistentOwner
+      : selector.startsWith("aside.app-shell-left-panel button:")
+        ? "button"
+        : "group";
     if (root === "group" && !grouped) continue;
     const rootSelector = selector.split(" :is(.text-token-foreground")[0];
     const excludesDirectGroupChild = /:not\((?::where\()?\.group > button\)?\)/u.test(rootSelector);
     if (root === "button" && grouped && excludesDirectGroupChild) continue;
+    if (genericSelected) {
+      if (persistentSelectors.length > 0) roots.add(root);
+      continue;
+    }
 
     const primaryDisabled = disabledTarget === "button" && (disabled || ariaDisabled);
     const focusedActionDisabled = disabledTarget === "quick-action" && (disabled || ariaDisabled);
@@ -373,8 +402,8 @@ test("sidebar primary selector model separates transient and persistent material
     settings: normalizePrivateSkinSettings({}),
   })));
   const { css } = resolveThemeTarget(bundle, "codex");
-  const materialSelectors = privateSkinMaterialSelectors(css, "background-color");
-  const glyphSelectors = privateSkinMaterialSelectors(css, "filter");
+  const materialSelectors = privateSkinLayerSelectors(css, "material");
+  const glyphSelectors = privateSkinLayerSelectors(css, "glyph");
   const standaloneMaterial = materialSelectors.filter((selector) => (
     selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
   ));
@@ -386,6 +415,10 @@ test("sidebar primary selector model separates transient and persistent material
   ));
   const groupedGlyph = glyphSelectors.filter((selector) => (
     selector.startsWith("aside.app-shell-left-panel .group:has(> button")
+  ));
+  const childTargetingMaterial = materialSelectors.filter((selector) => (
+    selector.startsWith("aside.app-shell-left-panel :is([aria-current=\"page\"]")
+      || selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
   ));
 
   for (const layer of ["material", "glyph"]) {
@@ -410,11 +443,12 @@ test("sidebar primary selector model separates transient and persistent material
     PRIVATE_SKIN_STATE_ICON_SELECTORS[5],
   ], "Standalone material must retain its exact transient and persistent branches.");
   assert.deepEqual(groupedMaterial, [
+    PRIVATE_SKIN_GENERIC_SELECTED_SELECTORS[1],
     PRIVATE_SKIN_STATE_ICON_SELECTORS[1],
     PRIVATE_SKIN_STATE_ICON_SELECTORS[6],
     PRIVATE_SKIN_STATE_ICON_SELECTORS[7],
     PRIVATE_SKIN_STATE_ICON_SELECTORS[10],
-  ], "Grouped material must retain transient, own-persistent, child-persistent, and descendant-focus coverage.");
+  ], "Grouped material must retain generic selection, transient, own-persistent, child-persistent, and descendant-focus coverage.");
   assert.deepEqual(standaloneGlyph, [
     PRIVATE_SKIN_STATE_GLYPH_SELECTORS[0],
     PRIVATE_SKIN_STATE_GLYPH_SELECTORS[5],
@@ -506,6 +540,14 @@ test("sidebar primary selector model separates transient and persistent material
         "Verified child persistent state must remain visible when the primary action is disabled.",
       );
     }
+  }
+
+  for (const selector of childTargetingMaterial) {
+    assert.match(
+      selector,
+      /:not\(:where\(\.group > button\)\)/u,
+      `Material rule must exclude verified .group > button roots: ${selector}`,
+    );
   }
 
   assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[0].includes(":not(:disabled, [aria-disabled=\"true\"])"));
@@ -743,7 +785,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const main = css.match(/main\.main-surface\s*\{([^}]*)\}/s);
     const header = css.match(/header\.app-header-tint\s*\{([^}]*)\}/s);
     const composer = css.match(/\.composer-surface-chrome\s*\{([^}]*)\}/s);
-    const selected = css.match(/aside\.app-shell-left-panel\s+:is\(\[aria-current="page"\],\s*\[aria-selected="true"\],\s*\[data-state="active"\]\)\s*\{([^}]*)\}/s);
+    const selected = cssRuleBlockForSelector(css, PRIVATE_SKIN_GENERIC_SELECTED_SELECTORS[0]);
     const code = css.match(/:is\(pre, code, \[data-language\]\)\s*\{([^}]*)\}/s);
     const baseTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_ICON_SELECTORS[4]);
     const baseGlyphTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_GLYPH_SELECTORS[4]);
@@ -795,10 +837,10 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(composer[1], /border-radius:\s*var\(--codextheme-radius\)/);
     assert.ok(composer[1].includes(`box-shadow: ${expected.shadow}`));
     assert.match(composer[1], new RegExp(`blur\\(${expected.composerBlur}px\\) saturate\\(1\\.08\\)`));
-    assert.match(selected[1], new RegExp(`accent-soft\\) ${expected.selectionAlpha}%`));
-    assert.match(selected[1], /accent\) 44%/);
-    assert.match(selected[1], /inset 3px 0 0 var\(--codextheme-accent\)/);
-    assert.match(selected[1], /border-radius:\s*var\(--codextheme-radius\)/);
+    assert.match(selected, new RegExp(`accent-soft\\) ${expected.selectionAlpha}%`));
+    assert.match(selected, /accent\) 44%/);
+    assert.match(selected, /inset 3px 0 0 var\(--codextheme-accent\)/);
+    assert.match(selected, /border-radius:\s*var\(--codextheme-radius\)/);
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
     assert.match(stateMaterial, /color:\s*var\(--codextheme-accent\)\s*!important;/);
     assert.match(stateMaterial, /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-surface-alpha\), transparent\)/);
