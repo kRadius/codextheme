@@ -93,6 +93,7 @@ const PRIVATE_SKIN_BASE_GLYPH_SELECTORS = PRIVATE_SKIN_BASE_ICON_SELECTORS.map((
 const PRIVATE_SKIN_REQUIRED_STATE_SELECTOR_COVERAGE = [
   "aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel .group:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)",
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   ".dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible)",
   ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"])",
@@ -104,8 +105,9 @@ const PRIVATE_SKIN_STATE_ICON_SELECTORS = [
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible, [aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:disabled, [aria-disabled=\"true\"]):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
   ".dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled=\"true\"])",
   ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"]):not(:disabled, [aria-disabled=\"true\"])",
-  "aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
+  "aside.app-shell-left-panel .group:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)",
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])",
   ".composer-surface-chrome button.border-token-border[data-state=\"open\"]",
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible):not(:disabled, [aria-disabled=\"true\"]):not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground)):not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))",
@@ -119,9 +121,10 @@ const PRIVATE_SKIN_STATE_GLYPH_SELECTORS = [
   `${PRIVATE_SKIN_STATE_ICON_SELECTORS[4]} svg`,
   `${PRIVATE_SKIN_STATE_ICON_SELECTORS[5]} :is(.text-token-foreground, svg)`,
   `${PRIVATE_SKIN_STATE_ICON_SELECTORS[6]} :is(.text-token-foreground, svg)`,
-  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[7]} svg`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[7]} :is(.text-token-foreground, svg)`,
   `${PRIVATE_SKIN_STATE_ICON_SELECTORS[8]} svg`,
-  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[9]} :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg)`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[9]} svg`,
+  `${PRIVATE_SKIN_STATE_ICON_SELECTORS[10]} :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg)`,
 ];
 
 function assertPrivateSkinIconRuleScopes(css, label) {
@@ -206,22 +209,24 @@ function privateSkinMaterialSelectors(css, declaration) {
 
 function capturedSidebarStateRoots(css, {
   grouped,
-  state,
-  stateOwner = "button",
+  transient = [],
+  persistent = [],
+  persistentOwner = "button",
   layer = "material",
   disabled = false,
   ariaDisabled = false,
   disabledTarget = "button",
 }) {
-  const persistentState = {
+  const transientStates = new Set(transient);
+  const persistentSelectors = persistent.map((state) => ({
     "aria-current": "[aria-current=\"page\"]",
     "aria-selected": "[aria-selected=\"true\"]",
     "data-state-active": "[data-state=\"active\"]",
-  }[state];
+  }[state]));
   const selectors = privateSkinMaterialSelectors(css, layer === "material" ? "background-color" : "filter")
     .filter((selector) => (
       selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
-        || selector.startsWith("aside.app-shell-left-panel .group:has(> button > .text-token-foreground)")
+        || selector.startsWith("aside.app-shell-left-panel .group:has(> button")
     ));
   const roots = new Set();
 
@@ -236,21 +241,29 @@ function capturedSidebarStateRoots(css, {
     const focusedActionDisabled = disabledTarget === "quick-action" && (disabled || ariaDisabled);
     if (root === "button" && primaryDisabled && rootSelector.includes(":not(:disabled, [aria-disabled=\"true\"])")) continue;
     if (root === "group" && primaryDisabled && rootSelector.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground))")) continue;
-    if (state === "quick-action-focus" && focusedActionDisabled && rootSelector.includes(":not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))")) continue;
+    if (transientStates.has("quick-action-focus") && focusedActionDisabled && rootSelector.includes(":not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))")) continue;
 
     if (rootSelector.includes(":has(button:focus-visible)")) {
-      if (state === "focus-visible" || state === "quick-action-focus") roots.add(root);
+      if (transientStates.has("primary-focus") || transientStates.has("quick-action-focus")) roots.add(root);
+      continue;
+    }
+    if (rootSelector.includes(":has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])")) {
+      if (persistentOwner === "button" && persistentSelectors.some((stateSelector) => rootSelector.includes(stateSelector))) roots.add(root);
       continue;
     }
     if (rootSelector.includes(":is(:hover, :focus-visible,")) {
       const transientMatch = root === "button"
-        ? state === "hover" || state === "focus-visible"
-        : state === "hover";
-      const persistentMatch = persistentState && stateOwner === root && rootSelector.includes(persistentState);
+        ? transientStates.has("primary-hover") || transientStates.has("primary-focus")
+        : transientStates.has("primary-hover") || transientStates.has("quick-action-hover");
+      const persistentMatch = persistentOwner === root
+        && persistentSelectors.some((stateSelector) => rootSelector.includes(stateSelector));
       if (transientMatch || persistentMatch) roots.add(root);
       continue;
     }
-    if (persistentState && stateOwner === root && rootSelector.includes(persistentState)) roots.add(root);
+    if (
+      persistentOwner === root
+      && persistentSelectors.some((stateSelector) => rootSelector.includes(stateSelector))
+    ) roots.add(root);
   }
 
   return [...roots];
@@ -366,14 +379,31 @@ test("sidebar primary selector model separates transient and persistent material
     selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
   ));
   const groupedMaterial = materialSelectors.filter((selector) => (
-    selector.startsWith("aside.app-shell-left-panel .group:has(> button > .text-token-foreground)")
+    selector.startsWith("aside.app-shell-left-panel .group:has(> button")
   ));
   const standaloneGlyph = glyphSelectors.filter((selector) => (
     selector.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
   ));
   const groupedGlyph = glyphSelectors.filter((selector) => (
-    selector.startsWith("aside.app-shell-left-panel .group:has(> button > .text-token-foreground)")
+    selector.startsWith("aside.app-shell-left-panel .group:has(> button")
   ));
+
+  for (const layer of ["material", "glyph"]) {
+    for (const persistentState of ["aria-current", "aria-selected", "data-state-active"]) {
+      for (const transient of [["primary-hover"], ["primary-focus"], ["quick-action-focus"]]) {
+        assert.deepEqual(
+          capturedSidebarStateRoots(css, {
+            grouped: true,
+            transient,
+            persistent: [persistentState],
+            layer,
+          }),
+          ["group"],
+          `Child ${persistentState} plus ${transient[0]} must paint only outer group ${layer}.`,
+        );
+      }
+    }
+  }
 
   assert.deepEqual(standaloneMaterial, [
     PRIVATE_SKIN_STATE_ICON_SELECTORS[0],
@@ -382,8 +412,9 @@ test("sidebar primary selector model separates transient and persistent material
   assert.deepEqual(groupedMaterial, [
     PRIVATE_SKIN_STATE_ICON_SELECTORS[1],
     PRIVATE_SKIN_STATE_ICON_SELECTORS[6],
-    PRIVATE_SKIN_STATE_ICON_SELECTORS[9],
-  ], "Grouped material must retain hover, persistent, and descendant keyboard-focus coverage.");
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[7],
+    PRIVATE_SKIN_STATE_ICON_SELECTORS[10],
+  ], "Grouped material must retain transient, own-persistent, child-persistent, and descendant-focus coverage.");
   assert.deepEqual(standaloneGlyph, [
     PRIVATE_SKIN_STATE_GLYPH_SELECTORS[0],
     PRIVATE_SKIN_STATE_GLYPH_SELECTORS[5],
@@ -391,54 +422,57 @@ test("sidebar primary selector model separates transient and persistent material
   assert.deepEqual(groupedGlyph, [
     PRIVATE_SKIN_STATE_GLYPH_SELECTORS[1],
     PRIVATE_SKIN_STATE_GLYPH_SELECTORS[6],
-    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[9],
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[7],
+    PRIVATE_SKIN_STATE_GLYPH_SELECTORS[10],
   ], "Grouped glyph states must remain on the outer group material root.");
 
   assert.match(standaloneMaterial[0], /:not\(:where\(\.group > button\)\):is\(:hover/u);
-  assert.doesNotMatch(standaloneMaterial[1], /\.group > button/u);
+  assert.match(standaloneMaterial[1], /:not\(:where\(\.group > button\)\):is\(\[aria-current/u);
   assert.match(standaloneGlyph[0], /:not\(:where\(\.group > button\)\):is\(:hover/u);
-  assert.doesNotMatch(standaloneGlyph[1], /\.group > button/u);
+  assert.match(standaloneGlyph[1], /:not\(:where\(\.group > button\)\):is\(\[aria-current/u);
 
   for (const layer of ["material", "glyph"]) {
-    for (const state of ["hover", "focus-visible"]) {
+    for (const { transient, label } of [
+      { transient: ["primary-hover"], label: "primary hover" },
+      { transient: ["primary-focus"], label: "primary focus" },
+    ]) {
       assert.deepEqual(
-        capturedSidebarStateRoots(css, { grouped: true, state, layer }),
+        capturedSidebarStateRoots(css, { grouped: true, transient, layer }),
         ["group"],
-        `Captured .group > button row must paint only the outer group ${layer} on child ${state}.`,
+        `Captured .group > button row must paint only the outer group ${layer} on ${label}.`,
       );
       assert.deepEqual(
-        capturedSidebarStateRoots(css, { grouped: false, state, layer }),
+        capturedSidebarStateRoots(css, { grouped: false, transient, layer }),
         ["button"],
-        `Ordinary standalone primary button must retain ${layer} on ${state}.`,
+        `Ordinary standalone primary button must retain ${layer} on ${label}.`,
       );
     }
 
-    for (const state of ["aria-current", "aria-selected", "data-state-active"]) {
+    for (const persistentState of ["aria-current", "aria-selected", "data-state-active"]) {
       assert.deepEqual(
-        capturedSidebarStateRoots(css, { grouped: true, state, stateOwner: "button", layer }),
-        ["button"],
-        `Persistent ${state} on the child must retain its standalone ${layer} root.`,
-      );
-      assert.deepEqual(
-        capturedSidebarStateRoots(css, { grouped: true, state, stateOwner: "group", layer }),
+        capturedSidebarStateRoots(css, { grouped: true, persistent: [persistentState], layer }),
         ["group"],
-        `Persistent ${state} on the outer group must retain its grouped ${layer} root.`,
+        `Child ${persistentState} alone must promote ${layer} to the outer group.`,
       );
       assert.deepEqual(
         capturedSidebarStateRoots(css, {
           grouped: true,
-          state,
-          stateOwner: "button",
+          persistent: [persistentState],
+          persistentOwner: "group",
           layer,
-          disabled: true,
         }),
+        ["group"],
+        `Outer ${persistentState} alone must retain the grouped ${layer} root.`,
+      );
+      assert.deepEqual(
+        capturedSidebarStateRoots(css, { grouped: false, persistent: [persistentState], layer }),
         ["button"],
-        `Persistent ${state} must remain visible when the selected child is disabled.`,
+        `Ordinary standalone ${persistentState} must retain the button ${layer} root.`,
       );
     }
 
     assert.deepEqual(
-      capturedSidebarStateRoots(css, { grouped: true, state: "quick-action-focus", layer }),
+      capturedSidebarStateRoots(css, { grouped: true, transient: ["quick-action-focus"], layer }),
       ["group"],
       `A focused quick action must materialize the outer group ${layer}.`,
     );
@@ -446,7 +480,7 @@ test("sidebar primary selector model separates transient and persistent material
       assert.deepEqual(
         capturedSidebarStateRoots(css, {
           grouped: true,
-          state: "quick-action-focus",
+          transient: ["quick-action-focus"],
           layer,
           disabledTarget: "quick-action",
           ...disabledState,
@@ -454,19 +488,29 @@ test("sidebar primary selector model separates transient and persistent material
         [],
         "A disabled focused quick action must not materialize the group.",
       );
-      for (const state of ["hover", "focus-visible"]) {
+      for (const transient of [["primary-hover"], ["primary-focus"]]) {
         assert.deepEqual(
-          capturedSidebarStateRoots(css, { grouped: true, state, layer, ...disabledState }),
+          capturedSidebarStateRoots(css, { grouped: true, transient, layer, ...disabledState }),
           [],
-          `A disabled grouped primary child must not paint ${layer} on ${state}.`,
+          `A disabled grouped primary child must not paint ${layer} on ${transient[0]}.`,
         );
       }
+      assert.deepEqual(
+        capturedSidebarStateRoots(css, {
+          grouped: true,
+          persistent: ["aria-current"],
+          layer,
+          ...disabledState,
+        }),
+        ["group"],
+        "Verified child persistent state must remain visible when the primary action is disabled.",
+      );
     }
   }
 
   assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[0].includes(":not(:disabled, [aria-disabled=\"true\"])"));
   assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[1].includes(":not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))"));
-  assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[9].includes(":not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))"));
+  assert.ok(PRIVATE_SKIN_STATE_ICON_SELECTORS[10].includes(":not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))"));
   assert.equal(
     PRIVATE_SKIN_STATE_ICON_SELECTORS[4],
     ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"]):not(:disabled, [aria-disabled=\"true\"])",
@@ -734,7 +778,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
         `${recipe} grouped interaction selector must exclude a hovered disabled child: ${selector}`,
       );
     }
-    for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS.slice(5, 9)) {
+    for (const selector of PRIVATE_SKIN_STATE_ICON_SELECTORS.slice(5, 10)) {
       assert.doesNotMatch(selector, /:not\([^)]*(?:disabled|aria-disabled)/u, `${recipe} persistent selector must retain disabled selected/open states: ${selector}`);
     }
     assert.match(sidebar[1], new RegExp(`surface\\) ${expected.sidebarAlpha}%`));

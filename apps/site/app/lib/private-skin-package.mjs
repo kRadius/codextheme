@@ -125,8 +125,9 @@ html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .tex
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]):not(:has(button:hover:is(:disabled, [aria-disabled="true"]))),
 html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]),
 html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]):not(:disabled, [aria-disabled="true"]),
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is([aria-current="page"], [aria-selected="true"], [data-state="active"]),
 html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) > .text-token-foreground),
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is([aria-current="page"], [aria-selected="true"], [data-state="active"]),
 html.codextheme-codex-skin .composer-surface-chrome button.border-token-border[data-state="open"],
 html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible):not(:disabled, [aria-disabled="true"]):not(:has(> button:is(:disabled, [aria-disabled="true"]) > .text-token-foreground)):not(:has(button:focus-visible:is(:disabled, [aria-disabled="true"]))) {
@@ -143,8 +144,9 @@ html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .tex
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is(:hover, :focus-visible, [aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:disabled, [aria-disabled="true"]):not(:has(button:hover:is(:disabled, [aria-disabled="true"]))) svg:not(button:is(:disabled, [aria-disabled="true"]) *),
 html.codextheme-codex-skin .dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled="true"]) svg,
 html.codextheme-codex-skin .composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state="open"]):not(:disabled, [aria-disabled="true"]) svg,
-html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is([aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
 html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) > .text-token-foreground) :is(.text-token-foreground, svg),
 html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) svg,
 html.codextheme-codex-skin .composer-surface-chrome button.border-token-border[data-state="open"] svg,
 html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible):not(:disabled, [aria-disabled="true"]):not(:has(> button:is(:disabled, [aria-disabled="true"]) > .text-token-foreground)):not(:has(button:focus-visible:is(:disabled, [aria-disabled="true"]))) :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg) {
