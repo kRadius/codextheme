@@ -32,6 +32,33 @@ function contrastRatio(first, second) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function hsl(color) {
+  const [red, green, blue] = color
+    .slice(1)
+    .match(/../gu)
+    .map((value) => Number.parseInt(value, 16) / 255);
+  const maximum = Math.max(red, green, blue);
+  const minimum = Math.min(red, green, blue);
+  const range = maximum - minimum;
+  const lightness = (maximum + minimum) / 2;
+  let hue = 0;
+  if (range > 0) {
+    if (maximum === red) hue = ((green - blue) / range) % 6;
+    else if (maximum === green) hue = (blue - red) / range + 2;
+    else hue = (red - green) / range + 4;
+    hue = (hue * 60 + 360) % 360;
+  }
+  const saturation = range === 0
+    ? 0
+    : range / (1 - Math.abs(2 * lightness - 1));
+  return { hue, saturation: saturation * 100, lightness: lightness * 100 };
+}
+
+function hueDistance(first, second) {
+  const distance = Math.abs(first - second);
+  return Math.min(distance, 360 - distance);
+}
+
 test("pixel analysis is deterministic and bounded", () => {
   const first = analyzeImagePixels(solid(180, 52, 76));
   const second = analyzeImagePixels(solid(180, 52, 76));
@@ -308,7 +335,7 @@ test("skin tokens and compatibility palettes normalize invalid profiles", () => 
   });
 });
 
-test("skin accents meet text contrast without changing an already readable highlight", () => {
+test("skin accents meet text contrast without changing an already vivid readable highlight", () => {
   const lowContrast = deriveSkinTokens({
     primary: "#ffffff",
     secondary: "#616175",
@@ -324,10 +351,71 @@ test("skin accents meet text contrast without changing an already readable highl
   const readable = deriveSkinTokens({
     primary: "#ffffff",
     secondary: "#8b5cf6",
-    highlight: "#f4f1eb",
+    highlight: "#f0b0d0",
   }, { recipe: "cinematic" });
-  assert.ok(contrastRatio("#f4f1eb", readable.surface) >= 4.5);
-  assert.equal(readable.accent, "#f4f1eb");
+  assert.ok(hsl("#f0b0d0").saturation >= 41.5);
+  assert.ok(contrastRatio("#f0b0d0", readable.surface) >= 4.5);
+  assert.equal(readable.accent, "#f0b0d0");
+});
+
+test("low-chroma highlights become vivid, hue-preserving interaction accents", () => {
+  const profile = {
+    primary: "#3e372f",
+    secondary: "#8d6a45",
+    highlight: "#948475",
+    luminance: 38,
+    saturation: 12,
+    contrast: 24,
+    complexity: 18,
+  };
+  const tokens = deriveSkinTokens(profile, { recipe: "cinematic" });
+  const accentHsl = hsl(tokens.accent);
+
+  assert.ok(accentHsl.saturation >= 41.5);
+  assert.ok(hueDistance(accentHsl.hue, hsl(profile.highlight).hue) <= 2);
+  assert.ok(contrastRatio(tokens.accent, tokens.surface) >= 4.5);
+});
+
+test("vivid readable highlights remain unchanged interaction accents", () => {
+  const tokens = deriveSkinTokens({
+    primary: "#08253b",
+    secondary: "#0a8fb4",
+    highlight: "#27c7ee",
+    luminance: 35,
+    saturation: 78,
+    contrast: 52,
+    complexity: 24,
+  }, { recipe: "glass" });
+
+  assert.equal(tokens.accent, "#27c7ee");
+});
+
+test("achromatic highlights borrow a vivid interaction hue from the secondary", () => {
+  const profile = {
+    primary: "#303030",
+    secondary: "#7350a8",
+    highlight: "#9a9a9a",
+    luminance: 35,
+    saturation: 3,
+    contrast: 20,
+    complexity: 10,
+  };
+  const tokens = deriveSkinTokens(profile, { recipe: "focus" });
+  const accentHsl = hsl(tokens.accent);
+
+  assert.ok(hueDistance(accentHsl.hue, hsl(profile.secondary).hue) <= 2);
+  assert.ok(accentHsl.saturation >= 41.5);
+});
+
+test("fully neutral profiles receive a vivid readable interaction accent", () => {
+  const tokens = deriveSkinTokens({
+    primary: "#303030",
+    secondary: "#777777",
+    highlight: "#9a9a9a",
+  }, { recipe: "focus" });
+
+  assert.ok(hsl(tokens.accent).saturation >= 41.5);
+  assert.ok(contrastRatio(tokens.accent, tokens.surface) >= 4.5);
 });
 
 test("skin tokens expose only the closed semantic contract", () => {
