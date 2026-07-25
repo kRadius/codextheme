@@ -73,6 +73,27 @@ function compareSpecificity(left, right) {
   return 0;
 }
 
+function rightmostTargetCompound(selector) {
+  let parentheses = 0;
+  let brackets = 0;
+  for (let index = selector.length - 1; index >= 0; index -= 1) {
+    const character = selector[index];
+    if (character === ")") parentheses += 1;
+    if (character === "(") parentheses -= 1;
+    if (character === "]") brackets += 1;
+    if (character === "[") brackets -= 1;
+    if (
+      parentheses === 0 &&
+      brackets === 0 &&
+      (/\s/u.test(character) || [">", "+", "~"].includes(character))
+    ) {
+      const target = selector.slice(index + 1).trim();
+      if (target !== "") return target;
+    }
+  }
+  return selector.trim();
+}
+
 function assertPrimaryRemainsNative(source) {
   for (const { selectors, declarations } of cssRules(source)) {
     const usesInteractionMaterial =
@@ -88,9 +109,10 @@ function assertPrimaryRemainsNative(source) {
       const isComposerDescendant =
         selector.includes(".mockup-composer-actions") &&
         selector.trim() !== ".mockup-composer-actions";
-      if (isComposerDescendant && usesInteractionMaterial) {
-        assert.ok(
-          selector.includes(".mockup-composer-secondary"),
+      if (isComposerDescendant && isTransient) {
+        assert.match(
+          rightmostTargetCompound(selector),
+          /^\.mockup-composer-secondary(?::(?:hover|focus-visible)|\.is-hover-preview)$/u,
           "primary Send must not inherit transient composer action material",
         );
       }
@@ -285,6 +307,25 @@ ${selector} {
       `${selector} must be recognized as a primary Send mutation`,
     );
   }
+  for (const [selector, declaration] of [
+    [".mockup-composer-actions b:hover", "opacity: .5;"],
+    [".mockup-composer-actions b:focus-visible", "background: red;"],
+    [".mockup-composer-actions .mockup-composer-secondary + b:hover", "opacity: .5;"],
+    [".mockup-composer-actions .mockup-composer-secondary + b:focus-visible", "background: red;"],
+  ]) {
+    assert.throws(
+      () => assertPrimaryRemainsNative(`${css}
+${selector} {
+  ${declaration}
+}`),
+      /primary Send/u,
+      `${selector} must be rejected without relying on interaction tokens`,
+    );
+  }
+  assert.doesNotThrow(() => assertPrimaryRemainsNative(`${css}
+.mockup-composer-actions > .mockup-composer-secondary:hover {
+  opacity: .5;
+}`));
 
   assert.doesNotThrow(() => assertSelectedOutranksTransient(css));
   const selectedFixture = `.mockup-sidebar-control.mockup-selected {
