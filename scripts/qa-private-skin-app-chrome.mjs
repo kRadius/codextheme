@@ -25,6 +25,14 @@ const FAMILY_SAMPLE_LIMITS = Object.freeze({
   "home-chrome": 4,
   "composer-secondary": 4,
 });
+const FAMILY_MIN_STABLE_SAMPLES = Object.freeze({
+  "sidebar-chrome": 2,
+  "header-chrome": 2,
+  "summary-chrome": 4,
+  "menu-chrome": 2,
+  "home-chrome": 4,
+  "composer-secondary": 2,
+});
 const PRIVATE_ID = "mqa20260725.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const EXPORTED_AT = "2026-07-25T00:00:00.000Z";
 const PROFILE = Object.freeze({
@@ -125,7 +133,11 @@ const reportFile = reportArgument
   ? path.resolve(reportArgument.slice("--report=".length))
   : null;
 const homeOnly = process.argv.includes("--home-only");
+const sessionOnly = process.argv.includes("--session-only");
 const temporarilyClearHomeDraft = process.argv.includes("--temporarily-clear-home-draft");
+if (homeOnly && sessionOnly) {
+  throw new Error("--home-only and --session-only are mutually exclusive.");
+}
 if (temporarilyClearHomeDraft && !homeOnly) {
   throw new Error("--temporarily-clear-home-draft requires --home-only.");
 }
@@ -338,6 +350,67 @@ function materialSource() {
       return { actionCount: actions.length, outside, overlaps };
     };
   `;
+}
+
+function editorSelectionSource() {
+  return String.raw`
+    const nodePathFrom = (root, node) => {
+      if (!node || (node !== root && !root.contains(node))) return null;
+      const path = [];
+      for (let current = node; current && current !== root; current = current.parentNode) {
+        const parent = current.parentNode;
+        if (!parent) return null;
+        path.unshift([...parent.childNodes].indexOf(current));
+      }
+      return path;
+    };
+    const nodeFromPath = (root, path) => {
+      if (!Array.isArray(path)) return null;
+      let current = root;
+      for (const index of path) {
+        current = current?.childNodes?.[index] ?? null;
+        if (!current) return null;
+      }
+      return current;
+    };
+    const selectionSnapshot = (editor) => {
+      const selection = document.getSelection();
+      if (!selection || selection.rangeCount === 0) return { valid: false };
+      const anchorPath = nodePathFrom(editor, selection.anchorNode);
+      const focusPath = nodePathFrom(editor, selection.focusNode);
+      if (!anchorPath || !focusPath) return { valid: false };
+      let direction = selection.isCollapsed ? "none" : null;
+      if (!direction) {
+        const anchorRange = document.createRange();
+        anchorRange.setStart(editor, 0);
+        anchorRange.setEnd(selection.anchorNode, selection.anchorOffset);
+        const focusRange = document.createRange();
+        focusRange.setStart(editor, 0);
+        focusRange.setEnd(selection.focusNode, selection.focusOffset);
+        direction = anchorRange.compareBoundaryPoints(Range.END_TO_END, focusRange) <= 0
+          ? "forward"
+          : "backward";
+      }
+      return {
+        valid: true,
+        anchorPath,
+        anchorOffset: selection.anchorOffset,
+        focusPath,
+        focusOffset: selection.focusOffset,
+        direction,
+      };
+    };
+  `;
+}
+
+function selectionSnapshotsEqual(first, second) {
+  if (!first?.valid) return true;
+  return Boolean(second?.valid)
+    && JSON.stringify(first.anchorPath) === JSON.stringify(second.anchorPath)
+    && first.anchorOffset === second.anchorOffset
+    && JSON.stringify(first.focusPath) === JSON.stringify(second.focusPath)
+    && first.focusOffset === second.focusOffset
+    && first.direction === second.direction;
 }
 
 async function evaluate(session, expression) {
@@ -580,6 +653,7 @@ async function readHomeProjectContext(session) {
 
 async function readHomeDraft(session) {
   return evaluate(session, `(() => {
+    ${editorSelectionSource()}
     const textarea = document.querySelector(".composer-surface-chrome textarea");
     if (textarea) {
       return {
@@ -606,6 +680,7 @@ async function readHomeDraft(session) {
       scrollTop: editable.scrollTop,
       scrollLeft: editable.scrollLeft,
       active: document.activeElement === editable,
+      selection: selectionSnapshot(editable),
     };
   })()`);
 }
@@ -677,7 +752,8 @@ async function setHomeDraft(session, state, value) {
 }
 
 async function restoreHomeEditorState(session, state) {
-  await evaluate(session, `(() => {
+  return evaluate(session, `(() => {
+    ${editorSelectionSource()}
     const state = ${JSON.stringify({
     kind: state.kind,
     selectionStart: state.selectionStart,
@@ -686,11 +762,12 @@ async function restoreHomeEditorState(session, state) {
     scrollTop: state.scrollTop,
     scrollLeft: state.scrollLeft,
     active: state.active,
+    selection: state.selection ?? { valid: false },
   })};
     const element = state.kind === "textarea"
       ? document.querySelector(".composer-surface-chrome textarea")
       : document.querySelector('.composer-surface-chrome [contenteditable="true"]');
-    if (!element) return false;
+    if (!element) return { restored: false, selection: { valid: false } };
     if (state.kind === "textarea"
       && Number.isInteger(state.selectionStart)
       && Number.isInteger(state.selectionEnd)) {
@@ -702,10 +779,64 @@ async function restoreHomeEditorState(session, state) {
     }
     element.scrollTop = state.scrollTop;
     element.scrollLeft = state.scrollLeft;
+    if (state.kind === "contenteditable" && state.selection?.valid) {
+      const anchorNode = nodeFromPath(element, state.selection.anchorPath);
+      const focusNode = nodeFromPath(element, state.selection.focusPath);
+      if (!anchorNode || !focusNode) {
+        return { restored: false, selection: { valid: false } };
+      }
+      element.focus({ preventScroll: true });
+      const selection = document.getSelection();
+      selection.removeAllRanges();
+      selection.setBaseAndExtent(
+        anchorNode,
+        state.selection.anchorOffset,
+        focusNode,
+        state.selection.focusOffset,
+      );
+    }
     if (state.active) element.focus({ preventScroll: true });
     else if (document.activeElement === element) element.blur();
-    return true;
+    return {
+      restored: true,
+      active: document.activeElement === element,
+      scrollTop: element.scrollTop,
+      scrollLeft: element.scrollLeft,
+      selection: state.kind === "contenteditable"
+        ? selectionSnapshot(element)
+        : { valid: false },
+    };
   })()`);
+}
+
+async function waitForStableLayout(session) {
+  await evaluate(session, `new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  })`);
+  await sleep(250);
+  let previous = null;
+  let stableReads = 0;
+  const deadline = Date.now() + NAVIGATION_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const current = await evaluate(session, `(() => {
+      const measure = (element) => element ? {
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      } : null;
+      return {
+        root: measure(document.documentElement),
+        body: measure(document.body),
+        main: measure(document.querySelector("main.main-surface")),
+      };
+    })()`);
+    const serialized = JSON.stringify(current);
+    if (serialized === previous) stableReads += 1;
+    else stableReads = 0;
+    if (stableReads >= 2) return current;
+    previous = serialized;
+    await sleep(100);
+  }
+  throw new Error("Timed out waiting for stable responsive layout metrics.");
 }
 
 async function setViewport(session, viewport, original) {
@@ -716,6 +847,7 @@ async function setViewport(session, viewport, original) {
       `innerWidth === ${original.width} && innerHeight === ${original.height}`,
       "the physical desktop viewport",
     );
+    await waitForStableLayout(session);
     return;
   }
   await session.send("Emulation.setDeviceMetricsOverride", {
@@ -731,6 +863,7 @@ async function setViewport(session, viewport, original) {
     `innerWidth === ${viewport.width} && innerHeight === ${viewport.height}`,
     `${viewport.width}x${viewport.height} emulated viewport`,
   );
+  await waitForStableLayout(session);
 }
 
 async function collectControls(session, family) {
@@ -739,9 +872,17 @@ async function collectControls(session, family) {
   const limit = FAMILY_SAMPLE_LIMITS[family.id] ?? 4;
   for (let targetIndex = 0; targetIndex < family.targets.length; targetIndex += 1) {
     const target = family.targets[targetIndex];
+    const tagPrefix = `qa-family-${family.id}-${targetIndex}-${++qaSequence}`;
     const collected = await evaluate(session, `(() => {
       ${visibleSource()}
       ${targetIsEligibleSource()}
+      const signatureOf = (element) => ({
+        text: (element.innerText || element.textContent || "").replace(/\\s+/g, " ").trim(),
+        ariaLabel: element.getAttribute("aria-label"),
+        title: element.getAttribute("title"),
+        testId: element.getAttribute("data-testid"),
+        threadId: element.getAttribute("data-app-action-sidebar-thread-id"),
+      });
       const candidates = [...document.querySelectorAll(${cssString(target.selector)})]
         .filter((element) => visible(element, ${family.id === "header-chrome" ? "false" : "true"}))
         .filter((element) => centerHit(element))
@@ -760,13 +901,19 @@ async function collectControls(session, family) {
           Math.floor(index * prioritized.length / ${limit})))];
       const tagged = sampleIndices.map((index) => prioritized[index])
         .map((element, controlIndex) => {
-          const id = ${cssString(`qa-family-${family.id}-${targetIndex}-`)}
-            + controlIndex + "-" + Math.random().toString(36).slice(2);
+          const id = ${cssString(tagPrefix)} + "-" + controlIndex;
           element.setAttribute(${cssString(QA_ATTRIBUTE)}, id);
           const rect = element.getBoundingClientRect();
+          const identity = signatureOf(element);
+          identity.signatureOccurrence = prioritized
+            .slice(0, prioritized.indexOf(element))
+            .filter((candidate) =>
+              JSON.stringify(signatureOf(candidate)) === JSON.stringify(identity)).length;
           return {
             id,
             controlIndex,
+            identity,
+            candidateOrdinal: prioritized.indexOf(element),
             x: Math.max(2, Math.min(innerWidth - 2, rect.left + rect.width / 2)),
             y: Math.max(2, Math.min(innerHeight - 2, rect.top + rect.height / 2)),
           };
@@ -787,6 +934,57 @@ async function collectControls(session, family) {
     })));
   }
   return { controls, roots };
+}
+
+async function retagControl(session, family, control, retryIndex) {
+  const id = `qa-family-${family.id}-${control.targetIndex}-${control.controlIndex}-retry-${retryIndex}-${++qaSequence}`;
+  const replacement = await evaluate(session, `(() => {
+    ${visibleSource()}
+    ${targetIsEligibleSource()}
+    const target = ${JSON.stringify(control.target)};
+    const expected = ${JSON.stringify(control.identity)};
+    const signatureOf = (element) => ({
+      text: (element.innerText || element.textContent || "").replace(/\\s+/g, " ").trim(),
+      ariaLabel: element.getAttribute("aria-label"),
+      title: element.getAttribute("title"),
+      testId: element.getAttribute("data-testid"),
+      threadId: element.getAttribute("data-app-action-sidebar-thread-id"),
+    });
+    const matchesSignature = (element) => {
+      const actual = signatureOf(element);
+      return actual.text === expected.text
+        && actual.ariaLabel === expected.ariaLabel
+        && actual.title === expected.title
+        && actual.testId === expected.testId
+        && actual.threadId === expected.threadId;
+    };
+    const candidates = [...document.querySelectorAll(${cssString(control.selector)})]
+      .filter((element) => visible(element, ${family.id === "header-chrome" ? "false" : "true"}))
+      .filter((element) => centerHit(element))
+      .filter((element) => eligible(element, target));
+    const prioritized = ${cssString(family.id)} === "sidebar-chrome"
+      && ${control.targetIndex} === 0
+      ? [
+        ...candidates.filter((element) =>
+          element.classList.contains("!text-token-input-placeholder-foreground")),
+        ...candidates.filter((element) =>
+          !element.classList.contains("!text-token-input-placeholder-foreground")),
+      ]
+      : candidates;
+    const signatureMatches = prioritized.filter(matchesSignature);
+    const element = signatureMatches[expected.signatureOccurrence]
+      ?? prioritized[${control.candidateOrdinal}]
+      ?? null;
+    if (!element) return null;
+    element.setAttribute(${cssString(QA_ATTRIBUTE)}, ${cssString(id)});
+    const rect = element.getBoundingClientRect();
+    return {
+      id: ${cssString(id)},
+      x: Math.max(2, Math.min(innerWidth - 2, rect.left + rect.width / 2)),
+      y: Math.max(2, Math.min(innerHeight - 2, rect.top + rect.height / 2)),
+    };
+  })()`);
+  return replacement ? { ...control, ...replacement } : null;
 }
 
 async function readTaggedStyle(session, id) {
@@ -829,13 +1027,35 @@ async function readTaggedStyle(session, id) {
 async function auditFamily(session, family) {
   const { controls, roots } = await collectControls(session, family);
   const rows = [];
+  const discardedSamples = [];
   for (const control of controls) {
-    await movePointer(session);
-    await sleep(40);
-    const idle = await readTaggedStyle(session, control.id);
-    await movePointer(session, control.x, control.y);
-    await sleep(HOVER_SETTLE_MS);
-    const hover = await readTaggedStyle(session, control.id);
+    let activeControl = control;
+    let idle = null;
+    let hover = null;
+    let stableAttempt = null;
+    for (let attempt = 0; attempt < 2 && activeControl; attempt += 1) {
+      await movePointer(session);
+      await sleep(40);
+      idle = await readTaggedStyle(session, activeControl.id);
+      await movePointer(session, activeControl.x, activeControl.y);
+      await sleep(HOVER_SETTLE_MS);
+      hover = await readTaggedStyle(session, activeControl.id);
+      if (idle && hover) {
+        stableAttempt = attempt;
+        break;
+      }
+      discardedSamples.push({
+        targetIndex: control.targetIndex,
+        controlIndex: control.controlIndex,
+        attempt,
+        reason: !idle ? "tagged control detached before idle read" : "tagged control detached before hover read",
+        reselectStrategy: "same selector and normalized text/attributes, then original candidate ordinal",
+      });
+      activeControl = attempt === 0
+        ? await retagControl(session, family, control, attempt + 1)
+        : null;
+    }
+    if (stableAttempt === null) continue;
     const ownerMaterial = family.paintTarget === "before"
       ? hover?.beforeSurfaceAccent
       : hover?.rootSurfaceAccent;
@@ -866,6 +1086,7 @@ async function auditFamily(session, family) {
       selector: control.selector,
       targetIndex: control.targetIndex,
       controlIndex: control.controlIndex,
+      stableAttempt,
       result,
       checks: {
         pointerHit: hover?.hit ?? false,
@@ -882,7 +1103,17 @@ async function auditFamily(session, family) {
     });
   }
   await movePointer(session);
-  return { family: family.id, roots, sampledControls: rows.length, rows };
+  const minimumStableSamples = FAMILY_MIN_STABLE_SAMPLES[family.id] ?? 1;
+  return {
+    family: family.id,
+    roots,
+    attemptedControls: controls.length,
+    sampledControls: rows.length,
+    minimumStableSamples,
+    coverageMet: rows.length >= minimumStableSamples,
+    discardedSamples,
+    rows,
+  };
 }
 
 function elementEligibleForFamilySource() {
@@ -1099,12 +1330,210 @@ async function captureScreenshot(session, filename) {
   return output;
 }
 
-async function auditCell(session, view, viewport, originalThreadId) {
+async function probeSummaryStructure(session) {
+  const summaryFamily = PRIVATE_SKIN_INTERACTION_FAMILIES
+    .find(({ id }) => id === "summary-chrome");
+  const target = summaryFamily.targets[0];
+  return evaluate(session, `(() => {
+    ${visibleSource()}
+    ${targetIsEligibleSource()}
+    const target = ${JSON.stringify(target)};
+    const exactRoots = [...document.querySelectorAll(${cssString(target.selector)})];
+    const landmarkSelectors = [
+      '[class*="summary-panel"]',
+      '[data-testid*="summary" i]',
+      '[aria-label*="summary" i]',
+      '[class*="right-rail"]',
+      '[data-testid*="right-rail" i]',
+      'main.main-surface > aside'
+    ];
+    const landmarkSelectorState = landmarkSelectors.map((selector) => {
+      const roots = [...document.querySelectorAll(selector)];
+      return {
+        selector,
+        total: roots.length,
+        visible: roots.filter((element) => visible(element, false)).length,
+      };
+    });
+    const summaryHeadingPattern = /^(summary|摘要|概览|环境信息|environment information)$/iu;
+    const headings = [...document.querySelectorAll(
+      'main.main-surface :is(h1,h2,h3,h4,h5,h6,[role="heading"])'
+    )].filter((element) =>
+      summaryHeadingPattern.test((element.innerText || element.textContent || "").trim()));
+    const landmarkTotal = landmarkSelectorState
+      .reduce((total, state) => total + state.total, 0);
+    const exactRootLayout = exactRoots.map((element, index) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const ancestorChain = [...function* ancestors() {
+        for (let current = element.parentElement; current; current = current.parentElement) {
+          yield current;
+        }
+      }()];
+      const noninteractiveAncestor = ancestorChain.find((ancestor) => {
+        const ancestorStyle = getComputedStyle(ancestor);
+        return ancestorStyle.pointerEvents === "none"
+          || Number.parseFloat(ancestorStyle.opacity) <= 0.01;
+      });
+      const effectiveOpacity = [element, ...ancestorChain]
+        .reduce((opacity, current) => {
+          const value = Number.parseFloat(getComputedStyle(current).opacity);
+          return opacity * (Number.isFinite(value) ? value : 1);
+        }, 1);
+      const clippingAncestor = [...function* ancestors() {
+        for (let current = element.parentElement; current; current = current.parentElement) {
+          yield current;
+        }
+      }()].find((ancestor) => {
+        const ancestorStyle = getComputedStyle(ancestor);
+        return ["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowX)
+          || ["hidden", "clip", "auto", "scroll"].includes(ancestorStyle.overflowY);
+      });
+      const hiddenAncestor = [...function* ancestors() {
+        for (let current = element.parentElement; current; current = current.parentElement) {
+          yield current;
+        }
+      }()].find((ancestor) => {
+        const ancestorStyle = getComputedStyle(ancestor);
+        return ancestorStyle.display === "none"
+          || ancestorStyle.visibility === "hidden"
+          || Number.parseFloat(ancestorStyle.opacity) <= 0.01;
+      });
+      const hiddenReasons = [];
+      if (rect.width === 0 || rect.height === 0) hiddenReasons.push("zero-rect");
+      if (style.display === "none") hiddenReasons.push("display-none");
+      if (style.visibility === "hidden") hiddenReasons.push("visibility-hidden");
+      if (hiddenAncestor) hiddenReasons.push("hidden-ancestor");
+      const clippingRect = clippingAncestor?.getBoundingClientRect() ?? null;
+      const clippingIntersection = clippingRect ? {
+        width: Math.max(0, Math.min(rect.right, clippingRect.right)
+          - Math.max(rect.left, clippingRect.left)),
+        height: Math.max(0, Math.min(rect.bottom, clippingRect.bottom)
+          - Math.max(rect.top, clippingRect.top)),
+      } : null;
+      const viewportIntersection = {
+        width: Math.max(0, Math.min(rect.right, innerWidth) - Math.max(rect.left, 0)),
+        height: Math.max(0, Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0)),
+      };
+      const viewportIntersectionRatio = (
+        viewportIntersection.width * viewportIntersection.height
+      ) / Math.max(1, rect.width * rect.height);
+      return {
+        index,
+        rect: {
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        },
+        fullyOutsideViewport: rect.right <= 0
+          || rect.left >= innerWidth
+          || rect.bottom <= 0
+          || rect.top >= innerHeight,
+        viewportIntersection,
+        viewportIntersectionRatio,
+        centerHit: centerHit(element),
+        display: style.display,
+        visibility: style.visibility,
+        pointerEvents: style.pointerEvents,
+        opacity: style.opacity,
+        effectiveOpacity,
+        noninteractiveAncestor: noninteractiveAncestor ? {
+          tagName: noninteractiveAncestor.tagName,
+          className: typeof noninteractiveAncestor.className === "string"
+            ? noninteractiveAncestor.className
+            : "",
+          pointerEvents: getComputedStyle(noninteractiveAncestor).pointerEvents,
+          opacity: getComputedStyle(noninteractiveAncestor).opacity,
+        } : null,
+        hiddenAncestor: hiddenAncestor ? {
+          tagName: hiddenAncestor.tagName,
+          className: typeof hiddenAncestor.className === "string"
+            ? hiddenAncestor.className
+            : "",
+          display: getComputedStyle(hiddenAncestor).display,
+          visibility: getComputedStyle(hiddenAncestor).visibility,
+          opacity: getComputedStyle(hiddenAncestor).opacity,
+        } : null,
+        nearestClippingAncestor: clippingAncestor ? {
+          tagName: clippingAncestor.tagName,
+          className: typeof clippingAncestor.className === "string"
+            ? clippingAncestor.className
+            : "",
+          overflowX: getComputedStyle(clippingAncestor).overflowX,
+          overflowY: getComputedStyle(clippingAncestor).overflowY,
+          rect: {
+            left: clippingRect.left,
+            right: clippingRect.right,
+            top: clippingRect.top,
+            bottom: clippingRect.bottom,
+            width: clippingRect.width,
+            height: clippingRect.height,
+          },
+          intersection: clippingIntersection,
+          fullyClipped: clippingIntersection.width === 0
+            || clippingIntersection.height === 0,
+        } : null,
+        hiddenReasons,
+        layoutHiddenConfirmed: hiddenReasons.length > 0,
+      };
+    });
+    const overflowState = (element) => element ? {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      horizontalOverflow: element.scrollWidth > element.clientWidth + 1,
+    } : null;
+    return {
+      exactSelector: ${cssString(target.selector)},
+      totalDomRoots: exactRoots.length,
+      eligibleRoots: exactRoots.filter((element) => eligible(element, target)).length,
+      visibleRoots: exactRoots.filter((element) => visible(element, false)).length,
+      hittableRoots: exactRoots
+        .filter((element) => visible(element, false) && centerHit(element)).length,
+      exactRootLayout,
+      landmarkSelectorState,
+      panelLandmarkState: {
+        total: landmarkTotal,
+        visible: landmarkSelectorState.reduce(
+          (total, state) => total + state.visible,
+          0,
+        ),
+        headingTotal: headings.length,
+        headingVisible: headings.filter((element) => visible(element, false)).length,
+      },
+      documentLayout: {
+        root: overflowState(document.documentElement),
+        body: overflowState(document.body),
+        main: overflowState(document.querySelector("main.main-surface")),
+      },
+      allExactRootsLayoutHidden: exactRoots.length > 0
+        && exactRootLayout.every((root) => root.layoutHiddenConfirmed),
+      allExactRootsOffscreenOrClipped: exactRoots.length > 0
+        && exactRootLayout.every((root) =>
+          root.fullyOutsideViewport || root.nearestClippingAncestor?.fullyClipped),
+      allExactRootsResponsiveNoninteractive: exactRoots.length > 0
+        && exactRootLayout.every((root) =>
+          root.pointerEvents === "none"
+          || root.effectiveOpacity <= 0.01
+          || root.layoutHiddenConfirmed
+          || root.fullyOutsideViewport
+          || root.nearestClippingAncestor?.fullyClipped),
+    };
+  })()`);
+}
+
+async function auditCell(session, view, viewport, originalThreadId, runContext = {}) {
   progress("cell:start", `${view}/${viewport.id}`);
   let expectedFamilies = [...APPLICABLE_FAMILIES[view]];
   const families = [];
   const failures = [];
   await closeMenu(session);
+  const summaryStructure = view === "session"
+    ? await probeSummaryStructure(session)
+    : null;
+  const settledLayout = await layoutState(session);
   for (const family of PRIVATE_SKIN_INTERACTION_FAMILIES) {
     if (!expectedFamilies.includes(family.id) || family.id === "menu-chrome") continue;
     const result = await auditFamily(session, family);
@@ -1114,12 +1543,35 @@ async function auditCell(session, view, viewport, originalThreadId) {
   const menuFamily = PRIVATE_SKIN_INTERACTION_FAMILIES.find(({ id }) => id === "menu-chrome");
   families.push(await auditFamily(session, menuFamily));
   const summaryRows = families.find(({ family }) => family === "summary-chrome")?.rows ?? [];
+  const summaryFamilyResult = families.find(({ family }) => family === "summary-chrome");
   const notApplicableFamilies = [];
-  if (view === "session" && viewport.id === "narrow" && summaryRows.length === 0) {
+  const noStructuralHorizontalOverflow = summaryStructure
+    && [summaryStructure.documentLayout?.root,
+      summaryStructure.documentLayout?.body,
+      summaryStructure.documentLayout?.main]
+      .every((state) => state && !state.horizontalOverflow);
+  const responsiveHiddenSummary = view === "session"
+    && viewport.id === "narrow"
+    && runContext.desktopSummaryCounterpart?.passed === true
+    && (summaryStructure?.totalDomRoots ?? 0) > 0
+    && (summaryStructure?.eligibleRoots ?? 0) > 0
+    && summaryStructure?.visibleRoots === 0
+    && summaryStructure?.hittableRoots === 0
+    && summaryStructure?.allExactRootsResponsiveNoninteractive === true
+    && noStructuralHorizontalOverflow
+    && !settledLayout.root.horizontalOverflow
+    && !settledLayout.body.horizontalOverflow
+    && !settledLayout.main?.horizontalOverflow
+    && settledLayout.clippedControls === 0;
+  if (responsiveHiddenSummary) {
     expectedFamilies = expectedFamilies.filter((family) => family !== "summary-chrome");
+    if (summaryFamilyResult) summaryFamilyResult.applicability = "N/A";
     notApplicableFamilies.push({
       family: "summary-chrome",
-      reason: "Codex responsive layout does not render summary controls at the narrow viewport",
+      result: "N/A",
+      reason: "responsive-noninteractive-confirmed-by-desktop-counterpart",
+      desktopCounterpart: runContext.desktopSummaryCounterpart,
+      structuralProof: summaryStructure,
     });
   }
   const exclusions = [];
@@ -1133,11 +1585,11 @@ async function auditCell(session, view, viewport, originalThreadId) {
   const grouped = await probeGroupedOwner(session);
   const summaryReplacement = (() => {
     if (view !== "session") return { class: "summary-native-before", status: "Not observed" };
-    if (summaryRows.length === 0 && notApplicableFamilies.length > 0) {
+    if (summaryRows.length === 0 && responsiveHiddenSummary) {
       return {
         class: "summary-native-before",
-        status: "Not observed",
-        reason: notApplicableFamilies[0].reason,
+        status: "N/A",
+        reason: "responsive-noninteractive-confirmed-by-desktop-counterpart",
       };
     }
     if (summaryRows.length === 0) return { class: "summary-native-before", status: "Fail" };
@@ -1171,8 +1623,13 @@ async function auditCell(session, view, viewport, originalThreadId) {
   );
   for (const expectedFamily of expectedFamilies) {
     const result = families.find(({ family }) => family === expectedFamily);
-    if (!result || result.sampledControls === 0) {
-      failures.push(`${expectedFamily}: expected applicable family had zero sampled controls`);
+    if (!result) {
+      failures.push(`${expectedFamily}: expected applicable family was not audited`);
+    } else if (!result.coverageMet) {
+      failures.push(
+        `${expectedFamily}: ${result.sampledControls}/${result.minimumStableSamples}`
+        + ` required stable samples; discarded=${result.discardedSamples.length}`,
+      );
     }
   }
   for (const family of families) {
@@ -1196,12 +1653,31 @@ async function auditCell(session, view, viewport, originalThreadId) {
     failures.push("layout: horizontal overflow");
   }
   if (layout.clippedControls > 0) failures.push(`layout: ${layout.clippedControls} controls cross viewport edges`);
+  if (view === "session" && viewport.id === "desktop") {
+    runContext.desktopSummaryCounterpart = {
+      passed: Boolean(
+        summaryFamilyResult?.coverageMet
+        && summaryRows.length > 0
+        && summaryRows.every((row) => row.result)
+        && summaryReplacement.status === "Pass"
+        && (summaryStructure?.visibleRoots ?? 0) > 0
+        && (summaryStructure?.hittableRoots ?? 0) > 0
+      ),
+      exactSelector: summaryStructure?.exactSelector ?? null,
+      totalDomRoots: summaryStructure?.totalDomRoots ?? 0,
+      eligibleRoots: summaryStructure?.eligibleRoots ?? 0,
+      visibleRoots: summaryStructure?.visibleRoots ?? 0,
+      hittableRoots: summaryStructure?.hittableRoots ?? 0,
+      stablePassingSamples: summaryRows.filter((row) => row.result).length,
+    };
+  }
   await movePointer(session);
   const cell = {
     view,
     viewport: { id: viewport.id, width: layout.width, height: layout.height },
     expectedFamilies,
     notApplicableFamilies,
+    structuralApplicability: { summary: summaryStructure, settledLayout },
     families,
     exclusions,
     directProbes: [persistence, grouped, summaryReplacement],
@@ -1238,7 +1714,7 @@ const report = {
   schema: "codextheme-private-skin-app-chrome-qa-v1",
   generatedAt: new Date().toISOString(),
   source: "repository-local buildPrivateSkinPackage + @codextheme/runtime",
-  mode: homeOnly ? "home-only" : "full",
+  mode: homeOnly ? "home-only" : (sessionOnly ? "session-only" : "full"),
   port: PORT,
   fixture: {
     id: PRIVATE_ID,
@@ -1270,6 +1746,8 @@ const report = {
     preflightClear: null,
     preflightSuggestions: null,
     preflightRestoreHashEqual: null,
+    selectionCaptured: null,
+    selectionRestored: null,
   },
   cells: [],
   restoration: {
@@ -1280,7 +1758,7 @@ const report = {
     bottomPanel: "Pending",
     draft: temporarilyClearHomeDraft ? "Pending" : "Pass",
     draftIndependent: temporarilyClearHomeDraft ? "Pending" : "Pass",
-    projectContext: "Pending",
+    projectContext: sessionOnly ? "Pass" : "Pending",
     temporaryAttributes: "Pending",
     pointer: "Pending",
   },
@@ -1331,6 +1809,7 @@ try {
     { id: "desktop", width: original.width, height: original.height },
     { id: "narrow", ...NARROW_VIEWPORT },
   ];
+  const sessionRunContext = {};
   if (!homeOnly) {
     if (original.browserPanelVisible) {
       progress("browser-panel", "closing for summary audit");
@@ -1339,14 +1818,22 @@ try {
     report.browserPanel.closedDuringSessionMatrix = !(await browserPanelVisible(session));
     for (const viewport of viewports) {
       await setViewport(session, viewport, original);
-      report.cells.push(await auditCell(session, "session", viewport, original.selectedThreadId));
+      report.cells.push(await auditCell(
+        session,
+        "session",
+        viewport,
+        original.selectedThreadId,
+        sessionRunContext,
+      ));
     }
   }
-  await setViewport(session, viewports[0], original);
-  await navigateHome(session);
-  originalHomeProjectContext = await readHomeProjectContext(session);
-  if (!originalHomeProjectContext) throw new Error("Could not record the original Home project context.");
-  if (temporarilyClearHomeDraft) {
+  if (!sessionOnly) {
+    await setViewport(session, viewports[0], original);
+    await navigateHome(session);
+    originalHomeProjectContext = await readHomeProjectContext(session);
+    if (!originalHomeProjectContext) throw new Error("Could not record the original Home project context.");
+  }
+  if (!sessionOnly && temporarilyClearHomeDraft) {
     homeDraftBackup = await readHomeDraft(session);
     if (!homeDraftBackup) throw new Error("Could not read the authorized Home draft editor.");
     const beforeHash = sha256(homeDraftBackup.value);
@@ -1368,6 +1855,7 @@ try {
       stringLength: homeDraftBackup.value.length,
       byteLength: Buffer.byteLength(homeDraftBackup.value, "utf8"),
       sha256Before: beforeHash,
+      selectionCaptured: Boolean(homeDraftBackup.selection?.valid),
     };
     progress("draft:backup", `sha256=${beforeHash} bytes=${report.draft.byteLength}`);
     await setHomeDraft(session, homeDraftBackup, "");
@@ -1432,9 +1920,11 @@ try {
     );
     progress("draft:clear", "suggestionCards=4");
   }
-  for (const viewport of viewports) {
-    await setViewport(session, viewport, original);
-    report.cells.push(await auditCell(session, "home", viewport, original.selectedThreadId));
+  if (!sessionOnly) {
+    for (const viewport of viewports) {
+      await setViewport(session, viewport, original);
+      report.cells.push(await auditCell(session, "home", viewport, original.selectedThreadId));
+    }
   }
 } catch (error) {
   report.fatalError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
@@ -1476,14 +1966,20 @@ try {
           })()`,
           "exact Home draft restoration",
         );
-        await restoreHomeEditorState(session, homeDraftBackup);
+        const restoredEditorState = await restoreHomeEditorState(session, homeDraftBackup);
         const restoredDraft = await readHomeDraft(session);
         const afterHash = restoredDraft ? sha256(restoredDraft.value) : null;
+        report.draft.selectionRestored = selectionSnapshotsEqual(
+          homeDraftBackup.selection,
+          restoredDraft?.selection,
+        );
         report.draft.sha256After = afterHash;
         if (!restoredDraft
           || restoredDraft.value !== homeDraftBackup.value
-          || afterHash !== report.draft.sha256Before) {
-          throw new Error("The Home draft did not restore byte-for-byte.");
+          || afterHash !== report.draft.sha256Before
+          || !restoredEditorState?.restored
+          || !report.draft.selectionRestored) {
+          throw new Error("The Home draft text or editor selection did not restore exactly.");
         }
         homeDraftRestoredInPlace = true;
       }
@@ -1492,7 +1988,9 @@ try {
       report.restoration.draft = `Fail: ${error.message}`;
     }
     try {
-      if (originalHomeProjectContext) {
+      if (sessionOnly) {
+        report.restoration.projectContext = "Pass";
+      } else if (originalHomeProjectContext) {
         const restoredProjectContext = await readHomeProjectContext(session);
         report.restoration.projectContext = restoredProjectContext === originalHomeProjectContext
           ? "Pass"
@@ -1597,7 +2095,7 @@ try {
 }
 
 const restorationPass = Object.values(report.restoration).every((value) => value === "Pass");
-const expectedCellCount = homeOnly ? 2 : 4;
+const expectedCellCount = homeOnly || sessionOnly ? 2 : 4;
 const cellsPass = report.cells.length === expectedCellCount
   && report.cells.every((cell) => cell.result === "Pass");
 report.result = !report.fatalError
