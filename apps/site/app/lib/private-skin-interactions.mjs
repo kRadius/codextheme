@@ -53,7 +53,7 @@ export const PRIVATE_SKIN_INTERACTION_FAMILIES = Object.freeze([
     interactionTarget("[role=\"listbox\"] [role=\"option\"]"),
   ]),
   interactionFamily("home-chrome", "self", [
-    interactionTarget(".dream-home button:not(header *, .composer-surface-chrome *)"),
+    interactionTarget(".dream-home section[class~=\"group/home-suggestions\"] button"),
   ]),
   interactionFamily("composer-secondary", "self", [
     interactionTarget(".composer-surface-chrome button.border-token-border"),
@@ -118,6 +118,7 @@ ${glyphs} {
 
 ${state} {
   color: var(--codextheme-accent) !important;
+  -webkit-text-fill-color: var(--codextheme-accent) !important;
 }
 
 ${pseudoReset}${paint} {

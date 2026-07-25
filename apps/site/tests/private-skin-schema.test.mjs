@@ -128,7 +128,7 @@ const APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT = [
   {
     id: "home-chrome",
     paintTarget: "self",
-    roots: [".dream-home button:not(header *, .composer-surface-chrome *)"],
+    roots: [".dream-home section[class~=\"group/home-suggestions\"] button"],
   },
   {
     id: "composer-secondary",
@@ -173,6 +173,12 @@ test("private skin interaction CSS is owned, eligible, transient, and fail-close
   ]) {
     assert.ok(css.includes(marker), `Interaction CSS must retain ${marker}.`);
   }
+  for (const selector of PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS) {
+    const stateColorBlock = cssRuleBlocksForSelector(css, selector)
+      .find((block) => declarationNames(block).includes("color"));
+    assert.match(stateColorBlock ?? "", /color:\s*var\(--codextheme-accent\)\s*!important;/u);
+    assert.match(stateColorBlock ?? "", /-webkit-text-fill-color:\s*var\(--codextheme-accent\)\s*!important;/u);
+  }
   assert.match(
     css,
     /button\[class~="group\/summary-panel-item"\][^{]*::before\s*\{\s*background-color:\s*transparent\s*!important;\s*box-shadow:\s*none\s*!important;/su,
@@ -185,6 +191,17 @@ test("private skin interaction CSS is owned, eligible, transient, and fail-close
   assert.doesNotMatch(css, /html\.codextheme-codex-skin\s+svg\s*\{/u);
   assert.doesNotMatch(css, /data-message-author-role|(?:^|[\s,(])(?:pre|code)(?:[\s,):.#\[]|$)|data-language/u);
   assert.doesNotMatch(css, /\.size-token-button-composer/u);
+});
+
+test("home interactions target only the four verified suggestion-card controls", () => {
+  const [homeFamily] = PRIVATE_SKIN_INTERACTION_FAMILIES.filter(({ id }) => id === "home-chrome");
+  assert.deepEqual(homeFamily.roots, [
+    ".dream-home section[class~=\"group/home-suggestions\"] button",
+  ]);
+  const css = buildPrivateSkinInteractionCss();
+  assert.match(css, /\.dream-home section\[class~="group\/home-suggestions"\] button/u);
+  assert.doesNotMatch(css, /\.dream-home button:not\(/u);
+  assert.doesNotMatch(css, /data-composer-utility-bar-scroll-area|\.dream-home header|\.dream-home \.composer-surface-chrome/u);
 });
 
 const TEST_ENABLED = ':not(:disabled, [aria-disabled="true"])';
@@ -282,8 +299,12 @@ function assertPrivateSkinIconRuleScopes(css, label) {
           ["background", "border-color", "border-radius", "box-shadow", "color"],
           `${label} selected roots must contain only selection material.`,
         );
-      } else if (transientIconSelectors.has(selector) && declarations.length === 1 && declarations[0] === "color") {
-        assert.deepEqual(declarations, ["color"], `${label} transient roots must contain only interaction color.`);
+      } else if (transientIconSelectors.has(selector) && declarations.includes("color")) {
+        assert.deepEqual(
+          declarations,
+          ["-webkit-text-fill-color", "color"],
+          `${label} transient roots must contain only interaction text color.`,
+        );
       } else if (transientPaintSelectors.has(selector) && selector.endsWith("::before")) {
         assert.deepEqual(
           declarations,
@@ -1169,6 +1190,23 @@ test("icon rule audit rejects same-line material appended to a transition-only r
   );
 });
 
+test("interaction audit rejects Chromium text fill outside the transient state-color block", () => {
+  const selector = `html.codextheme-codex-skin ${PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS[0]}`;
+  assert.throws(
+    () => assertPrivateSkinIconRuleScopes(
+      `${selector} {
+  -webkit-text-fill-color: var(--codextheme-accent) !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  border-radius: var(--codextheme-radius) !important;
+  box-shadow: none !important;
+}`,
+      "probe",
+    ),
+    /transient self-painted roots must contain only interaction material/u,
+  );
+});
+
 test("recipe profiles generate distinct complete adaptive surface systems", () => {
   const profile = analyzeImagePixels({
     data: new Uint8Array([
@@ -1303,7 +1341,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const stateMaterial = cssRuleBlocksForSelector(css, PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS.at(-1))
       .find((block) => declarationNames(block).includes("background-color"));
     const stateColor = cssRuleBlocksForSelector(css, PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.at(-1))
-      .find((block) => declarationNames(block).length === 1 && declarationNames(block)[0] === "color");
+      .find((block) => declarationNames(block).includes("color"));
     const stateGlyph = cssRuleBlockForSelector(css, PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS.at(-1));
     assert.ok(sidebar, `${recipe} CSS must include the owned sidebar rule.`);
     assert.ok(main, `${recipe} CSS must include the main surface rule.`);
@@ -1360,6 +1398,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(selected, /border-radius:\s*var\(--codextheme-radius\)/);
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
     assert.match(stateColor, /color:\s*var\(--codextheme-accent\)\s*!important;/);
+    assert.match(stateColor, /-webkit-text-fill-color:\s*var\(--codextheme-accent\)\s*!important;/);
     assert.match(stateMaterial, /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-surface-alpha\), transparent\)/);
     assert.match(stateMaterial, /border-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\)\s*!important;/);
     assert.match(stateMaterial, /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\),\s*0 0 18px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)/s);
