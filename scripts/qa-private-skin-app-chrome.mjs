@@ -1,10 +1,9 @@
-import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { buildPrivateSkinPackage } from "../apps/site/app/lib/private-skin-package.mjs";
 import { PRIVATE_SKIN_INTERACTION_FAMILIES } from "../apps/site/app/lib/private-skin-interactions.mjs";
+import { createPrivateQaArtifactStore } from "./lib/private-qa-artifacts.mjs";
 import {
   CdpSession,
   applyTheme,
@@ -124,6 +123,12 @@ const EXCLUSION_CLASSES = Object.freeze([
 ]);
 
 const adapter = getAdapter("codex");
+const {
+  ensureArtifactDirectory: ensurePrivateArtifactDirectory,
+  writeArtifact: writePrivateArtifact,
+  createDraftRecovery,
+  cleanupDraftRecovery,
+} = createPrivateQaArtifactStore();
 let terminationSignal = null;
 let restorationStarted = false;
 const sleep = async (milliseconds) => {
@@ -166,47 +171,6 @@ const sigintHandler = () => signalHandler("SIGINT");
 const sigtermHandler = () => signalHandler("SIGTERM");
 process.on("SIGINT", sigintHandler);
 process.on("SIGTERM", sigtermHandler);
-
-async function ensurePrivateArtifactDirectory(directory) {
-  const createdPath = await fs.mkdir(directory, { recursive: true, mode: 0o700 });
-  const created = createdPath !== undefined;
-  if (created) await fs.chmod(directory, 0o700);
-  const metadata = await fs.lstat(directory);
-  if (!metadata.isDirectory()) {
-    throw new Error("The private artifact path is not a directory.");
-  }
-  if (typeof process.getuid === "function" && metadata.uid !== process.getuid()) {
-    throw new Error("The private artifact directory is not owned by the current user.");
-  }
-  if ((metadata.mode & 0o077) !== 0) {
-    throw new Error("The private artifact directory grants access to other users.");
-  }
-}
-
-async function writePrivateArtifact(filename, data, { prepareDirectory = true } = {}) {
-  if (prepareDirectory) await ensurePrivateArtifactDirectory(path.dirname(filename));
-  await fs.writeFile(filename, data, { mode: 0o600 });
-  await fs.chmod(filename, 0o600);
-}
-
-async function removeDraftRecoveryBackup() {
-  if (homeDraftBackupFile) {
-    try {
-      await fs.unlink(homeDraftBackupFile);
-    } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
-    }
-  }
-  if (homeDraftBackupDirectory) {
-    try {
-      await fs.rmdir(homeDraftBackupDirectory);
-    } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
-    }
-  }
-  homeDraftBackupFile = null;
-  homeDraftBackupDirectory = null;
-}
 
 function hsl(hex) {
   const [red, green, blue] = hex.slice(1).match(/../gu)
@@ -1978,8 +1942,7 @@ const report = {
 let session;
 let original;
 let homeDraftBackup;
-let homeDraftBackupFile;
-let homeDraftBackupDirectory;
+let homeDraftRecovery;
 let homeDraftHashBefore;
 let originalHomeProjectContext;
 let homeDraftRestoredInPlace = false;
@@ -2070,17 +2033,9 @@ try {
       throw new Error("The Home draft editor does not have a valid restorable selection.");
     }
     homeDraftHashBefore = sha256(homeDraftBackup.value);
-    homeDraftBackupDirectory = await fs.mkdtemp(
-      path.join(os.tmpdir(), "private-skin-app-chrome-draft-"),
-    );
-    await fs.chmod(homeDraftBackupDirectory, 0o700);
-    homeDraftBackupFile = path.join(homeDraftBackupDirectory, "draft-recovery.json");
-    await fs.writeFile(
-      homeDraftBackupFile,
+    homeDraftRecovery = await createDraftRecovery(
       `${JSON.stringify(homeDraftBackup)}\n`,
-      { flag: "wx", mode: 0o600 },
     );
-    await fs.chmod(homeDraftBackupFile, 0o600);
     report.draft = {
       ...report.draft,
       backupRemoved: false,
@@ -2347,12 +2302,13 @@ try {
     progress("restoration", JSON.stringify(report.restoration));
     session.close();
   }
-  const draftRecoveryCanBeRemoved = Boolean(homeDraftBackupDirectory)
-    && (!homeDraftMutationStarted || report.draft.independentExactEquality === true);
-  if (draftRecoveryCanBeRemoved) {
+  if (homeDraftRecovery) {
     try {
-      await removeDraftRecoveryBackup();
-      report.draft.backupRemoved = true;
+      const cleanup = await cleanupDraftRecovery(homeDraftRecovery, {
+        mutationStarted: homeDraftMutationStarted,
+        independentRestoreVerified: report.draft.independentExactEquality === true,
+      });
+      report.draft.backupRemoved = cleanup.removed;
     } catch (error) {
       report.restoration.draftIndependent = `Fail: recovery cleanup failed: ${error.message}`;
     }
