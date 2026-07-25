@@ -93,16 +93,16 @@ export function CodexMockup({
         <nav>
           <span className="mockup-sidebar-control"><i>＋</i> New chat</span>
           <span className="mockup-sidebar-control"><i>⌘</i> Commands</span>
-          <span className="mockup-sidebar-control"><i>◴</i> Scheduled</span>
-          <span className="mockup-sidebar-control"><i>◇</i> Plugins</span>
+          <span className="mockup-sidebar-control mockup-sidebar-optional"><i>◴</i> Scheduled</span>
+          <span className="mockup-sidebar-control mockup-sidebar-optional"><i>◇</i> Plugins</span>
         </nav>
         <p>Projects</p>
         <b className="mockup-sidebar-control mockup-project mockup-selected"><i>□</i> codextheme</b>
-        <span className="mockup-project">Private skin studio</span>
-        <span className="mockup-project">Launch notes</span>
-        <p>Chats</p>
-        <span className="mockup-muted">No chats</span>
-        <footer>⚙ custom <i>?</i></footer>
+        <span className="mockup-project mockup-sidebar-optional">Private skin studio</span>
+        <span className="mockup-project mockup-sidebar-optional">Launch notes</span>
+        <p className="mockup-sidebar-optional">Chats</p>
+        <span className="mockup-muted mockup-sidebar-optional">No chats</span>
+        <footer className="mockup-sidebar-optional">⚙ custom <i>?</i></footer>
       </aside>
       <main className="mockup-main" aria-hidden="true">
         {mode === "home" ? (

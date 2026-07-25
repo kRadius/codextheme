@@ -20,11 +20,83 @@ const previewInteractionFamilies = [
   "mockup-composer-secondary",
 ];
 
-function cssRules() {
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectorList, declarations]) => ({
+function cssRules(source = css) {
+  return [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selectorList, declarations]) => ({
     selectors: selectorList.split(",").map((value) => value.trim()),
     declarations,
   }));
+}
+
+function atRuleBody(source, header) {
+  const headerIndex = source.indexOf(header);
+  assert.notEqual(headerIndex, -1, `${header} must exist`);
+  const openIndex = source.indexOf("{", headerIndex);
+  let depth = 1;
+  for (let index = openIndex + 1; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(openIndex + 1, index);
+  }
+  assert.fail(`${header} must have a closing brace`);
+}
+
+function declarationsForSelector(source, selector) {
+  return cssRules(source)
+    .filter(({ selectors }) => selectors.includes(selector))
+    .map(({ declarations }) => declarations)
+    .join("\n");
+}
+
+function pixelEdges(value) {
+  const values = value.split(/\s+/u).map((part) => {
+    assert.match(part, /^(?:0|\d+px)$/u);
+    return Number.parseInt(part, 10);
+  });
+  const [top, right = top, bottom = top, left = right] = values;
+  return { top, right, bottom, left };
+}
+
+function assertPrimaryRemainsNative(source) {
+  for (const { selectors, declarations } of cssRules(source)) {
+    const primarySelectors = selectors.filter((selector) => selector.includes(".mockup-composer-primary"));
+    if (primarySelectors.length === 0) continue;
+    for (const selector of primarySelectors) {
+      assert.doesNotMatch(
+        selector,
+        /:(?:hover|focus-visible)|\.is-hover-preview/u,
+        "primary Send must not have a transient interaction selector",
+      );
+    }
+    assert.doesNotMatch(
+      declarations,
+      /--studio-icon-hover-(?:surface|border|glow)-alpha|0 0 18px/u,
+      "primary Send must not use shared interaction material",
+    );
+  }
+}
+
+function assertSelectedOutranksTransient(source) {
+  const rules = cssRules(source);
+  const transientIndexes = rules
+    .map(({ selectors }, index) => selectors.some((selector) =>
+      [
+        ".mockup-sidebar-control:hover",
+        ".mockup-sidebar-control:focus-visible",
+        ".mockup-sidebar-control.is-hover-preview",
+      ].includes(selector),
+    ) ? index : -1)
+    .filter((index) => index >= 0);
+  const selectedIndex = rules.findIndex(({ selectors }) =>
+    selectors.includes(".mockup-sidebar-control.mockup-selected"),
+  );
+  assert.ok(transientIndexes.length > 0, "sidebar transient material rule must exist");
+  assert.ok(selectedIndex > Math.max(...transientIndexes), "selected material must follow sidebar transient material");
+
+  const selected = rules[selectedIndex].declarations;
+  assert.match(selected, /background:\s*color-mix\(in srgb, var\(--studio-accent-soft\) var\(--studio-selection-alpha\), transparent\)/u);
+  assert.match(selected, /border-color:\s*color-mix\(in srgb, var\(--studio-accent\) 44%, transparent\)/u);
+  assert.match(selected, /box-shadow:\s*inset 3px 0 0 var\(--studio-accent\)/u);
+  assert.doesNotMatch(selected, /--studio-icon-hover-glow-alpha|0 0 18px/u);
 }
 
 function idleRulesFor(selector) {
@@ -164,6 +236,39 @@ test("preview interaction families share one material rule and exclude primary S
   );
 });
 
+test("preview interaction audit rejects primary transient material and selected cascade regressions", () => {
+  assert.doesNotThrow(() => assertPrimaryRemainsNative(css));
+  assert.throws(
+    () => assertPrimaryRemainsNative(`${css}
+.mockup-composer-primary:hover {
+  background: color-mix(in srgb, var(--studio-accent) var(--studio-icon-hover-surface-alpha), transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--studio-accent) var(--studio-icon-hover-glow-alpha), transparent);
+}`),
+    /primary Send must not have a transient interaction selector/u,
+  );
+
+  assert.doesNotThrow(() => assertSelectedOutranksTransient(css));
+  const selectedFixture = `.mockup-sidebar-control.mockup-selected {
+  background: color-mix(in srgb, var(--studio-accent-soft) var(--studio-selection-alpha), transparent);
+  border-color: color-mix(in srgb, var(--studio-accent) 44%, transparent);
+  box-shadow: inset 3px 0 0 var(--studio-accent);
+}`;
+  const transientFixture = `.mockup-sidebar-control:hover {
+  background: color-mix(in srgb, var(--studio-accent) var(--studio-icon-hover-surface-alpha), transparent);
+}`;
+  assert.throws(
+    () => assertSelectedOutranksTransient(`${selectedFixture}\n${transientFixture}`),
+    /selected material must follow sidebar transient material/u,
+  );
+  assert.throws(
+    () => assertSelectedOutranksTransient(`${transientFixture}\n${selectedFixture.replace(
+      "box-shadow: inset 3px 0 0 var(--studio-accent);",
+      "box-shadow: 0 0 18px var(--studio-icon-hover-glow-alpha);",
+    )}`),
+    /box-shadow/u,
+  );
+});
+
 test("preview session rail constrains desktop and narrow layout overflow", () => {
   assert.match(
     css,
@@ -181,6 +286,72 @@ test("preview session rail constrains desktop and narrow layout overflow", () =>
     css,
     /@media \(max-width: 720px\) \{[\s\S]*?\.mockup-summary, \.mockup-menu \{[^}]*padding: 3px;[^}]*\}/u,
   );
+});
+
+test("preview sidebar fits a bounded 320px and 375px vertical budget", () => {
+  const sidebarMarkup = mockup.match(/<aside className="mockup-sidebar"[\s\S]*?<\/aside>/u)?.[0] ?? "";
+  assert.match(sidebarMarkup, /className="mockup-sidebar-control">Codex/u);
+  assert.match(sidebarMarkup, /className="mockup-sidebar-control mockup-project mockup-selected"/u);
+  assert.ok(
+    [...sidebarMarkup.matchAll(/className="[^"]*\bmockup-sidebar-optional\b[^"]*"/gu)].length >= 6,
+    "nonessential sidebar preview rows must be explicitly marked",
+  );
+
+  const smallWidthCss = atRuleBody(css, "@media (max-width: 480px)");
+  assert.match(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar-optional"),
+    /display:\s*none/u,
+  );
+
+  const sidebarPadding = pixelEdges(declarationValues(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar"),
+    "padding",
+  )[0]);
+  const brandPadding = pixelEdges(declarationValues(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar strong"),
+    "padding",
+  )[0]);
+  const brandMargin = pixelEdges(declarationValues(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar strong"),
+    "margin-bottom",
+  )[0]);
+  const navPadding = pixelEdges(declarationValues(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar nav span"),
+    "padding",
+  )[0]);
+  const navGap = Number.parseInt(declarationValues(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar nav"),
+    "gap",
+  )[0], 10);
+  const headingMargin = pixelEdges(declarationValues(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar > p"),
+    "margin",
+  )[0]);
+  const projectPadding = pixelEdges(declarationValues(
+    declarationsForSelector(smallWidthCss, ".mockup-sidebar > b"),
+    "padding",
+  )[0]);
+
+  const conservativeLineHeight = 10;
+  const onePixelBorderPair = 2;
+  const visibleNavRows = 2;
+  const estimatedDemand =
+    sidebarPadding.top + sidebarPadding.bottom +
+    conservativeLineHeight + brandPadding.top + brandPadding.bottom + onePixelBorderPair + brandMargin.top +
+    visibleNavRows * (conservativeLineHeight + navPadding.top + navPadding.bottom + onePixelBorderPair) +
+    navGap * (visibleNavRows - 1) +
+    conservativeLineHeight + headingMargin.top + headingMargin.bottom +
+    conservativeLineHeight + projectPadding.top + projectPadding.bottom + onePixelBorderPair;
+  assert.ok(estimatedDemand <= 96, `compressed sidebar demand ${estimatedDemand}px must stay bounded`);
+
+  for (const viewportWidth of [320, 375]) {
+    const mockupWidth = viewportWidth - 28;
+    const sidebarInnerHeight = mockupWidth * (10 / 16) * (1 - .078);
+    assert.ok(
+      estimatedDemand + 8 <= sidebarInnerHeight,
+      `${viewportWidth}px viewport must retain at least 8px of sidebar vertical slack`,
+    );
+  }
 });
 
 test("preview mirrors private icon interaction states", () => {

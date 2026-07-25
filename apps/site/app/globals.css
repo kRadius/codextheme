@@ -443,6 +443,16 @@ button { font: inherit; }
   .coming-panel .primary-link { justify-self: start; }
 }
 
+@media (max-width: 480px) {
+  .mockup-sidebar { padding: 6px 5px 5px; }
+  .mockup-sidebar strong { margin-bottom: 3px; padding: 2px 4px; }
+  .mockup-sidebar nav { gap: 1px; }
+  .mockup-sidebar nav span { padding: 2px 4px; }
+  .mockup-sidebar > p { margin: 5px 0 2px; }
+  .mockup-sidebar > b, .mockup-project { padding: 2px 4px; }
+  .mockup-sidebar-optional { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
