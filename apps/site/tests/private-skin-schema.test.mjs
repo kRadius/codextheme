@@ -280,6 +280,7 @@ function assertPrivateSkinIconRuleScopes(css, label) {
     for (const selector of splitSelectorList(cleanSelectorPrelude(match[1]))) {
       const targetsPrivateIcon = interactionRoots.some((root) => selector.includes(root));
       const normalizedSelector = selector.replace(/^html\.codextheme-codex-skin /u, "");
+      const usesChromiumTextFill = declarations.includes("-webkit-text-fill-color");
       const usesInteractionAccent = /var\(--codextheme-(?:accent|icon-hover-(?:surface|border|glow)-alpha)\)/u.test(block)
         || declarations.includes("filter")
         || declarations.includes("transition");
@@ -323,6 +324,8 @@ function assertPrivateSkinIconRuleScopes(css, label) {
         assert.deepEqual(declarations, ["background-color", "box-shadow"], `${label} summary resets must contain only native-material neutralization.`);
       } else if (persistentGlyphSelectors.has(selector)) {
         assert.deepEqual(declarations, ["color"], `${label} persistent glyph rules must contain only selected accent color.`);
+      } else if (usesChromiumTextFill) {
+        assert.fail(`${label} CSS contains Chromium text fill outside an approved transient state-color selector: ${selector}`);
       } else if (usesInteractionAccent && crossesForbiddenBoundary) {
         assert.fail(`${label} CSS contains a forbidden interaction selector: ${selector}`);
       } else if (/\bsvg\b/u.test(selector) || targetsPrivateIcon) {
@@ -1204,6 +1207,18 @@ test("interaction audit rejects Chromium text fill outside the transient state-c
       "probe",
     ),
     /transient self-painted roots must contain only interaction material/u,
+  );
+});
+
+test("interaction audit rejects Chromium text fill on an arbitrary unapproved control", () => {
+  assert.throws(
+    () => assertPrivateSkinIconRuleScopes(
+      `html.codextheme-codex-skin .unapproved-control:hover {
+  -webkit-text-fill-color: var(--codextheme-accent) !important;
+}`,
+      "probe",
+    ),
+    /Chromium text fill outside an approved transient state-color selector/u,
   );
 });
 
