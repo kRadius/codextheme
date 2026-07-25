@@ -407,6 +407,44 @@ test("achromatic highlights borrow a vivid interaction hue from the secondary", 
   assert.ok(accentHsl.saturation >= 41.5);
 });
 
+test("black achromatic highlights retain the borrowed secondary hue", () => {
+  const profile = {
+    primary: "#303030",
+    secondary: "#7350a8",
+    highlight: "#000000",
+  };
+  const tokens = deriveSkinTokens(profile, { recipe: "focus" });
+  const accentHsl = hsl(tokens.accent);
+
+  assert.ok(hueDistance(accentHsl.hue, hsl(profile.secondary).hue) <= 2);
+  assert.ok(accentHsl.saturation >= 41.5);
+  assert.ok(contrastRatio(tokens.accent, tokens.surface) >= 4.5);
+});
+
+test("white achromatic highlights retain the borrowed secondary hue", () => {
+  const profile = {
+    primary: "#303030",
+    secondary: "#7350a8",
+    highlight: "#ffffff",
+  };
+  const tokens = deriveSkinTokens(profile, { recipe: "focus" });
+  const accentHsl = hsl(tokens.accent);
+
+  assert.ok(hueDistance(accentHsl.hue, hsl(profile.secondary).hue) <= 2);
+  assert.ok(accentHsl.saturation >= 41.5);
+  assert.ok(contrastRatio(tokens.accent, tokens.surface) >= 4.5);
+});
+
+test("analyzed low-chroma colors keep a quantized vivid interaction accent", () => {
+  const profile = analyzeImagePixels(solid(167, 150, 207));
+  const tokens = deriveSkinTokens(profile, { recipe: profile.recommendedRecipe });
+  const accentHsl = hsl(tokens.accent);
+
+  assert.ok(hueDistance(accentHsl.hue, hsl(profile.highlight).hue) <= 2);
+  assert.ok(accentHsl.saturation >= 41.5);
+  assert.ok(contrastRatio(tokens.accent, tokens.surface) >= 4.5);
+});
+
 test("fully neutral profiles receive a vivid readable interaction accent", () => {
   const tokens = deriveSkinTokens({
     primary: "#303030",

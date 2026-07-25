@@ -196,19 +196,31 @@ function hslToHex(hue, saturation, lightness) {
 }
 
 function readableInteractionAccent(source, surface) {
-  const sourceHsl = rgbToHsl(...parseHex(source, FALLBACK_COLORS.highlight));
   if (
-    sourceHsl.saturation >= INTERACTION_SATURATION_FLOOR
-    && contrastRatio(source, surface) >= 4.5
+    source.color
+    && source.saturation >= INTERACTION_SATURATION_FLOOR
+    && contrastRatio(source.color, surface) >= 4.5
   ) {
-    return source;
+    return source.color;
   }
-  const saturation = Math.max(sourceHsl.saturation, INTERACTION_SATURATION_FLOOR);
-  const steps = Math.ceil((1 - sourceHsl.lightness) / 0.01);
-  for (let step = 0; step <= steps; step += 1) {
-    const lightness = Math.min(1, sourceHsl.lightness + step * 0.01);
-    const candidate = hslToHex(sourceHsl.hue, saturation, lightness);
-    if (contrastRatio(candidate, surface) >= 4.5) return candidate;
+  const saturation = Math.max(source.saturation, INTERACTION_SATURATION_FLOOR);
+  for (let step = 0; step <= 100; step += 1) {
+    const offset = step * 0.01;
+    const lightnesses = step === 0
+      ? [source.lightness]
+      : [source.lightness + offset, source.lightness - offset];
+    for (const lightness of lightnesses) {
+      if (lightness < 0 || lightness > 1) continue;
+      const candidate = hslToHex(source.hue, saturation, lightness);
+      const candidateHsl = rgbToHsl(...parseHex(candidate, FALLBACK_COLORS.highlight));
+      if (
+        candidateHsl.saturation >= INTERACTION_SATURATION_FLOOR - 0.5
+        && hueDistance(candidateHsl.hue, source.hue) <= 2
+        && contrastRatio(candidate, surface) >= 4.5
+      ) {
+        return candidate;
+      }
+    }
   }
   return FALLBACK_COLORS.highlight;
 }
@@ -216,7 +228,10 @@ function readableInteractionAccent(source, surface) {
 function interactionAccent(safe, surface) {
   const highlightHsl = rgbToHsl(...parseHex(safe.highlight, FALLBACK_COLORS.highlight));
   if (highlightHsl.saturation >= ACHROMATIC_SATURATION_THRESHOLD) {
-    return readableInteractionAccent(safe.highlight, surface);
+    return readableInteractionAccent({
+      ...highlightHsl,
+      color: safe.highlight,
+    }, surface);
   }
 
   const candidates = [safe.secondary, safe.primary]
@@ -225,12 +240,11 @@ function interactionAccent(safe, surface) {
   const hueSource = candidates[0].saturation >= ACHROMATIC_SATURATION_THRESHOLD
     ? candidates[0]
     : rgbToHsl(...parseHex(FALLBACK_COLORS.highlight, FALLBACK_COLORS.highlight));
-  const source = hslToHex(
-    hueSource.hue,
-    Math.max(highlightHsl.saturation, INTERACTION_SATURATION_FLOOR),
-    highlightHsl.lightness,
-  );
-  return readableInteractionAccent(source, surface);
+  return readableInteractionAccent({
+    hue: hueSource.hue,
+    saturation: Math.max(highlightHsl.saturation, INTERACTION_SATURATION_FLOOR),
+    lightness: highlightHsl.lightness,
+  }, surface);
 }
 
 function pixelLuminance(red, green, blue) {
