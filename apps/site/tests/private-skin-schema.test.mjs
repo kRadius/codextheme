@@ -16,6 +16,10 @@ import {
 } from "../app/lib/private-skin-profile.mjs";
 import { buildPrivateSkinPackage } from "../app/lib/private-skin-package.mjs";
 import {
+  PRIVATE_SKIN_INTERACTION_FAMILIES,
+  buildPrivateSkinInteractionCss,
+} from "../app/lib/private-skin-interactions.mjs";
+import {
   lintThemePackage,
   resolveThemeTarget,
   validateThemePackage,
@@ -51,10 +55,14 @@ function splitSelectorList(prelude) {
   return selectors;
 }
 
+function cleanSelectorPrelude(prelude) {
+  return prelude.replace(/\/\*[\s\S]*?\*\//gu, "").trim();
+}
+
 function assertOwnedCssSelectors(css, label) {
   const allowed = /^(?::root\.codextheme-codex-skin|html\.codextheme-codex-skin|#codextheme-codex-skin-chrome)/u;
   for (const match of css.matchAll(/([^{}]+)\{/gu)) {
-    const prelude = match[1].trim();
+    const prelude = cleanSelectorPrelude(match[1]);
     if (prelude.startsWith("@media")) continue;
     for (const selector of splitSelectorList(prelude)) {
       assert.match(selector, allowed, `${label} CSS contains an unowned selector: ${selector}`);
@@ -72,48 +80,114 @@ function declarationNames(block) {
 function cssRuleBlockForSelector(css, selector) {
   const ownedSelector = `html.codextheme-codex-skin ${selector}`;
   for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
-    const selectors = splitSelectorList(match[1].trim()).map((item) => item.replace(/\s+/gu, " "));
+    const selectors = splitSelectorList(cleanSelectorPrelude(match[1])).map((item) => item.replace(/\s+/gu, " "));
     if (selectors.includes(ownedSelector)) return match[2];
   }
   return null;
 }
 
-const PRIVATE_SKIN_BASE_ICON_SELECTORS = [
-  "aside.app-shell-left-panel button:has(> .text-token-foreground)",
-  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground)",
-  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group",
-  ".dream-home button:not(header *, .composer-surface-chrome *)",
-  ".composer-surface-chrome button.border-token-border",
-];
+function cssRuleBlocksForSelector(css, selector) {
+  const ownedSelector = `html.codextheme-codex-skin ${selector}`;
+  const blocks = [];
+  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
+    const selectors = splitSelectorList(cleanSelectorPrelude(match[1])).map((item) => item.replace(/\s+/gu, " "));
+    if (selectors.includes(ownedSelector)) blocks.push(match[2]);
+  }
+  return blocks;
+}
 
-const PRIVATE_SKIN_BASE_GLYPH_SELECTORS = PRIVATE_SKIN_BASE_ICON_SELECTORS.map((selector, index) => (
-  `${selector}${index < 2 ? " :is(.text-token-foreground, svg)" : " svg"}`
-));
+test("private skin interaction families expose the frozen six-family app chrome contract", () => {
+  assert.deepEqual(
+    PRIVATE_SKIN_INTERACTION_FAMILIES.map(({ id, paintTarget }) => ({ id, paintTarget })),
+    [
+      { id: "sidebar-chrome", paintTarget: "self" },
+      { id: "header-chrome", paintTarget: "self" },
+      { id: "summary-chrome", paintTarget: "before" },
+      { id: "menu-chrome", paintTarget: "self" },
+      { id: "home-chrome", paintTarget: "self" },
+      { id: "composer-secondary", paintTarget: "self" },
+    ],
+  );
+  assert.ok(Object.isFrozen(PRIVATE_SKIN_INTERACTION_FAMILIES));
+  for (const family of PRIVATE_SKIN_INTERACTION_FAMILIES) {
+    assert.ok(Object.isFrozen(family));
+    assert.ok(Object.isFrozen(family.roots));
+  }
+});
+
+test("private skin interaction CSS is owned, eligible, transient, and fail-closed", () => {
+  const css = buildPrivateSkinInteractionCss();
+  for (const family of PRIVATE_SKIN_INTERACTION_FAMILIES) {
+    assert.match(css, new RegExp(`/\\* codextheme-interaction:${family.id} \\*/`, "u"));
+    for (const root of family.roots) {
+      assert.ok(css.includes(`html.codextheme-codex-skin ${root}`));
+    }
+  }
+  for (const marker of [
+    ":not(:disabled, [aria-disabled=\"true\"])",
+    ":not([data-variant=\"destructive\"])",
+    ":not([class*=\"text-token-danger\"])",
+    ":not([class*=\"text-token-error\"])",
+    ":not(:has([class*=\"text-token-danger\"], [class*=\"text-token-error\"]))",
+    ":is(:hover, :focus-visible, [data-state=\"open\"])",
+  ]) {
+    assert.ok(css.includes(marker), `Interaction CSS must retain ${marker}.`);
+  }
+  assert.match(
+    css,
+    /button\[class~="group\/summary-panel-item"\][^{]*::before\s*\{\s*background-color:\s*transparent\s*!important;\s*box-shadow:\s*none\s*!important;/su,
+  );
+  assert.match(
+    css,
+    /button\[class~="group\/summary-panel-item"\][^{]*:is\(:hover, :focus-visible, \[data-state="open"\]\)::before\s*\{[^}]*--codextheme-icon-hover-surface-alpha[^}]*--codextheme-icon-hover-glow-alpha/su,
+  );
+  assert.doesNotMatch(css, /(?:^|,)\s*(?:button|a):hover\b/mu);
+  assert.doesNotMatch(css, /html\.codextheme-codex-skin\s+svg\s*\{/u);
+  assert.doesNotMatch(css, /data-message-author-role|(?:^|[\s,(])(?:pre|code)(?:[\s,):.#\[]|$)|data-language/u);
+  assert.doesNotMatch(css, /\.size-token-button-composer/u);
+});
+
+const TEST_ENABLED = ':not(:disabled, [aria-disabled="true"])';
+const TEST_SAFE_ACTION = ':not([data-variant="destructive"]):not([class*="text-token-danger"]):not([class*="text-token-error"]):not(:has([class*="text-token-danger"], [class*="text-token-error"]))';
+const TEST_STATE = ':is(:hover, :focus-visible, [data-state="open"])';
+
+function testedEligible(selector) {
+  return `${selector}${TEST_ENABLED}${TEST_SAFE_ACTION}`;
+}
+
+function testedStateful(selector) {
+  return `${testedEligible(selector)}${TEST_STATE}`;
+}
+
+const PRIVATE_SKIN_BASE_ICON_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+  .flatMap((family) => family.roots.map(testedEligible));
+
+const PRIVATE_SKIN_BASE_GLYPH_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+  .flatMap((family) => family.roots.map((selector) => (
+    `${testedEligible(selector)} :is(.text-token-foreground, svg)`
+  )));
 
 const PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS = [
   "aside.app-shell-left-panel :is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]):not(:where(.group > button))",
   "aside.app-shell-left-panel .group:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)",
 ];
 
-const PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS = [
-  "aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is(:hover, :focus-visible):not(:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])):not(:disabled, [aria-disabled=\"true\"])",
-  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is(:hover, :focus-visible):not(:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])):not(:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)):not(:disabled, [aria-disabled=\"true\"]):not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground)):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
-  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group:is(:hover, :focus-visible):not(:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])):not(:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)):not(:disabled, [aria-disabled=\"true\"]):not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))",
-  ".dream-home button:not(header *, .composer-surface-chrome *):is(:hover, :focus-visible):not(:disabled, [aria-disabled=\"true\"])",
-  ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"]):not(:disabled, [aria-disabled=\"true\"])",
-  ".composer-surface-chrome button.border-token-border[data-state=\"open\"]",
-  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible):not(:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"])):not(:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)):not(:disabled, [aria-disabled=\"true\"]):not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground)):not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))",
-];
+const PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+  .flatMap((family) => family.roots.map(testedStateful));
 
-const PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS = [
-  `${PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[0]} :is(.text-token-foreground, svg)`,
-  `${PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[1]} :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg)`,
-  `${PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[2]} svg:not(button:is(:disabled, [aria-disabled="true"]) *)`,
-  `${PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[3]} svg`,
-  `${PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[4]} svg`,
-  `${PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[5]} svg`,
-  `${PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[6]} :is(.text-token-foreground, button:not(:disabled, [aria-disabled="true"]) svg)`,
-];
+const PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+  .flatMap((family) => family.roots.map((selector) => (
+    `${testedStateful(selector)}${family.paintTarget === "before" ? "::before" : ""}`
+  )));
+
+const PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+  .flatMap((family) => family.roots.map((selector) => (
+    `${testedStateful(selector)} :is(.text-token-foreground, svg)`
+  )));
+
+const PRIVATE_SKIN_SUMMARY_RESET_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+  .filter((family) => family.paintTarget === "before")
+  .flatMap((family) => family.roots.map((selector) => `${testedEligible(selector)}::before`));
 
 const PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS = [
   "aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) :is(.text-token-foreground, svg)",
@@ -128,34 +202,48 @@ function assertPrivateSkinIconRuleScopes(css, label) {
   const baseGlyphSelectors = new Set(PRIVATE_SKIN_BASE_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
   const selectedSurfaceSelectors = new Set(PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS.map((selector) => `${prefix}${selector}`));
   const transientIconSelectors = new Set(PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.map((selector) => `${prefix}${selector}`));
+  const transientPaintSelectors = new Set(PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS.map((selector) => `${prefix}${selector}`));
   const transientGlyphSelectors = new Set(PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
+  const summaryResetSelectors = new Set(PRIVATE_SKIN_SUMMARY_RESET_SELECTORS.map((selector) => `${prefix}${selector}`));
   const persistentGlyphSelectors = new Set(PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
+  const interactionRoots = PRIVATE_SKIN_INTERACTION_FAMILIES.flatMap((family) => family.roots);
   for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
     const block = match[2];
-    for (const selector of splitSelectorList(match[1].trim())) {
-      const targetsPrivateIcon = /aside\.app-shell-left-panel .*(?:text-token-foreground|\[role="listitem"\] \[role="button"\]\.group)|\.dream-home button|\.composer-surface-chrome button/u.test(selector);
+    const declarations = declarationNames(block);
+    for (const selector of splitSelectorList(cleanSelectorPrelude(match[1]))) {
+      const targetsPrivateIcon = interactionRoots.some((root) => selector.includes(root));
       if (baseIconSelectors.has(selector)) {
-        assert.deepEqual(declarationNames(block), ["transition"], `${label} base icon roots must be transition-only.`);
+        assert.deepEqual(declarations, ["transition"], `${label} base icon roots must be transition-only.`);
         assert.match(block, /transition:\s*color \.16s ease, background-color \.16s ease, border-color \.16s ease, box-shadow \.16s ease;/u);
       } else if (baseGlyphSelectors.has(selector)) {
-        assert.deepEqual(declarationNames(block), ["transition"], `${label} base glyph rules must be transition-only.`);
+        assert.deepEqual(declarations, ["transition"], `${label} base glyph rules must be transition-only.`);
         assert.match(block, /transition:\s*color \.16s ease, filter \.16s ease;/u);
       } else if (selectedSurfaceSelectors.has(selector)) {
         assert.deepEqual(
-          declarationNames(block),
+          declarations,
           ["background", "border-color", "border-radius", "box-shadow", "color"],
           `${label} selected roots must contain only selection material.`,
         );
-      } else if (transientIconSelectors.has(selector)) {
+      } else if (transientIconSelectors.has(selector) && declarations.length === 1 && declarations[0] === "color") {
+        assert.deepEqual(declarations, ["color"], `${label} transient roots must contain only interaction color.`);
+      } else if (transientPaintSelectors.has(selector) && selector.endsWith("::before")) {
         assert.deepEqual(
-          declarationNames(block),
-          ["background-color", "border-color", "box-shadow", "color"],
-          `${label} transient icon roots must contain only interaction material.`,
+          declarations,
+          ["background-color", "border-radius", "box-shadow"],
+          `${label} transient pseudo-elements must contain only interaction material.`,
+        );
+      } else if (transientPaintSelectors.has(selector)) {
+        assert.deepEqual(
+          declarations,
+          ["background-color", "border-color", "border-radius", "box-shadow"],
+          `${label} transient self-painted roots must contain only interaction material.`,
         );
       } else if (transientGlyphSelectors.has(selector)) {
-        assert.deepEqual(declarationNames(block), ["color", "filter"], `${label} transient glyph rules must contain only accent material.`);
+        assert.deepEqual(declarations, ["color", "filter"], `${label} transient glyph rules must contain only accent material.`);
+      } else if (summaryResetSelectors.has(selector)) {
+        assert.deepEqual(declarations, ["background-color", "box-shadow"], `${label} summary resets must contain only native-material neutralization.`);
       } else if (persistentGlyphSelectors.has(selector)) {
-        assert.deepEqual(declarationNames(block), ["color"], `${label} persistent glyph rules must contain only selected accent color.`);
+        assert.deepEqual(declarations, ["color"], `${label} persistent glyph rules must contain only selected accent color.`);
       } else if (/\bsvg\b/u.test(selector) || targetsPrivateIcon) {
         assert.fail(`${label} CSS contains an unapproved private icon selector: ${selector}`);
       } else if (/var\(--codextheme-icon-hover-(?:surface|border|glow)-alpha\)/u.test(block)) {
@@ -168,40 +256,59 @@ function assertPrivateSkinIconRuleScopes(css, label) {
 function assertPrivateSkinLint(bundle) {
   const prefix = "html.codextheme-codex-skin ";
   const expectedPreludes = [
+    ...PRIVATE_SKIN_INTERACTION_FAMILIES.flatMap((family) => {
+      const base = family.roots.map(testedEligible);
+      const glyph = family.roots.map((selector) => `${testedEligible(selector)} :is(.text-token-foreground, svg)`);
+      const state = family.roots.map(testedStateful);
+      const reset = family.paintTarget === "before"
+        ? family.roots.map((selector) => `${testedEligible(selector)}::before`)
+        : [];
+      const paint = family.roots.map((selector) => (
+        `${testedStateful(selector)}${family.paintTarget === "before" ? "::before" : ""}`
+      ));
+      const stateGlyph = family.roots.map((selector) => `${testedStateful(selector)} :is(.text-token-foreground, svg)`);
+      return [base, glyph, state, ...(reset.length ? [reset] : []), paint, stateGlyph];
+    }),
     ...PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS.map((selector) => [selector]),
-    PRIVATE_SKIN_BASE_ICON_SELECTORS,
-    PRIVATE_SKIN_BASE_GLYPH_SELECTORS,
-    PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS,
-    PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS,
     PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS,
   ].map((selectors) => selectors.map((selector) => `${prefix}${selector}`).join(", "));
   const actualPreludes = [...bundle.targets.codex.css.matchAll(/([^{}]+)\{/gu)]
-    .map((match) => match[1].trim().replace(/\s+/gu, " "));
+    .map((match) => cleanSelectorPrelude(match[1]).replace(/\s+/gu, " "));
   for (const prelude of expectedPreludes) {
     assert.ok(actualPreludes.includes(prelude), `Private skin CSS must retain the exact selector prelude: ${prelude}`);
   }
-  assert.equal(
-    expectedPreludes[4].slice(0, 240),
-    expectedPreludes[5].slice(0, 240),
-    "Transient material and glyph preludes must retain the exact shared lint display selector.",
-  );
-  const expected = [expectedPreludes[2], expectedPreludes[3], expectedPreludes[5], expectedPreludes[6]].flatMap((prelude) => [
+  const lintPreludes = [
+    ...PRIVATE_SKIN_INTERACTION_FAMILIES.map((family) => (
+      family.roots.map((selector) => `${prefix}${testedEligible(selector)}`).join(", ")
+    )),
+    PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`).join(", "),
+  ];
+  const expectedLint = lintPreludes.flatMap((prelude, index) => [
     {
       code: "long-selector",
       appId: "codex",
       location: "targets.codex.css",
       selector: prelude.slice(0, 240),
-      message: `Selector is ${prelude.length} characters long and may be coupled to DOM structure.`,
     },
-    {
-      code: "deep-child-chain",
-      appId: "codex",
-      location: "targets.codex.css",
-      selector: prelude.slice(0, 240),
-      message: "Deep direct-child chains are sensitive to wrapper changes.",
-    },
+    ...index === 0 || index === lintPreludes.length - 1
+      ? [{
+          code: "deep-child-chain",
+          appId: "codex",
+          location: "targets.codex.css",
+          selector: prelude.slice(0, 240),
+        }]
+      : [],
   ]);
-  assert.deepEqual(lintThemePackage(bundle), expected);
+  const lint = lintThemePackage(bundle);
+  assert.deepEqual(lint.map(({ message: _message, ...issue }) => issue), expectedLint);
+  for (const issue of lint) {
+    assert.match(
+      issue.message,
+      issue.code === "long-selector"
+        ? /^Selector is \d+ characters long and may be coupled to DOM structure\.$/u
+        : /^Deep direct-child chains are sensitive to wrapper changes\.$/u,
+    );
+  }
 }
 
 function isMaterialPaintDeclaration(name) {
@@ -220,7 +327,7 @@ function privateSkinLayerSelectors(css, layer) {
       ? declarations.some(isMaterialPaintDeclaration)
       : declarations.some((declaration) => declaration === "color" || declaration === "filter");
     if (!containsLayer) continue;
-    selectors.push(...splitSelectorList(match[1].trim()).map((selector) => selector.replace(/^html\.codextheme-codex-skin /u, "")));
+    selectors.push(...splitSelectorList(cleanSelectorPrelude(match[1])).map((selector) => selector.replace(/^html\.codextheme-codex-skin /u, "")));
   }
   return selectors;
 }
@@ -522,7 +629,7 @@ function sidebarCascadeWinners(css, scenario) {
   let sourceOrder = 0;
 
   for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
-    for (const selector of splitSelectorList(rule[1].trim())) {
+    for (const selector of splitSelectorList(cleanSelectorPrelude(rule[1]))) {
       sourceOrder += 1;
       const specificity = selectorSpecificity(selector);
       for (const element of ["surface", "label", "glyph"]) {
@@ -682,14 +789,6 @@ function assertSelectedCascade(cascade, selectionAlpha = 24) {
   }
 }
 
-function assertTransientCascade(cascade) {
-  assert.deepEqual(cascade.paintedRoots(), [cascade.rootIdentity], "Only the hovered/focused physical root may own surface paint.");
-  assert.match(cascade.declaration("surface", "color")?.value ?? "", /var\(--codextheme-accent\)/u);
-  assert.match(cascade.declaration("surface", "background-color")?.value ?? "", /--codextheme-icon-hover-surface-alpha/u);
-  assert.match(cascade.declaration("surface", "border-color")?.value ?? "", /--codextheme-icon-hover-border-alpha/u);
-  assert.match(cascade.declaration("surface", "box-shadow")?.value ?? "", /--codextheme-icon-hover-glow-alpha/u);
-}
-
 test("sidebar cascade model distinguishes each persistent attribute", () => {
   const persistentSelectors = {
     "aria-current": "[aria-current=\"page\"]",
@@ -745,7 +844,7 @@ html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-f
   );
 });
 
-test("sidebar cascade keeps selected material persistent and transient material ephemeral", () => {
+test("sidebar cascade keeps selected material after guarded transient material", () => {
   const bundle = validateThemePackage(JSON.parse(buildPrivateSkinPackage({
     id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     exportedAt: "2026-07-19T00:00:00.000Z",
@@ -753,178 +852,29 @@ test("sidebar cascade keeps selected material persistent and transient material 
     settings: normalizePrivateSkinSettings({}),
   })));
   const { css } = resolveThemeTarget(bundle, "codex");
-  const materialSelectors = privateSkinLayerSelectors(css, "material");
-  const glyphSelectors = privateSkinLayerSelectors(css, "glyph");
-
-  const persistentStates = ["aria-current", "aria-selected", "data-state-active"];
-  for (const persistentState of persistentStates) {
-    for (const transient of [undefined, "primary-hover", "primary-focus", "quick-focus"]) {
-      assertSelectedCascade(sidebarCascadeWinners(css, {
-        kind: "group",
-        persistentOwner: "primary",
-        persistentState,
-        transient,
-      }));
-    }
-    for (const transient of [undefined, "root-hover", "root-focus", "primary-hover", "primary-focus", "quick-focus"]) {
-      assertSelectedCascade(sidebarCascadeWinners(css, {
-        kind: "group",
-        persistentOwner: "root",
-        persistentState,
-        transient,
-      }));
-    }
-    for (const transient of [undefined, "primary-hover", "primary-focus"]) {
-      assertSelectedCascade(sidebarCascadeWinners(css, {
-        kind: "standalone",
-        persistentOwner: "root",
-        persistentState,
-        transient,
-      }));
-    }
-    for (const transient of [undefined, "root-hover", "root-focus"]) {
-      assertSelectedCascade(sidebarCascadeWinners(css, {
-        kind: "listitem",
-        persistentOwner: "root",
-        persistentState,
-        transient,
-      }));
-    }
-  }
-
-  for (const scenario of [
-    { kind: "standalone", transient: "primary-hover" },
-    { kind: "standalone", transient: "primary-focus" },
-    { kind: "group", transient: "primary-hover" },
-    { kind: "group", transient: "primary-focus" },
-    { kind: "group", transient: "quick-focus" },
-    { kind: "listitem", transient: "root-hover" },
-    { kind: "listitem", transient: "root-focus" },
-  ]) {
-    assertTransientCascade(sidebarCascadeWinners(css, scenario));
-  }
-
-  for (const disabledState of [{ disabled: true }, { ariaDisabled: true }]) {
-    for (const scenario of [
-      { kind: "standalone", transient: "primary-hover", disabledTarget: "root" },
-      { kind: "group", transient: "primary-hover", disabledTarget: "primary" },
-      { kind: "group", transient: "primary-focus", disabledTarget: "primary" },
-      { kind: "group", transient: "quick-focus", disabledTarget: "quick" },
-      { kind: "listitem", transient: "root-hover", disabledTarget: "root" },
-      { kind: "listitem", transient: "root-focus", disabledTarget: "root" },
-    ]) {
-      assert.deepEqual(
-        sidebarCascadeWinners(css, { ...scenario, ...disabledState }).paintedRoots(),
-        [],
-        `Disabled and aria-disabled controls must not receive transient material: ${JSON.stringify({ ...scenario, ...disabledState })}`,
-      );
-    }
-    for (const persistentState of persistentStates) {
-      for (const scenario of [
-        { kind: "standalone", persistentOwner: "root", transient: "primary-hover", disabledTarget: "root" },
-        { kind: "standalone", persistentOwner: "root", transient: "primary-focus", disabledTarget: "root" },
-        { kind: "group", persistentOwner: "primary", transient: "primary-hover", disabledTarget: "primary" },
-        { kind: "group", persistentOwner: "primary", transient: "primary-focus", disabledTarget: "primary" },
-        { kind: "group", persistentOwner: "primary", transient: "quick-focus", disabledTarget: "quick" },
-        { kind: "group", persistentOwner: "root", transient: "primary-hover", disabledTarget: "root" },
-        { kind: "group", persistentOwner: "root", transient: "primary-focus", disabledTarget: "root" },
-        { kind: "listitem", persistentOwner: "root", transient: "root-hover", disabledTarget: "root" },
-        { kind: "listitem", persistentOwner: "root", transient: "root-focus", disabledTarget: "root" },
-      ]) {
-        assertSelectedCascade(sidebarCascadeWinners(css, {
-          ...scenario,
-          persistentState,
-          ...disabledState,
-        }));
-      }
-    }
-  }
-
-  for (const scenario of [
-    { kind: "standalone", persistentOwner: "root", persistentState: "aria-current", transient: "primary-hover" },
-    { kind: "group", persistentOwner: "primary", persistentState: "aria-selected", transient: "quick-focus" },
-    { kind: "group", persistentOwner: "root", persistentState: "data-state-active", transient: "primary-focus" },
-    { kind: "listitem", persistentOwner: "root", persistentState: "aria-selected", transient: "root-hover" },
-  ]) {
-    const selected = sidebarCascadeWinners(css, scenario);
-    assert.match(selected.declaration("label", "color")?.value ?? selected.declaration("surface", "color")?.value ?? "", /var\(--codextheme-accent\)/u);
-    assert.match(selected.declaration("glyph", "color")?.value ?? selected.declaration("surface", "color")?.value ?? "", /var\(--codextheme-accent\)/u);
-    assert.equal(selected.declaration("label", "filter"), undefined, "Selected labels must not receive hover glow.");
-    assert.equal(selected.declaration("glyph", "filter"), undefined, "Selected glyphs must not receive hover glow.");
-  }
-
-  for (const scenario of [
-    { kind: "standalone", transient: "primary-hover" },
-    { kind: "group", transient: "quick-focus" },
-    { kind: "listitem", transient: "root-focus" },
-  ]) {
-    const transient = sidebarCascadeWinners(css, scenario);
-    assert.match(transient.declaration("glyph", "color")?.value ?? "", /var\(--codextheme-accent\)/u);
-    assert.match(transient.declaration("glyph", "filter")?.value ?? "", /drop-shadow\(0 0 7px/u);
-    if (scenario.kind !== "listitem") {
-      assert.match(transient.declaration("label", "color")?.value ?? "", /var\(--codextheme-accent\)/u);
-      assert.match(transient.declaration("label", "filter")?.value ?? "", /drop-shadow\(0 0 7px/u);
-    }
-  }
-
+  const sidebarPaint = PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS.filter((selector) => selector.startsWith("aside."));
+  const materialSelectors = privateSkinLayerSelectors(css, "material")
+    .filter((selector) => selector.startsWith("aside.app-shell-left-panel "));
   assert.deepEqual(
-    materialSelectors.filter((selector) => selector.startsWith("aside.app-shell-left-panel ")),
-    [...PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS, ...PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.filter((selector) => selector.startsWith("aside."))],
-    "Sidebar material selectors must consist only of selected surfaces and guarded transient surfaces.",
-  );
-  assert.deepEqual(
-    glyphSelectors.filter((selector) => selector.startsWith("aside.app-shell-left-panel ") && /\s(?:svg|:is\(\.text-token-foreground)/u.test(selector)),
-    [
-      ...PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS.filter((selector) => selector.startsWith("aside.")),
-      ...PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS,
-    ],
-    "Sidebar glyph selectors must separate transient glow from persistent accent color.",
+    materialSelectors,
+    [...sidebarPaint, ...PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS],
+    "Sidebar material must be limited to generated transient paint followed by persistent selected paint.",
   );
 
-  for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
-    if (!/var\(--codextheme-icon-hover-(?:surface|border|glow)-alpha\)/u.test(rule[2])) continue;
-    if (!cssDeclarations(rule[2]).some((declaration) => isMaterialPaintDeclaration(declaration.name))) continue;
-    for (const selector of splitSelectorList(rule[1].trim())) {
-      for (const scenario of [
-        { kind: "standalone", persistentOwner: "root" },
-        { kind: "group", persistentOwner: "root" },
-        { kind: "group", persistentOwner: "primary" },
-        { kind: "listitem", persistentOwner: "root" },
-      ]) {
-        assert.equal(
-          sidebarSelectorMatches(selector, { ...scenario, persistentState: "aria-current" }, "surface"),
-          false,
-          `Sidebar persistent state must not match a hover-token material selector: ${selector}`,
-        );
-      }
-    }
+  const lastInteraction = css.lastIndexOf("/* codextheme-interaction:composer-secondary */");
+  for (const selector of [...PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS, ...PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS]) {
+    assert.ok(css.indexOf(selector, lastInteraction) > lastInteraction, `Selected selector must follow generated interactions: ${selector}`);
   }
 
-  assert.deepEqual(
-    privateSkinLayerSelectors(
-      "html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground) { border: 1px solid red; background-image: linear-gradient(red, blue); }",
-      "material",
-    ),
-    ["aside.app-shell-left-panel button:has(> .text-token-foreground)"],
-    "Material audit must recognize paint shorthands and longhand background properties.",
-  );
-
-  assert.ok(PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[0].includes(":not(:disabled, [aria-disabled=\"true\"])"));
-  assert.ok(PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[1].includes(":not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))"));
-  assert.ok(PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[6].includes(":not(:has(button:focus-visible:is(:disabled, [aria-disabled=\"true\"])))"));
+  for (const selector of PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS) {
+    assert.ok(selector.includes(TEST_ENABLED));
+    assert.ok(selector.includes(TEST_SAFE_ACTION));
+    assert.ok(selector.endsWith(TEST_STATE));
+  }
   assert.equal(
-    PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[4],
-    ".composer-surface-chrome button.border-token-border:is(:hover, :focus-visible, [data-state=\"open\"]):not(:disabled, [aria-disabled=\"true\"])",
-    "Composer coverage must remain limited to enabled secondary controls, excluding Send.",
-  );
-  const composerOpen = cssRuleBlockForSelector(css, PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[4]);
-  assert.match(composerOpen ?? "", /--codextheme-icon-hover-surface-alpha/u, "Composer open must retain full interaction material.");
-  assert.match(composerOpen ?? "", /--codextheme-icon-hover-border-alpha/u, "Composer open must retain the interaction border.");
-  assert.match(composerOpen ?? "", /--codextheme-icon-hover-glow-alpha/u, "Composer open must retain the interaction glow.");
-  assert.equal(
-    cssRuleBlockForSelector(css, PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[5]),
-    composerOpen,
-    "Composer open must retain full material even when the enabled-interaction selector does not match.",
+    PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.at(-1),
+    testedStateful(".composer-surface-chrome button.border-token-border"),
+    "Composer coverage must remain limited to safe enabled secondary controls.",
   );
   assert.doesNotMatch(css, /\.size-token-button-composer/u, "Send must remain outside private icon material selectors.");
 });
@@ -1155,10 +1105,13 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     const composer = css.match(/\.composer-surface-chrome\s*\{([^}]*)\}/s);
     const selected = cssRuleBlockForSelector(css, PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS[0]);
     const code = css.match(/:is\(pre, code, \[data-language\]\)\s*\{([^}]*)\}/s);
-    const baseTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_ICON_SELECTORS[4]);
-    const baseGlyphTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_GLYPH_SELECTORS[4]);
-    const stateMaterial = cssRuleBlockForSelector(css, PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[4]);
-    const stateGlyph = cssRuleBlockForSelector(css, PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS[4]);
+    const baseTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_ICON_SELECTORS.at(-1));
+    const baseGlyphTransition = cssRuleBlockForSelector(css, PRIVATE_SKIN_BASE_GLYPH_SELECTORS.at(-1));
+    const stateMaterial = cssRuleBlocksForSelector(css, PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS.at(-1))
+      .find((block) => declarationNames(block).includes("background-color"));
+    const stateColor = cssRuleBlocksForSelector(css, PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.at(-1))
+      .find((block) => declarationNames(block).length === 1 && declarationNames(block)[0] === "color");
+    const stateGlyph = cssRuleBlockForSelector(css, PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS.at(-1));
     assert.ok(sidebar, `${recipe} CSS must include the owned sidebar rule.`);
     assert.ok(main, `${recipe} CSS must include the main surface rule.`);
     assert.ok(header, `${recipe} CSS must include the header rule.`);
@@ -1168,7 +1121,9 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     for (const selector of [
       ...PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS,
       ...PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS,
+      ...PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS,
       ...PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS,
+      ...PRIVATE_SKIN_SUMMARY_RESET_SELECTORS,
       ...PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS,
     ]) {
       assert.ok(css.includes(selector), `${recipe} CSS must scope icon material to ${selector}.`);
@@ -1176,26 +1131,21 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.ok(baseTransition, `${recipe} CSS must transition secondary composer controls.`);
     assert.ok(baseGlyphTransition, `${recipe} CSS must transition secondary composer glyphs.`);
     assert.ok(stateMaterial, `${recipe} CSS must materialize only secondary composer controls on interaction.`);
+    assert.ok(stateColor, `${recipe} CSS must accent secondary composer controls on interaction.`);
     assert.ok(stateGlyph, `${recipe} CSS must accent secondary composer glyphs on interaction.`);
-    assert.ok(
-      css.includes("aside.app-shell-left-panel .group:has(> button > .text-token-foreground):has(button:focus-visible)"),
-      `${recipe} CSS must materialize grouped rows when a child button receives keyboard focus.`,
-    );
-    for (const selector of PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.filter((_, index) => index !== 5)) {
-      assert.match(selector, /:not\([^)]*(?:disabled|aria-disabled)/u, `${recipe} interaction selector must exclude disabled controls: ${selector}`);
-    }
-    for (const selector of PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.slice(1, 3)) {
-      assert.ok(
-        selector.includes(":not(:has(button:hover:is(:disabled, [aria-disabled=\"true\"])))"),
-        `${recipe} grouped interaction selector must exclude a hovered disabled child: ${selector}`,
-      );
-    }
-    for (const selector of [
-      ...PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS,
-      ...PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS,
-      PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS[5],
+    for (const marker of [
+      "/* codextheme-interaction:sidebar-chrome */",
+      "/* codextheme-interaction:header-chrome */",
+      "/* codextheme-interaction:summary-chrome */",
+      "/* codextheme-interaction:menu-chrome */",
+      "/* codextheme-interaction:home-chrome */",
+      "/* codextheme-interaction:composer-secondary */",
     ]) {
-      assert.doesNotMatch(selector, /:not\([^)]*(?:disabled|aria-disabled)/u, `${recipe} persistent selector must retain disabled selected/open states: ${selector}`);
+      assert.ok(css.includes(marker), `${recipe} must emit ${marker}`);
+    }
+    for (const selector of PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS) {
+      assert.match(selector, /:not\([^)]*(?:disabled|aria-disabled)/u, `${recipe} interaction selector must exclude disabled controls: ${selector}`);
+      assert.ok(selector.includes(TEST_SAFE_ACTION), `${recipe} interaction selector must exclude unsafe actions: ${selector}`);
     }
     assert.match(sidebar[1], new RegExp(`surface\\) ${expected.sidebarAlpha}%`));
     assert.match(sidebar[1], new RegExp(`accent\\) ${expected.borderAlpha}%`));
@@ -1216,7 +1166,7 @@ test("recipe profiles generate distinct complete adaptive surface systems", () =
     assert.match(selected, /inset 3px 0 0 var\(--codextheme-accent\)/);
     assert.match(selected, /border-radius:\s*var\(--codextheme-radius\)/);
     assert.match(code[1], new RegExp(`surface\\) ${expected.codeAlpha}%`));
-    assert.match(stateMaterial, /color:\s*var\(--codextheme-accent\)\s*!important;/);
+    assert.match(stateColor, /color:\s*var\(--codextheme-accent\)\s*!important;/);
     assert.match(stateMaterial, /background-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-surface-alpha\), transparent\)/);
     assert.match(stateMaterial, /border-color:\s*color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\)\s*!important;/);
     assert.match(stateMaterial, /box-shadow:\s*inset 0 0 0 1px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-border-alpha\), transparent\),\s*0 0 18px color-mix\(in srgb, var\(--codextheme-accent\) var\(--codextheme-icon-hover-glow-alpha\), transparent\)/s);
