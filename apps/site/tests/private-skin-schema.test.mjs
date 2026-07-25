@@ -96,22 +96,62 @@ function cssRuleBlocksForSelector(css, selector) {
   return blocks;
 }
 
+const APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT = [
+  {
+    id: "sidebar-chrome",
+    paintTarget: "self",
+    roots: [
+      "aside.app-shell-left-panel button:not(:where(.group > button))",
+      "aside.app-shell-left-panel [class~=\"group/section-toggle\"]",
+      "aside.app-shell-left-panel .group:has(> button > .text-token-foreground)",
+      "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group",
+    ],
+  },
+  {
+    id: "header-chrome",
+    paintTarget: "self",
+    roots: ["main.main-surface header.app-header-tint button"],
+  },
+  {
+    id: "summary-chrome",
+    paintTarget: "before",
+    roots: ["button[class~=\"group/summary-panel-item\"]"],
+  },
+  {
+    id: "menu-chrome",
+    paintTarget: "self",
+    roots: [
+      "[role=\"menu\"] [role=\"menuitem\"]",
+      "[role=\"listbox\"] [role=\"option\"]",
+    ],
+  },
+  {
+    id: "home-chrome",
+    paintTarget: "self",
+    roots: [".dream-home button:not(header *, .composer-surface-chrome *)"],
+  },
+  {
+    id: "composer-secondary",
+    paintTarget: "self",
+    roots: [".composer-surface-chrome button.border-token-border"],
+  },
+];
+
 test("private skin interaction families expose the frozen six-family app chrome contract", () => {
   assert.deepEqual(
-    PRIVATE_SKIN_INTERACTION_FAMILIES.map(({ id, paintTarget }) => ({ id, paintTarget })),
-    [
-      { id: "sidebar-chrome", paintTarget: "self" },
-      { id: "header-chrome", paintTarget: "self" },
-      { id: "summary-chrome", paintTarget: "before" },
-      { id: "menu-chrome", paintTarget: "self" },
-      { id: "home-chrome", paintTarget: "self" },
-      { id: "composer-secondary", paintTarget: "self" },
-    ],
+    PRIVATE_SKIN_INTERACTION_FAMILIES.map(({ id, paintTarget, roots }) => ({
+      id,
+      paintTarget,
+      roots: [...roots],
+    })),
+    APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT,
   );
   assert.ok(Object.isFrozen(PRIVATE_SKIN_INTERACTION_FAMILIES));
   for (const family of PRIVATE_SKIN_INTERACTION_FAMILIES) {
     assert.ok(Object.isFrozen(family));
     assert.ok(Object.isFrozen(family.roots));
+    assert.ok(Object.isFrozen(family.targets));
+    assert.ok(family.targets.every(Object.isFrozen));
   }
 });
 
@@ -141,7 +181,7 @@ test("private skin interaction CSS is owned, eligible, transient, and fail-close
     css,
     /button\[class~="group\/summary-panel-item"\][^{]*:is\(:hover, :focus-visible, \[data-state="open"\]\)::before\s*\{[^}]*--codextheme-icon-hover-surface-alpha[^}]*--codextheme-icon-hover-glow-alpha/su,
   );
-  assert.doesNotMatch(css, /(?:^|,)\s*(?:button|a):hover\b/mu);
+  assert.doesNotMatch(css, /html\.codextheme-codex-skin\s+(?:button|a):hover\b/u);
   assert.doesNotMatch(css, /html\.codextheme-codex-skin\s+svg\s*\{/u);
   assert.doesNotMatch(css, /data-message-author-role|(?:^|[\s,(])(?:pre|code)(?:[\s,):.#\[]|$)|data-language/u);
   assert.doesNotMatch(css, /\.size-token-button-composer/u);
@@ -151,28 +191,28 @@ const TEST_ENABLED = ':not(:disabled, [aria-disabled="true"])';
 const TEST_SAFE_ACTION = ':not([data-variant="destructive"]):not([class*="text-token-danger"]):not([class*="text-token-error"]):not(:has([class*="text-token-danger"], [class*="text-token-error"]))';
 const TEST_STATE = ':is(:hover, :focus-visible, [data-state="open"])';
 const TEST_NOT_SELECTED = ':not(:is([aria-current="page"], [aria-selected="true"], [data-state="active"]))';
-const TEST_NOT_UNSAFE_DIRECT_CHILD = ':not(:has(> button:is(:disabled, [aria-disabled="true"], [data-variant="destructive"])))';
-const TEST_NOT_SELECTED_DIRECT_CHILD = ':not(:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"])))';
+const TEST_NOT_UNSAFE_DESCENDANT_ACTION = ':not(:has(button:is(:disabled, [aria-disabled="true"], [data-variant="destructive"])))';
+const TEST_NOT_SELECTED_DESCENDANT_ACTION = ':not(:has(button:is([aria-current="page"], [aria-selected="true"], [data-state="active"])))';
 const TEST_GROUPED_ROOTS = new Set([
   "aside.app-shell-left-panel .group:has(> button > .text-token-foreground)",
   "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group",
 ]);
 
 function testedEligible(selector) {
-  const groupedGuard = TEST_GROUPED_ROOTS.has(selector) ? TEST_NOT_UNSAFE_DIRECT_CHILD : "";
+  const groupedGuard = TEST_GROUPED_ROOTS.has(selector) ? TEST_NOT_UNSAFE_DESCENDANT_ACTION : "";
   return `${selector}${TEST_ENABLED}${TEST_SAFE_ACTION}${groupedGuard}`;
 }
 
 function testedStateful(selector) {
   const selectedGuard = selector.startsWith("aside.app-shell-left-panel ") ? TEST_NOT_SELECTED : "";
-  const groupedSelectedGuard = TEST_GROUPED_ROOTS.has(selector) ? TEST_NOT_SELECTED_DIRECT_CHILD : "";
+  const groupedSelectedGuard = TEST_GROUPED_ROOTS.has(selector) ? TEST_NOT_SELECTED_DESCENDANT_ACTION : "";
   return `${testedEligible(selector)}${selectedGuard}${groupedSelectedGuard}${TEST_STATE}`;
 }
 
-const PRIVATE_SKIN_BASE_ICON_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+const PRIVATE_SKIN_BASE_ICON_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
   .flatMap((family) => family.roots.map(testedEligible));
 
-const PRIVATE_SKIN_BASE_GLYPH_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+const PRIVATE_SKIN_BASE_GLYPH_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
   .flatMap((family) => family.roots.map((selector) => (
     `${testedEligible(selector)} :is(.text-token-foreground, svg)`
   )));
@@ -182,20 +222,20 @@ const PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS = [
   "aside.app-shell-left-panel .group:has(> button:is([aria-current=\"page\"], [aria-selected=\"true\"], [data-state=\"active\"]) > .text-token-foreground)",
 ];
 
-const PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+const PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
   .flatMap((family) => family.roots.map(testedStateful));
 
-const PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+const PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
   .flatMap((family) => family.roots.map((selector) => (
     `${testedStateful(selector)}${family.paintTarget === "before" ? "::before" : ""}`
   )));
 
-const PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+const PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
   .flatMap((family) => family.roots.map((selector) => (
     `${testedStateful(selector)} :is(.text-token-foreground, svg)`
   )));
 
-const PRIVATE_SKIN_SUMMARY_RESET_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
+const PRIVATE_SKIN_SUMMARY_RESET_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
   .filter((family) => family.paintTarget === "before")
   .flatMap((family) => family.roots.map((selector) => `${testedEligible(selector)}::before`));
 
@@ -216,12 +256,20 @@ function assertPrivateSkinIconRuleScopes(css, label) {
   const transientGlyphSelectors = new Set(PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
   const summaryResetSelectors = new Set(PRIVATE_SKIN_SUMMARY_RESET_SELECTORS.map((selector) => `${prefix}${selector}`));
   const persistentGlyphSelectors = new Set(PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`));
-  const interactionRoots = PRIVATE_SKIN_INTERACTION_FAMILIES.flatMap((family) => family.roots);
+  const interactionRoots = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT.flatMap((family) => family.roots);
   for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/gu)) {
     const block = match[2];
     const declarations = declarationNames(block);
     for (const selector of splitSelectorList(cleanSelectorPrelude(match[1]))) {
       const targetsPrivateIcon = interactionRoots.some((root) => selector.includes(root));
+      const normalizedSelector = selector.replace(/^html\.codextheme-codex-skin /u, "");
+      const usesInteractionAccent = /var\(--codextheme-(?:accent|icon-hover-(?:surface|border|glow)-alpha)\)/u.test(block)
+        || declarations.includes("filter")
+        || declarations.includes("transition");
+      const crossesForbiddenBoundary = /^(?:button|a)(?=[:.#\[])/u.test(normalizedSelector)
+        || normalizedSelector.startsWith("main.main-surface header.app-header-tint ")
+        || normalizedSelector.startsWith(".dream-home ")
+        || /data-message-author-role|data-language|\[role="status"\]|\[aria-live=|(?:^|[\s>+~,(])(?:pre|code)(?=$|[\s>+~,:.#\[])/u.test(normalizedSelector);
       if (baseIconSelectors.has(selector)) {
         assert.deepEqual(declarations, ["transition"], `${label} base icon roots must be transition-only.`);
         assert.match(block, /transition:\s*color \.16s ease, background-color \.16s ease, border-color \.16s ease, box-shadow \.16s ease;/u);
@@ -254,6 +302,8 @@ function assertPrivateSkinIconRuleScopes(css, label) {
         assert.deepEqual(declarations, ["background-color", "box-shadow"], `${label} summary resets must contain only native-material neutralization.`);
       } else if (persistentGlyphSelectors.has(selector)) {
         assert.deepEqual(declarations, ["color"], `${label} persistent glyph rules must contain only selected accent color.`);
+      } else if (usesInteractionAccent && crossesForbiddenBoundary) {
+        assert.fail(`${label} CSS contains a forbidden interaction selector: ${selector}`);
       } else if (/\bsvg\b/u.test(selector) || targetsPrivateIcon) {
         assert.fail(`${label} CSS contains an unapproved private icon selector: ${selector}`);
       } else if (/var\(--codextheme-icon-hover-(?:surface|border|glow)-alpha\)/u.test(block)) {
@@ -266,7 +316,7 @@ function assertPrivateSkinIconRuleScopes(css, label) {
 function assertPrivateSkinLint(bundle) {
   const prefix = "html.codextheme-codex-skin ";
   const expectedPreludes = [
-    ...PRIVATE_SKIN_INTERACTION_FAMILIES.flatMap((family) => {
+    ...APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT.flatMap((family) => {
       const base = family.roots.map(testedEligible);
       const glyph = family.roots.map((selector) => `${testedEligible(selector)} :is(.text-token-foreground, svg)`);
       const state = family.roots.map(testedStateful);
@@ -288,7 +338,7 @@ function assertPrivateSkinLint(bundle) {
     assert.ok(actualPreludes.includes(prelude), `Private skin CSS must retain the exact selector prelude: ${prelude}`);
   }
   const lintPreludes = [
-    ...PRIVATE_SKIN_INTERACTION_FAMILIES.map((family) => (
+    ...APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT.map((family) => (
       family.roots.map((selector) => `${prefix}${testedEligible(selector)}`).join(", ")
     )),
     PRIVATE_SKIN_PERSISTENT_GLYPH_SELECTORS.map((selector) => `${prefix}${selector}`).join(", "),
@@ -583,7 +633,7 @@ function sidebarSurfaceSelectorMatches(root, scenario, identity) {
   if (
     primaryPersistent
     && negations.some((argument) => (
-      argument.startsWith(":has(> button:is(")
+      (argument.startsWith(":has(> button:is(") || argument.startsWith(":has(button:is("))
       && argument.includes(persistentStateSelector)
     ))
   ) return false;
@@ -597,18 +647,37 @@ function sidebarSurfaceSelectorMatches(root, scenario, identity) {
   const quickDisabled = disabled && scenario.disabledTarget === "quick";
   if (targetDisabled && root.includes(":not(:disabled, [aria-disabled=\"true\"])")) return false;
   if (
+    scenario.destructive
+    && scenario.unsafeTarget === "root"
+    && root.includes(":not([data-variant=\"destructive\"])")
+  ) return false;
+  if (
+    scenario.danger
+    && scenario.unsafeTarget === "root"
+    && root.includes(":not([class*=\"text-token-danger\"])")
+  ) return false;
+  if (
+    scenario.error
+    && scenario.unsafeTarget === "root"
+    && root.includes(":not([class*=\"text-token-error\"])")
+  ) return false;
+  if (
     primaryDisabled
     && ["group-row", "project-task-row"].includes(identity)
     && (
-      root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground))")
-      || root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))")
+      (!scenario.nested && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground))"))
+      || (!scenario.nested && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))"))
+      || root.includes(":not(:has(button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))")
     )
   ) return false;
   if (
     scenario.destructive
     && scenario.unsafeTarget === "primary"
     && ["group-row", "project-task-row"].includes(identity)
-    && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))")
+    && (
+      (!scenario.nested && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))"))
+      || root.includes(":not(:has(button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))")
+    )
   ) return false;
   if (
     scenario.danger
@@ -933,20 +1002,43 @@ test("grouped transient roots reject unsafe direct child controls", () => {
   })));
   const { css } = resolveThemeTarget(bundle, "codex");
   for (const kind of ["group", "listitem"]) {
-    for (const unsafe of [
-      { disabled: true, disabledTarget: "primary" },
-      { ariaDisabled: true, disabledTarget: "primary" },
-      { destructive: true, unsafeTarget: "primary" },
-      { danger: true, unsafeTarget: "primary" },
-      { error: true, unsafeTarget: "primary" },
-    ]) {
-      const cascade = sidebarCascadeWinners(css, {
-        kind,
-        transient: "root-hover",
-        ...unsafe,
-      });
-      assert.deepEqual(cascade.paintedRoots(), [], `Unsafe direct child must suppress grouped transient paint: ${JSON.stringify({ kind, ...unsafe })}`);
-      assert.equal(cascade.declaration("glyph", "filter"), undefined, `Unsafe direct child must suppress grouped glyph glow: ${JSON.stringify({ kind, ...unsafe })}`);
+    for (const nested of [false, true]) {
+      for (const unsafe of [
+        { disabled: true, disabledTarget: "primary" },
+        { ariaDisabled: true, disabledTarget: "primary" },
+        { destructive: true, unsafeTarget: "primary" },
+        { danger: true, unsafeTarget: "primary" },
+        { error: true, unsafeTarget: "primary" },
+      ]) {
+        const cascade = sidebarCascadeWinners(css, {
+          kind,
+          nested,
+          transient: "root-hover",
+          ...unsafe,
+        });
+        assert.deepEqual(cascade.paintedRoots(), [], `Unsafe child must suppress grouped transient paint: ${JSON.stringify({ kind, nested, ...unsafe })}`);
+        assert.equal(cascade.declaration("glyph", "color"), undefined, `Unsafe child must suppress grouped glyph accent: ${JSON.stringify({ kind, nested, ...unsafe })}`);
+        assert.equal(cascade.declaration("glyph", "filter"), undefined, `Unsafe child must suppress grouped glyph glow: ${JSON.stringify({ kind, nested, ...unsafe })}`);
+        if (nested) {
+          const nestedActionScenario = {
+            ...unsafe,
+            kind: "standalone",
+            transient: "primary-hover",
+            disabledTarget: unsafe.disabled || unsafe.ariaDisabled ? "root" : undefined,
+            unsafeTarget: "root",
+          };
+          assert.equal(
+            sidebarSelectorMatches(PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS[0], nestedActionScenario, "surface"),
+            false,
+            `Nested unsafe action must not receive standalone transient paint: ${JSON.stringify({ kind, ...unsafe })}`,
+          );
+          assert.equal(
+            sidebarSelectorMatches(PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS[0], nestedActionScenario, "glyph"),
+            false,
+            `Nested unsafe action SVG must not receive standalone accent or glow: ${JSON.stringify({ kind, ...unsafe })}`,
+          );
+        }
+      }
     }
   }
 
@@ -1041,6 +1133,29 @@ test("SVG scope audit rejects a permissive state pseudo-class branch", () => {
     ),
     /unapproved private icon selector/u,
   );
+});
+
+test("interaction boundary audit rejects generic, broadened, and content selectors", () => {
+  for (const selector of [
+    "button:hover",
+    "a:hover",
+    "main.main-surface header.app-header-tint :is(button, a):hover",
+    ".dream-home :is(button, [role=\"button\"]):hover",
+    "[data-message-author-role=\"assistant\"] button:hover",
+    "[role=\"status\"] button:hover",
+    "[aria-live=\"polite\"] a:hover",
+    ":is(pre, code, [data-language]) button:hover",
+    "svg:hover",
+  ]) {
+    assert.throws(
+      () => assertPrivateSkinIconRuleScopes(
+        `html.codextheme-codex-skin ${selector} { color: var(--codextheme-accent) !important; }`,
+        "probe",
+      ),
+      /unapproved private icon selector|forbidden interaction selector/u,
+      `Interaction audit must reject ${selector}.`,
+    );
+  }
 });
 
 test("icon rule audit rejects same-line material appended to a transition-only rule", () => {
