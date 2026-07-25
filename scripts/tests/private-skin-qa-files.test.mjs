@@ -144,7 +144,10 @@ test("cleanup surfaces unlink and directory removal failures", async (t) => {
   const unlinkStore = createPrivateQaArtifactStore({
     fsApi: withFs({
       unlink: async () => {
-        throw Object.assign(new Error("unlink blocked"), { code: "EACCES" });
+        throw Object.assign(
+          new Error(`unlink blocked for ${unlinkRecovery.file}`),
+          { code: "EACCES" },
+        );
       },
     }),
   });
@@ -154,7 +157,12 @@ test("cleanup surfaces unlink and directory removal failures", async (t) => {
       mutationStarted: false,
       independentRestoreVerified: false,
     }),
-    /unlink blocked/u,
+    (error) => {
+      assert.equal(error.code, "EACCES");
+      assert.equal(error.message, "Draft recovery file cleanup failed.");
+      assert.equal(error.message.includes(unlinkRecovery.file), false);
+      return true;
+    },
   );
   assert.equal(await fs.readFile(unlinkRecovery.file, "utf8"), "unlink failure");
   await baseStore.cleanupDraftRecovery(unlinkRecovery, {
@@ -166,7 +174,10 @@ test("cleanup surfaces unlink and directory removal failures", async (t) => {
   const rmdirStore = createPrivateQaArtifactStore({
     fsApi: withFs({
       rmdir: async () => {
-        throw Object.assign(new Error("rmdir blocked"), { code: "EACCES" });
+        throw Object.assign(
+          new Error(`rmdir blocked for ${rmdirRecovery.directory}`),
+          { code: "EACCES" },
+        );
       },
     }),
   });
@@ -175,9 +186,126 @@ test("cleanup surfaces unlink and directory removal failures", async (t) => {
       mutationStarted: false,
       independentRestoreVerified: false,
     }),
-    /rmdir blocked/u,
+    (error) => {
+      assert.equal(error.code, "EACCES");
+      assert.equal(error.message, "Draft recovery directory cleanup failed.");
+      assert.equal(error.message.includes(rmdirRecovery.directory), false);
+      assert.equal(
+        JSON.stringify({ restoration: `Fail: ${error.message}` })
+          .includes(rmdirRecovery.directory),
+        false,
+      );
+      return true;
+    },
   );
   await assert.rejects(fs.lstat(rmdirRecovery.file), { code: "ENOENT" });
   assert.equal((await fs.lstat(rmdirRecovery.directory)).isDirectory(), true);
   await fs.rmdir(rmdirRecovery.directory);
+});
+
+test("retained recovery reports its private absolute path only on stderr", async (t) => {
+  const root = await testRoot(t);
+  let stderr = "";
+  const store = createPrivateQaArtifactStore({
+    tempRoot: root,
+    stderr: { write: (message) => { stderr += message; } },
+  });
+  const recovery = await store.createDraftRecovery("private draft");
+
+  const result = await store.finalizeDraftRecovery(recovery, {
+    mutationStarted: true,
+    independentRestoreVerified: false,
+  });
+
+  assert.deepEqual(result, { removed: false, retained: true });
+  assert.equal(path.isAbsolute(recovery.file), true);
+  assert.match(stderr, new RegExp(recovery.file.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+  assert.match(stderr, /0600/u);
+  assert.match(stderr, /manually restore.*draft/iu);
+  assert.equal(JSON.stringify({ backupRemoved: result.removed }).includes(recovery.file), false);
+  assert.equal(JSON.stringify(result).includes("private draft"), false);
+});
+
+test("successful recovery cleanup is silent and returns no reportable path", async (t) => {
+  const root = await testRoot(t);
+  let stderr = "";
+  const store = createPrivateQaArtifactStore({
+    tempRoot: root,
+    stderr: { write: (message) => { stderr += message; } },
+  });
+  const recovery = await store.createDraftRecovery("private draft");
+
+  const result = await store.finalizeDraftRecovery(recovery, {
+    mutationStarted: true,
+    independentRestoreVerified: true,
+  });
+
+  assert.deepEqual(result, { removed: true, retained: false });
+  assert.equal(stderr, "");
+  assert.equal(JSON.stringify(result).includes(recovery.file), false);
+});
+
+test("failed unlink reports the retained recovery path and manual guidance", async (t) => {
+  const root = await testRoot(t);
+  const baseStore = createPrivateQaArtifactStore({ tempRoot: root });
+  const recovery = await baseStore.createDraftRecovery("private draft");
+  let stderr = "";
+  const store = createPrivateQaArtifactStore({
+    stderr: { write: (message) => { stderr += message; } },
+    fsApi: withFs({
+      unlink: async () => {
+        throw Object.assign(
+          new Error(`unlink blocked for ${recovery.file}`),
+          { code: "EACCES" },
+        );
+      },
+    }),
+  });
+
+  let cleanupError;
+  await assert.rejects(
+    store.finalizeDraftRecovery(recovery, {
+      mutationStarted: false,
+      independentRestoreVerified: false,
+    }),
+    (error) => {
+      cleanupError = error;
+      return error.message === "Draft recovery file cleanup failed.";
+    },
+  );
+
+  assert.match(stderr, new RegExp(recovery.file.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+  assert.match(stderr, /0600/u);
+  assert.match(stderr, /manually restore.*draft/iu);
+  assert.equal(cleanupError.message.includes(recovery.file), false);
+  assert.equal(
+    JSON.stringify({ restoration: `Fail: ${cleanupError.message}` }).includes(recovery.file),
+    false,
+  );
+  await baseStore.cleanupDraftRecovery(recovery, {
+    mutationStarted: false,
+    independentRestoreVerified: false,
+  });
+});
+
+test("missing recovery file never emits retained-path guidance", async (t) => {
+  const root = await testRoot(t);
+  let stderr = "";
+  const store = createPrivateQaArtifactStore({
+    tempRoot: root,
+    stderr: { write: (message) => { stderr += message; } },
+  });
+  const recovery = await store.createDraftRecovery("private draft");
+  await fs.unlink(recovery.file);
+
+  await assert.rejects(
+    store.finalizeDraftRecovery(recovery, {
+      mutationStarted: false,
+      independentRestoreVerified: false,
+    }),
+    /Draft recovery file cleanup failed/u,
+  );
+
+  assert.equal(stderr, "");
+  await fs.rmdir(recovery.directory);
 });

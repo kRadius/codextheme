@@ -3,13 +3,19 @@ import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { buildPrivateSkinPackage } from "../apps/site/app/lib/private-skin-package.mjs";
 import { PRIVATE_SKIN_INTERACTION_FAMILIES } from "../apps/site/app/lib/private-skin-interactions.mjs";
+import { createPrivateCache } from "../packages/cli/src/cache.mjs";
+import { createRuntime } from "../packages/cli/src/runtime.mjs";
+import { createStateStore } from "../packages/cli/src/state.mjs";
 import { createPrivateQaArtifactStore } from "./lib/private-qa-artifacts.mjs";
+import { createPrivateQaThemeTransaction } from "./lib/private-qa-theme-transaction.mjs";
 import {
   CdpSession,
-  applyTheme,
+  applyTheme as runtimeApplyTheme,
   getAdapter,
   listCdpTargets,
+  removeTheme as runtimeRemoveTheme,
   resolveThemeTarget,
+  verifyTheme as runtimeVerifyTheme,
 } from "@codextheme/runtime";
 
 const PORT = 9335;
@@ -123,11 +129,14 @@ const EXCLUSION_CLASSES = Object.freeze([
 ]);
 
 const adapter = getAdapter("codex");
+const storedThemeState = createStateStore();
+const storedPrivateCache = createPrivateCache();
+const storedThemeRuntime = createRuntime();
 const {
   ensureArtifactDirectory: ensurePrivateArtifactDirectory,
   writeArtifact: writePrivateArtifact,
   createDraftRecovery,
-  cleanupDraftRecovery,
+  finalizeDraftRecovery,
 } = createPrivateQaArtifactStore();
 let terminationSignal = null;
 let restorationStarted = false;
@@ -1934,6 +1943,7 @@ const report = {
     projectContext: sessionOnly ? "Pass" : "Pending",
     temporaryAttributes: "Pending",
     pointer: "Pending",
+    theme: "Pending",
   },
   fatalError: null,
   result: "Fail",
@@ -1975,151 +1985,195 @@ try {
   if (original.view !== "session" || !original.selectedThreadId) {
     throw new Error("The audit requires the current populated Session so it can restore the selected task deterministically.");
   }
-  mutationAuthorized = true;
-  progress("apply:start", `port=${PORT}`);
-  const applied = await applyTheme({ adapter, targetTheme, port: PORT, timeoutMs: 12_000 });
-  report.applied = applied.map(({ targetId, result }) => ({
-    targetId,
-    pass: result?.pass === true,
-  }));
-  if (!applied.length || !applied.every((entry) => entry.result?.pass === true)) {
-    throw new Error("The deterministic private package did not pass runtime verification.");
-  }
-  progress("apply:end", `targets=${applied.length}`);
-  const themedState = await readRootState(session);
-  const rootChecks = {
-    active: themedState.active,
-    namespace: themedState.namespace.includes("codextheme-codex-skin"),
-    accent: themedState.accent.toLowerCase() === correctedAccent.toLowerCase(),
-    saturation: accentMetrics.saturation >= 41.5,
-    contrast: accentMetrics.contrastAgainstSurface >= 4.5,
-  };
-  report.rootChecks = rootChecks;
-  if (!Object.values(rootChecks).every(Boolean)) {
-    throw new Error(`Root/accent validation failed: ${JSON.stringify(rootChecks)}`);
-  }
-  const viewports = [
-    { id: "desktop", width: original.width, height: original.height },
-    { id: "narrow", ...NARROW_VIEWPORT },
-  ];
-  const sessionRunContext = {};
-  if (!homeOnly) {
-    if (original.browserPanelVisible) {
-      progress("browser-panel", "closing for summary audit");
-      report.browserPanel.changedForAudit = await setBrowserPanel(session, false);
-    }
-    report.browserPanel.closedDuringSessionMatrix = !(await browserPanelVisible(session));
-    for (const viewport of viewports) {
-      await setViewport(session, viewport, original);
-      report.cells.push(await auditCell(
-        session,
-        "session",
-        viewport,
-        original.selectedThreadId,
-        sessionRunContext,
-      ));
-    }
-  }
-  if (!sessionOnly) {
-    await setViewport(session, viewports[0], original);
-    await navigateHome(session);
-    originalHomeProjectContext = await readHomeProjectContext(session);
-    if (!originalHomeProjectContext) throw new Error("Could not record the original Home project context.");
-  }
-  if (!sessionOnly && temporarilyClearHomeDraft) {
-    homeDraftBackup = await readHomeDraft(session);
-    if (!homeDraftBackup) throw new Error("Could not read the authorized Home draft editor.");
-    if (!homeDraftBackup.selection?.valid) {
-      throw new Error("The Home draft editor does not have a valid restorable selection.");
-    }
-    homeDraftHashBefore = sha256(homeDraftBackup.value);
-    homeDraftRecovery = await createDraftRecovery(
-      `${JSON.stringify(homeDraftBackup)}\n`,
-    );
-    report.draft = {
-      ...report.draft,
-      backupRemoved: false,
-      kind: homeDraftBackup.kind,
-      selectionCaptured: Boolean(homeDraftBackup.selection?.valid),
-    };
-    progress("draft:backup", "mode=0600 selection=valid");
-    homeDraftMutationStarted = true;
-    await setHomeDraft(session, homeDraftBackup, "");
-    await waitFor(
-      session,
-      `(() => {
-        const textarea = document.querySelector(".composer-surface-chrome textarea");
-        const editable = document.querySelector(
-          '.composer-surface-chrome [contenteditable="true"]'
+  const themeTransaction = createPrivateQaThemeTransaction({
+    readStoredState: () => storedThemeState.read(),
+    loadStoredTheme: async (state) => {
+      if (state.source === "private") {
+        const bundle = JSON.parse(await storedPrivateCache.read(state.cacheKey));
+        return storedThemeRuntime.loadThemeBundle(bundle);
+      }
+      return storedThemeRuntime.loadTheme(state.themeSlug);
+    },
+    readRendererState: async () => (
+      await runtimeVerifyTheme({
+        adapter,
+        targetTheme: null,
+        port: PORT,
+        timeoutMs: 12_000,
+      })
+    ).map(({ result }) => ({
+      installed: result?.installed === true,
+      stylePresent: result?.stylePresent === true,
+      themeId: result?.themeId ?? null,
+      version: result?.version ?? null,
+    })),
+    applyTheme: (theme) => runtimeApplyTheme({
+      adapter,
+      targetTheme: theme,
+      port: PORT,
+      timeoutMs: 12_000,
+    }),
+    removeTheme: () => runtimeRemoveTheme({ adapter, port: PORT, timeoutMs: 12_000 }),
+    verifyTheme: (theme) => runtimeVerifyTheme({
+      adapter,
+      targetTheme: theme,
+      port: PORT,
+      timeoutMs: 12_000,
+    }),
+  });
+  await themeTransaction.runFixture({
+    fixtureTheme: targetTheme,
+    onBeforeFixtureApply: () => {
+      mutationAuthorized = true;
+      progress("apply:start", `port=${PORT}`);
+    },
+    onRestoration: (status) => {
+      report.restoration.theme = status.status === "Pass"
+        ? "Pass"
+        : `Fail: ${status.error}`;
+    },
+    audit: async (applied) => {
+      report.applied = applied.map(({ targetId, result }) => ({
+        targetId,
+        pass: result?.pass === true,
+      }));
+      progress("apply:end", `targets=${applied.length}`);
+      const themedState = await readRootState(session);
+      const rootChecks = {
+        active: themedState.active,
+        namespace: themedState.namespace.includes("codextheme-codex-skin"),
+        accent: themedState.accent.toLowerCase() === correctedAccent.toLowerCase(),
+        saturation: accentMetrics.saturation >= 41.5,
+        contrast: accentMetrics.contrastAgainstSurface >= 4.5,
+      };
+      report.rootChecks = rootChecks;
+      if (!Object.values(rootChecks).every(Boolean)) {
+        throw new Error(`Root/accent validation failed: ${JSON.stringify(rootChecks)}`);
+      }
+      const viewports = [
+        { id: "desktop", width: original.width, height: original.height },
+        { id: "narrow", ...NARROW_VIEWPORT },
+      ];
+      const sessionRunContext = {};
+      if (!homeOnly) {
+        if (original.browserPanelVisible) {
+          progress("browser-panel", "closing for summary audit");
+          report.browserPanel.changedForAudit = await setBrowserPanel(session, false);
+        }
+        report.browserPanel.closedDuringSessionMatrix = !(await browserPanelVisible(session));
+        for (const viewport of viewports) {
+          await setViewport(session, viewport, original);
+          report.cells.push(await auditCell(
+            session,
+            "session",
+            viewport,
+            original.selectedThreadId,
+            sessionRunContext,
+          ));
+        }
+      }
+      if (!sessionOnly) {
+        await setViewport(session, viewports[0], original);
+        await navigateHome(session);
+        originalHomeProjectContext = await readHomeProjectContext(session);
+        if (!originalHomeProjectContext) throw new Error("Could not record the original Home project context.");
+      }
+      if (!sessionOnly && temporarilyClearHomeDraft) {
+        homeDraftBackup = await readHomeDraft(session);
+        if (!homeDraftBackup) throw new Error("Could not read the authorized Home draft editor.");
+        if (!homeDraftBackup.selection?.valid) {
+          throw new Error("The Home draft editor does not have a valid restorable selection.");
+        }
+        homeDraftHashBefore = sha256(homeDraftBackup.value);
+        homeDraftRecovery = await createDraftRecovery(
+          `${JSON.stringify(homeDraftBackup)}\n`,
         );
-        return (textarea?.value ?? editable?.innerText ?? "").trim() === "";
-      })()`,
-      "the authorized Home draft clear",
-    );
-    await waitFor(
-      session,
-      `(() => {
-        const selector = '.dream-home section[class~="group/home-suggestions"] button';
-        return document.querySelectorAll(selector).length === 4
-          && [...document.querySelectorAll(
-            '[data-composer-utility-bar-scroll-area] button'
-          )].filter((element) => element.matches(selector)).length === 0;
-      })()`,
-      "the four Home suggestion cards",
-    );
-    report.draft.preflightClear = true;
-    report.draft.preflightSuggestions = true;
-    await setHomeDraft(session, homeDraftBackup, homeDraftBackup.value);
-    await waitFor(
-      session,
-      `(() => {
-        const textarea = document.querySelector(".composer-surface-chrome textarea");
-        const editable = document.querySelector(
-          '.composer-surface-chrome [contenteditable="true"]'
+        report.draft = {
+          ...report.draft,
+          backupRemoved: false,
+          kind: homeDraftBackup.kind,
+          selectionCaptured: Boolean(homeDraftBackup.selection?.valid),
+        };
+        progress("draft:backup", "mode=0600 selection=valid");
+        homeDraftMutationStarted = true;
+        await setHomeDraft(session, homeDraftBackup, "");
+        await waitFor(
+          session,
+          `(() => {
+            const textarea = document.querySelector(".composer-surface-chrome textarea");
+            const editable = document.querySelector(
+              '.composer-surface-chrome [contenteditable="true"]'
+            );
+            return (textarea?.value ?? editable?.innerText ?? "").trim() === "";
+          })()`,
+          "the authorized Home draft clear",
         );
-        return (textarea?.value ?? editable?.innerText ?? null)
-          === ${cssString(homeDraftBackup.value)};
-      })()`,
-      "the reversible preflight Home draft restoration",
-    );
-    const preflightRestored = await readHomeDraft(session);
-    const preflightEditorState = await restoreHomeEditorState(session, homeDraftBackup);
-    const preflightExactState = await readHomeDraft(session);
-    report.draft.preflightExactEquality = Boolean(
-      preflightRestored
-      && sha256(preflightRestored.value) === homeDraftHashBefore
-      && preflightRestored.value === homeDraftBackup.value
-      && preflightEditorState?.restored
-      && preflightExactState
-      && selectionSnapshotsEqual(homeDraftBackup.selection, preflightExactState.selection)
-      && preflightExactState.active === homeDraftBackup.active
-      && preflightExactState.scrollTop === homeDraftBackup.scrollTop
-      && preflightExactState.scrollLeft === homeDraftBackup.scrollLeft,
-    );
-    if (!report.draft.preflightExactEquality) {
-      throw new Error("The reversible Home draft preflight did not restore exact editor state.");
-    }
-    progress("draft:preflight", "clear=true suggestions=4 exactEquality=true");
-    await setHomeDraft(session, homeDraftBackup, "");
-    await waitFor(
-      session,
-      `(() => {
-        const selector = '.dream-home section[class~="group/home-suggestions"] button';
-        return document.querySelectorAll(selector).length === 4
-          && [...document.querySelectorAll(
-            '[data-composer-utility-bar-scroll-area] button'
-          )].filter((element) => element.matches(selector)).length === 0;
-      })()`,
-      "the four Home suggestion cards after the preflight",
-    );
-    progress("draft:clear", "suggestionCards=4");
-  }
-  if (!sessionOnly) {
-    for (const viewport of viewports) {
-      await setViewport(session, viewport, original);
-      report.cells.push(await auditCell(session, "home", viewport, original.selectedThreadId));
-    }
-  }
+        await waitFor(
+          session,
+          `(() => {
+            const selector = '.dream-home section[class~="group/home-suggestions"] button';
+            return document.querySelectorAll(selector).length === 4
+              && [...document.querySelectorAll(
+                '[data-composer-utility-bar-scroll-area] button'
+              )].filter((element) => element.matches(selector)).length === 0;
+          })()`,
+          "the four Home suggestion cards",
+        );
+        report.draft.preflightClear = true;
+        report.draft.preflightSuggestions = true;
+        await setHomeDraft(session, homeDraftBackup, homeDraftBackup.value);
+        await waitFor(
+          session,
+          `(() => {
+            const textarea = document.querySelector(".composer-surface-chrome textarea");
+            const editable = document.querySelector(
+              '.composer-surface-chrome [contenteditable="true"]'
+            );
+            return (textarea?.value ?? editable?.innerText ?? null)
+              === ${cssString(homeDraftBackup.value)};
+          })()`,
+          "the reversible preflight Home draft restoration",
+        );
+        const preflightRestored = await readHomeDraft(session);
+        const preflightEditorState = await restoreHomeEditorState(session, homeDraftBackup);
+        const preflightExactState = await readHomeDraft(session);
+        report.draft.preflightExactEquality = Boolean(
+          preflightRestored
+          && sha256(preflightRestored.value) === homeDraftHashBefore
+          && preflightRestored.value === homeDraftBackup.value
+          && preflightEditorState?.restored
+          && preflightExactState
+          && selectionSnapshotsEqual(homeDraftBackup.selection, preflightExactState.selection)
+          && preflightExactState.active === homeDraftBackup.active
+          && preflightExactState.scrollTop === homeDraftBackup.scrollTop
+          && preflightExactState.scrollLeft === homeDraftBackup.scrollLeft,
+        );
+        if (!report.draft.preflightExactEquality) {
+          throw new Error("The reversible Home draft preflight did not restore exact editor state.");
+        }
+        progress("draft:preflight", "clear=true suggestions=4 exactEquality=true");
+        await setHomeDraft(session, homeDraftBackup, "");
+        await waitFor(
+          session,
+          `(() => {
+            const selector = '.dream-home section[class~="group/home-suggestions"] button';
+            return document.querySelectorAll(selector).length === 4
+              && [...document.querySelectorAll(
+                '[data-composer-utility-bar-scroll-area] button'
+              )].filter((element) => element.matches(selector)).length === 0;
+          })()`,
+          "the four Home suggestion cards after the preflight",
+        );
+        progress("draft:clear", "suggestionCards=4");
+      }
+      if (!sessionOnly) {
+        for (const viewport of viewports) {
+          await setViewport(session, viewport, original);
+          report.cells.push(await auditCell(session, "home", viewport, original.selectedThreadId));
+        }
+      }
+    },
+  });
 } catch (error) {
   report.fatalError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 } finally {
@@ -2304,7 +2358,7 @@ try {
   }
   if (homeDraftRecovery) {
     try {
-      const cleanup = await cleanupDraftRecovery(homeDraftRecovery, {
+      const cleanup = await finalizeDraftRecovery(homeDraftRecovery, {
         mutationStarted: homeDraftMutationStarted,
         independentRestoreVerified: report.draft.independentExactEquality === true,
       });

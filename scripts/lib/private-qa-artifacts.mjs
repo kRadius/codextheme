@@ -26,6 +26,7 @@ export function createPrivateQaArtifactStore({
   fsApi = fs,
   tempRoot = os.tmpdir(),
   getUid = defaultGetUid,
+  stderr = process.stderr,
 } = {}) {
   async function ensureArtifactDirectory(directory) {
     let createdPath;
@@ -79,9 +80,59 @@ export function createPrivateQaArtifactStore({
     if (mutationStarted && !independentRestoreVerified) {
       return { removed: false, retained: true };
     }
-    await fsApi.unlink(recovery.file);
-    await fsApi.rmdir(recovery.directory);
+    try {
+      await fsApi.unlink(recovery.file);
+    } catch (cause) {
+      const error = new Error("Draft recovery file cleanup failed.", { cause });
+      error.code = cause.code;
+      error.recoveryMayBeRetained = true;
+      throw error;
+    }
+    try {
+      await fsApi.rmdir(recovery.directory);
+    } catch (cause) {
+      const error = new Error("Draft recovery directory cleanup failed.", { cause });
+      error.code = cause.code;
+      throw error;
+    }
     return { removed: true, retained: false };
+  }
+
+  function warnRetainedRecovery(recovery) {
+    const filename = path.resolve(recovery.file);
+    stderr.write(
+      `[private-skin-qa] Draft recovery retained at ${filename} `
+      + "(owner-only mode 0600). Manually restore the draft from this file, "
+      + "then delete it securely.\n",
+    );
+  }
+
+  async function isPrivateRetainedRecovery(recovery) {
+    try {
+      const metadata = await fsApi.lstat(recovery.file);
+      const currentUid = getUid();
+      return metadata.isFile()
+        && (currentUid === null || currentUid === undefined || metadata.uid === currentUid)
+        && (metadata.mode & 0o777) === PRIVATE_FILE_MODE;
+    } catch {
+      return false;
+    }
+  }
+
+  async function finalizeDraftRecovery(recovery, restoration) {
+    try {
+      const result = await cleanupDraftRecovery(recovery, restoration);
+      if (result.retained && await isPrivateRetainedRecovery(recovery)) {
+        warnRetainedRecovery(recovery);
+      }
+      return result;
+    } catch (error) {
+      if (error.recoveryMayBeRetained === true
+        && await isPrivateRetainedRecovery(recovery)) {
+        warnRetainedRecovery(recovery);
+      }
+      throw error;
+    }
   }
 
   return {
@@ -89,5 +140,6 @@ export function createPrivateQaArtifactStore({
     writeArtifact,
     createDraftRecovery,
     cleanupDraftRecovery,
+    finalizeDraftRecovery,
   };
 }
