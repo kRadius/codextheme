@@ -9,8 +9,15 @@ function interactionTarget(selector, {
   preservesSelected = false,
   safetyScope = "self",
   selectedScope = "self",
+  stateMappings = ["self"],
 } = {}) {
-  return Object.freeze({ selector, preservesSelected, safetyScope, selectedScope });
+  return Object.freeze({
+    selector,
+    preservesSelected,
+    safetyScope,
+    selectedScope,
+    stateMappings: Object.freeze([...stateMappings]),
+  });
 }
 
 function interactionFamily(id, paintTarget, targets) {
@@ -35,11 +42,13 @@ export const PRIVATE_SKIN_INTERACTION_FAMILIES = Object.freeze([
       preservesSelected: true,
       safetyScope: "descendant-actions",
       selectedScope: "descendant-actions",
+      stateMappings: ["self", "direct-child-focus", "direct-child-open"],
     }),
     interactionTarget("aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group", {
       preservesSelected: true,
       safetyScope: "descendant-actions",
       selectedScope: "descendant-actions",
+      stateMappings: ["self", "direct-child-focus", "direct-child-open"],
     }),
   ]),
   interactionFamily("header-chrome", "self", [
@@ -71,16 +80,28 @@ function eligible(target) {
   return `${target.selector}${ENABLED}${SAFE_ACTION}${descendantGuard}`;
 }
 
-function stateful(target) {
+function guardedStateRoot(target) {
   const selectedGuard = target.preservesSelected ? NOT_SELECTED : "";
   const descendantSelectedGuard = target.selectedScope === "descendant-actions"
     ? NOT_SELECTED_DESCENDANT_ACTION
     : "";
-  return `${eligible(target)}${selectedGuard}${descendantSelectedGuard}${TRANSIENT_STATE}`;
+  return `${eligible(target)}${selectedGuard}${descendantSelectedGuard}`;
+}
+
+function statefulSelectors(target) {
+  const guardedRoot = guardedStateRoot(target);
+  return target.stateMappings.map((mapping) => {
+    if (mapping === "direct-child-focus") return `${guardedRoot}:has(> button:focus-visible)`;
+    if (mapping === "direct-child-open") return `${guardedRoot}:has(> button[data-state="open"])`;
+    return `${guardedRoot}${TRANSIENT_STATE}`;
+  });
 }
 
 function selectorList(family, transform = ({ selector }) => selector) {
-  return family.targets.map((target) => owned(transform(target))).join(",\n");
+  return family.targets.flatMap((target) => {
+    const transformed = transform(target);
+    return (Array.isArray(transformed) ? transformed : [transformed]).map(owned);
+  }).join(",\n");
 }
 
 function glyphSelector(selector) {
@@ -89,12 +110,17 @@ function glyphSelector(selector) {
 
 function familyCss(family) {
   const base = selectorList(family, eligible);
-  const state = selectorList(family, stateful);
+  const state = selectorList(family, statefulSelectors);
   const glyphs = selectorList(family, (target) => glyphSelector(eligible(target)));
-  const stateGlyphs = selectorList(family, (target) => glyphSelector(stateful(target)));
+  const stateGlyphs = selectorList(
+    family,
+    (target) => statefulSelectors(target).map(glyphSelector),
+  );
   const paint = selectorList(
     family,
-    (target) => `${stateful(target)}${family.paintTarget === "before" ? "::before" : ""}`,
+    (target) => statefulSelectors(target).map(
+      (selector) => `${selector}${family.paintTarget === "before" ? "::before" : ""}`,
+    ),
   );
   const pseudoReset = family.paintTarget === "before"
     ? `${selectorList(family, (target) => `${eligible(target)}::before`)} {

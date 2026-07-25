@@ -153,6 +153,14 @@ test("private skin interaction families expose the frozen six-family app chrome 
     assert.ok(Object.isFrozen(family.targets));
     assert.ok(family.targets.every(Object.isFrozen));
   }
+  const sidebarFamily = PRIVATE_SKIN_INTERACTION_FAMILIES.find(({ id }) => id === "sidebar-chrome");
+  assert.deepEqual(
+    sidebarFamily.targets.slice(2).map(({ stateMappings = [] }) => [...stateMappings]),
+    [
+      ["self", "direct-child-focus", "direct-child-open"],
+      ["self", "direct-child-focus", "direct-child-open"],
+    ],
+  );
 });
 
 test("private skin interaction CSS is owned, eligible, transient, and fail-closed", () => {
@@ -226,6 +234,17 @@ function testedStateful(selector) {
   return `${testedEligible(selector)}${selectedGuard}${groupedSelectedGuard}${TEST_STATE}`;
 }
 
+function testedStatefulSelectors(selector) {
+  const rootState = testedStateful(selector);
+  if (!TEST_GROUPED_ROOTS.has(selector)) return [rootState];
+  const guardedRoot = rootState.slice(0, -TEST_STATE.length);
+  return [
+    rootState,
+    `${guardedRoot}:has(> button:focus-visible)`,
+    `${guardedRoot}:has(> button[data-state="open"])`,
+  ];
+}
+
 const PRIVATE_SKIN_BASE_ICON_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
   .flatMap((family) => family.roots.map(testedEligible));
 
@@ -240,16 +259,20 @@ const PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS = [
 ];
 
 const PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
-  .flatMap((family) => family.roots.map(testedStateful));
+  .flatMap((family) => family.roots.flatMap(testedStatefulSelectors));
 
 const PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
-  .flatMap((family) => family.roots.map((selector) => (
-    `${testedStateful(selector)}${family.paintTarget === "before" ? "::before" : ""}`
+  .flatMap((family) => family.roots.flatMap((selector) => (
+    testedStatefulSelectors(selector).map((statefulSelector) => (
+      `${statefulSelector}${family.paintTarget === "before" ? "::before" : ""}`
+    ))
   )));
 
 const PRIVATE_SKIN_TRANSIENT_GLYPH_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
-  .flatMap((family) => family.roots.map((selector) => (
-    `${testedStateful(selector)} :is(.text-token-foreground, svg)`
+  .flatMap((family) => family.roots.flatMap((selector) => (
+    testedStatefulSelectors(selector).map((statefulSelector) => (
+      `${statefulSelector} :is(.text-token-foreground, svg)`
+    ))
   )));
 
 const PRIVATE_SKIN_SUMMARY_RESET_SELECTORS = APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT
@@ -343,14 +366,20 @@ function assertPrivateSkinLint(bundle) {
     ...APPROVED_PRIVATE_SKIN_INTERACTION_CONTRACT.flatMap((family) => {
       const base = family.roots.map(testedEligible);
       const glyph = family.roots.map((selector) => `${testedEligible(selector)} :is(.text-token-foreground, svg)`);
-      const state = family.roots.map(testedStateful);
+      const state = family.roots.flatMap(testedStatefulSelectors);
       const reset = family.paintTarget === "before"
         ? family.roots.map((selector) => `${testedEligible(selector)}::before`)
         : [];
-      const paint = family.roots.map((selector) => (
-        `${testedStateful(selector)}${family.paintTarget === "before" ? "::before" : ""}`
+      const paint = family.roots.flatMap((selector) => (
+        testedStatefulSelectors(selector).map((statefulSelector) => (
+          `${statefulSelector}${family.paintTarget === "before" ? "::before" : ""}`
+        ))
       ));
-      const stateGlyph = family.roots.map((selector) => `${testedStateful(selector)} :is(.text-token-foreground, svg)`);
+      const stateGlyph = family.roots.flatMap((selector) => (
+        testedStatefulSelectors(selector).map((statefulSelector) => (
+          `${statefulSelector} :is(.text-token-foreground, svg)`
+        ))
+      ));
       return [base, glyph, state, ...(reset.length ? [reset] : []), paint, stateGlyph];
     }),
     ...PRIVATE_SKIN_SELECTED_SURFACE_SELECTORS.map((selector) => [selector]),
@@ -643,9 +672,14 @@ function sidebarSurfaceSelectorMatches(root, scenario, identity) {
         : ["root-hover", "root-focus", "root-open"].includes(scenario.transient);
   }
   const descendantFocus = topLevelPseudoArguments(root, "has")
-    .some((argument) => argument === "button:focus-visible");
-  if (identity === "group-row" && descendantFocus) {
-    positiveState ||= ["primary-focus", "quick-focus"].includes(scenario.transient);
+    .some((argument) => argument === "> button:focus-visible");
+  const descendantOpen = topLevelPseudoArguments(root, "has")
+    .some((argument) => argument === "> button[data-state=\"open\"]");
+  if (["group-row", "project-task-row"].includes(identity) && descendantFocus) {
+    positiveState ||= scenario.transient === "primary-focus";
+  }
+  if (["group-row", "project-task-row"].includes(identity) && descendantOpen) {
+    positiveState ||= scenario.transient === "primary-open";
   }
   if (!positiveState) return false;
 
@@ -787,6 +821,9 @@ function sidebarCascadeWinners(css, scenario) {
     rootIdentity,
     declaration(element, name) {
       const identity = element === "surface" ? rootIdentity : `${rootIdentity}-${element}`;
+      return winners.get(`${identity}:${name}`);
+    },
+    declarationFor(identity, name) {
       return winners.get(`${identity}:${name}`);
     },
     paintedRoots() {
@@ -1007,7 +1044,11 @@ test("sidebar cascade keeps selected material after guarded transient material",
   for (const selector of PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS) {
     assert.ok(selector.includes(TEST_ENABLED));
     assert.ok(selector.includes(TEST_SAFE_ACTION));
-    assert.ok(selector.endsWith(TEST_STATE));
+    assert.ok(
+      selector.endsWith(TEST_STATE)
+      || selector.endsWith(":has(> button:focus-visible)")
+      || selector.endsWith(":has(> button[data-state=\"open\"])"),
+    );
   }
   assert.equal(
     PRIVATE_SKIN_TRANSIENT_ICON_SELECTORS.at(-1),
@@ -1015,6 +1056,45 @@ test("sidebar cascade keeps selected material after guarded transient material",
     "Composer coverage must remain limited to safe enabled secondary controls.",
   );
   assert.doesNotMatch(css, /\.size-token-button-composer/u, "Send must remain outside private icon material selectors.");
+});
+
+test("grouped child focus and open map to the outer paint root only", () => {
+  const bundle = validateThemePackage(JSON.parse(buildPrivateSkinPackage({
+    id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    exportedAt: "2026-07-19T00:00:00.000Z",
+    image: Buffer.from("safe-image"),
+    settings: normalizePrivateSkinSettings({}),
+  })));
+  const { css } = resolveThemeTarget(bundle, "codex");
+  for (const kind of ["group", "listitem"]) {
+    const outerIdentity = sidebarScenarioRootIdentity({ kind });
+    const childIdentity = kind === "group" ? "group-primary-button" : "project-task-button";
+    for (const transient of ["primary-focus", "primary-open"]) {
+      const cascade = sidebarCascadeWinners(css, { kind, transient });
+      assert.deepEqual(cascade.paintedRoots(), [outerIdentity], `Child ${transient} must paint only ${outerIdentity}.`);
+      assert.match(cascade.declaration("surface", "background-color")?.value ?? "", /--codextheme-icon-hover-surface-alpha/u);
+      assert.match(cascade.declaration("surface", "border-color")?.value ?? "", /--codextheme-icon-hover-border-alpha/u);
+      assert.match(cascade.declaration("surface", "box-shadow")?.value ?? "", /--codextheme-icon-hover-glow-alpha/u);
+      assert.match(cascade.declaration("label", "color")?.value ?? "", /var\(--codextheme-accent\)/u);
+      assert.match(cascade.declaration("glyph", "filter")?.value ?? "", /drop-shadow\(0 0 7px/u);
+      for (const property of ["background-color", "border-color", "box-shadow"]) {
+        assert.equal(cascade.declarationFor(childIdentity, property), undefined, `Child ${property} must remain theme-transparent.`);
+      }
+    }
+  }
+
+  for (const scenario of [
+    { kind: "group", persistentOwner: "root", persistentState: "aria-selected", transient: "primary-focus" },
+    { kind: "group", persistentOwner: "root", persistentState: "aria-current", transient: "primary-open" },
+    { kind: "group", persistentOwner: "primary", persistentState: "aria-selected", transient: "primary-focus" },
+    { kind: "group", persistentOwner: "primary", persistentState: "aria-current", transient: "primary-open" },
+    { kind: "listitem", persistentOwner: "root", persistentState: "aria-selected", transient: "primary-focus" },
+    { kind: "listitem", persistentOwner: "root", persistentState: "aria-current", transient: "primary-open" },
+  ]) {
+    const selected = sidebarCascadeWinners(css, scenario);
+    assertSelectedCascade(selected);
+    assert.equal(selected.declaration("glyph", "filter"), undefined, `Selected child state must not add transient glow: ${JSON.stringify(scenario)}`);
+  }
 });
 
 test("grouped transient roots reject unsafe direct child controls", () => {
