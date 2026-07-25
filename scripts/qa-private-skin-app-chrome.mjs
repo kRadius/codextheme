@@ -82,6 +82,7 @@ const EXCLUSION_CLASSES = Object.freeze([
   {
     id: "disabled",
     selectors: ["button:disabled", "[aria-disabled=\"true\"]"],
+    requireStable: true,
   },
   {
     id: "danger",
@@ -122,7 +123,14 @@ const EXCLUSION_CLASSES = Object.freeze([
 ]);
 
 const adapter = getAdapter("codex");
-const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+let terminationSignal = null;
+let restorationStarted = false;
+const sleep = async (milliseconds) => {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds));
+  if (terminationSignal && !restorationStarted) {
+    throw new Error(`Termination requested (${terminationSignal}).`);
+  }
+};
 const cssString = (value) => JSON.stringify(value);
 const screenshotArgument = process.argv.find((argument) => argument.startsWith("--screenshot-dir="));
 const screenshotDir = screenshotArgument
@@ -138,14 +146,35 @@ const temporarilyClearHomeDraft = process.argv.includes("--temporarily-clear-hom
 if (homeOnly && sessionOnly) {
   throw new Error("--home-only and --session-only are mutually exclusive.");
 }
-if (temporarilyClearHomeDraft && !homeOnly) {
-  throw new Error("--temporarily-clear-home-draft requires --home-only.");
+if (temporarilyClearHomeDraft && sessionOnly) {
+  throw new Error("--temporarily-clear-home-draft cannot be combined with --session-only.");
 }
 let qaSequence = 0;
 
 function progress(stage, detail = "") {
   const suffix = detail ? ` ${detail}` : "";
   process.stderr.write(`[private-skin-qa] ${stage}${suffix}\n`);
+}
+
+const signalHandler = (signal) => {
+  if (terminationSignal) return;
+  terminationSignal = signal;
+  progress("signal", `${signal} received; restoration will run before exit`);
+};
+const sigintHandler = () => signalHandler("SIGINT");
+const sigtermHandler = () => signalHandler("SIGTERM");
+process.on("SIGINT", sigintHandler);
+process.on("SIGTERM", sigtermHandler);
+
+async function ensurePrivateArtifactDirectory(directory) {
+  await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+  await fs.chmod(directory, 0o700);
+}
+
+async function writePrivateArtifact(filename, data, { prepareDirectory = true } = {}) {
+  if (prepareDirectory) await ensurePrivateArtifactDirectory(path.dirname(filename));
+  await fs.writeFile(filename, data, { mode: 0o600 });
+  await fs.chmod(filename, 0o600);
 }
 
 function hsl(hex) {
@@ -272,6 +301,15 @@ function styleSource() {
       const pixels = colorPixels(value);
       return sameRgb(pixels, accentPixels) && (pixels?.alpha ?? 0) >= 0.26 && (pixels?.alpha ?? 0) <= 0.34;
     };
+    const isAccentTint = (value) => {
+      const pixels = colorPixels(value);
+      return sameRgb(pixels, accentPixels) && (pixels?.alpha ?? 0) > 0.01;
+    };
+    const hasAccentEffect = (value) => {
+      if (!value || value === "none") return false;
+      const colors = value.match(/(?:rgba?|hsla?|color)\([^)]*\)/gu) ?? [];
+      return colors.some((color) => isAccentTint(color));
+    };
     const effectiveTextColor = (style) => {
       const textFill = style.webkitTextFillColor;
       return textFill && textFill !== style.color ? textFill : style.color;
@@ -290,16 +328,25 @@ function styleSource() {
           background: root.backgroundColor,
           borderColor: root.borderColor,
           shadow: root.boxShadow,
+          filter: root.filter,
         },
         before: {
+          color: before.color,
+          textFillColor: before.webkitTextFillColor,
+          effectiveTextColor: effectiveTextColor(before),
           background: before.backgroundColor,
           backgroundPixels: colorPixels(before.backgroundColor),
+          borderColor: before.borderColor,
           shadow: before.boxShadow,
+          filter: before.filter,
         },
         glyph: glyphStyle ? {
           color: glyphStyle.color,
           textFillColor: glyphStyle.webkitTextFillColor,
           effectiveTextColor: effectiveTextColor(glyphStyle),
+          background: glyphStyle.backgroundColor,
+          borderColor: glyphStyle.borderColor,
+          shadow: glyphStyle.boxShadow,
           filter: glyphStyle.filter,
         } : null,
         rect: {
@@ -392,6 +439,7 @@ function editorSelectionSource() {
           : "backward";
       }
       return {
+        kind: "contenteditable",
         valid: true,
         anchorPath,
         anchorOffset: selection.anchorOffset,
@@ -404,7 +452,12 @@ function editorSelectionSource() {
 }
 
 function selectionSnapshotsEqual(first, second) {
-  if (!first?.valid) return true;
+  if (!first?.valid || !second?.valid || first.kind !== second.kind) return false;
+  if (first.kind === "textarea") {
+    return first.start === second.start
+      && first.end === second.end
+      && first.direction === second.direction;
+  }
   return Boolean(second?.valid)
     && JSON.stringify(first.anchorPath) === JSON.stringify(second.anchorPath)
     && first.anchorOffset === second.anchorOffset
@@ -561,57 +614,68 @@ async function browserPanelVisible(session) {
   return evaluate(session, BROWSER_PANEL_VISIBLE_EXPRESSION);
 }
 
+let observedBrowserToggleIdentity = null;
+
 async function tagBrowserPanelToggle(session) {
   const id = `qa-panel-${++qaSequence}`;
   return evaluate(session, `(() => {
     const buttons = [...document.querySelectorAll(
-      "main.main-surface header.app-header-tint button"
+      'button[aria-label="显示/隐藏侧边栏"][aria-pressed]'
     )].filter((element) => {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
+      const hit = document.elementFromPoint(
+        Math.max(2, Math.min(innerWidth - 2, rect.left + rect.width / 2)),
+        Math.max(2, Math.min(innerHeight - 2, rect.top + rect.height / 2)),
+      );
       const intersectionHeight = Math.max(
         0,
         Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0),
       );
       return rect.width >= 12 && rect.height >= 12
         && intersectionHeight >= rect.height * 0.25
-        && style.display !== "none" && style.visibility !== "hidden";
+        && style.display !== "none" && style.visibility !== "hidden"
+        && hit && (hit === element || element.contains(hit));
     });
-    const element = buttons.at(-1);
-    if (!element) return null;
+    if (buttons.length !== 1) return { error: "semantic-toggle-count", count: buttons.length };
+    const [element] = buttons;
     const rect = element.getBoundingClientRect();
-    const points = [
-      [rect.left + rect.width / 2, rect.top + rect.height / 2],
-      [rect.left + rect.width / 2, rect.bottom - 4],
-      [rect.left + 4, rect.bottom - 4],
-      [rect.right - 4, rect.bottom - 4],
-    ].map(([x, y]) => [
-      Math.max(2, Math.min(innerWidth - 2, x)),
-      Math.max(2, Math.min(innerHeight - 2, y)),
-    ]);
-    const point = points.find(([x, y]) => {
-      const hit = document.elementFromPoint(x, y);
-      return hit && (hit === element || element.contains(hit));
-    });
-    if (!point) return null;
     element.setAttribute(${cssString(QA_ATTRIBUTE)}, ${cssString(id)});
     return {
       id: ${cssString(id)},
-      x: point[0],
-      y: point[1],
+      x: Math.max(2, Math.min(innerWidth - 2, rect.left + rect.width / 2)),
+      y: Math.max(2, Math.min(innerHeight - 2, rect.top + rect.height / 2)),
+      ariaLabel: element.getAttribute("aria-label"),
+      ariaPressed: element.getAttribute("aria-pressed"),
     };
   })()`);
 }
 
 async function setBrowserPanel(session, open) {
   const current = await browserPanelVisible(session);
-  if (current === open) return false;
   const control = await tagBrowserPanelToggle(session);
-  if (!control) throw new Error("Could not identify the visible Browser panel toggle.");
+  if (!control || control.error) {
+    throw new Error(
+      `Expected exactly one visible semantic Browser panel toggle; observed ${control?.count ?? 0}.`,
+    );
+  }
+  if (!["true", "false"].includes(control.ariaPressed)
+    || (control.ariaPressed === "true") !== current) {
+    throw new Error("The semantic Browser panel toggle state disagrees with panel visibility.");
+  }
+  observedBrowserToggleIdentity = {
+    ariaLabel: control.ariaLabel,
+    role: "button",
+    stateAttribute: "aria-pressed",
+  };
+  if (current === open) return false;
   await clickAt(session, control.x, control.y);
   await waitFor(
     session,
-    open ? BROWSER_PANEL_VISIBLE_EXPRESSION : `!${BROWSER_PANEL_VISIBLE_EXPRESSION}`,
+    `(${open ? BROWSER_PANEL_VISIBLE_EXPRESSION : `!${BROWSER_PANEL_VISIBLE_EXPRESSION}`})
+      && document.querySelector(
+        "[${QA_ATTRIBUTE}=" + CSS.escape(${cssString(control.id)}) + "]"
+      )?.getAttribute("aria-pressed") === ${cssString(String(open))}`,
     open ? "the Browser panel to reopen" : "the Browser panel to close",
   );
   return true;
@@ -665,6 +729,14 @@ async function readHomeDraft(session) {
         scrollTop: textarea.scrollTop,
         scrollLeft: textarea.scrollLeft,
         active: document.activeElement === textarea,
+        selection: {
+          kind: "textarea",
+          valid: Number.isInteger(textarea.selectionStart)
+            && Number.isInteger(textarea.selectionEnd),
+          start: textarea.selectionStart,
+          end: textarea.selectionEnd,
+          direction: textarea.selectionDirection || "none",
+        },
       };
     }
     const editable = document.querySelector(
@@ -804,7 +876,14 @@ async function restoreHomeEditorState(session, state) {
       scrollLeft: element.scrollLeft,
       selection: state.kind === "contenteditable"
         ? selectionSnapshot(element)
-        : { valid: false },
+        : {
+          kind: "textarea",
+          valid: Number.isInteger(element.selectionStart)
+            && Number.isInteger(element.selectionEnd),
+          start: element.selectionStart,
+          end: element.selectionEnd,
+          direction: element.selectionDirection || "none",
+        },
     };
   })()`);
 }
@@ -1010,14 +1089,32 @@ async function readTaggedStyle(session, id) {
       rootColorAccent: isAccentColor(style.root.effectiveTextColor),
       rootComputedColorAccent: isAccentColor(style.root.color),
       rootTextFillAccent: isAccentColor(style.root.textFillColor),
+      rootColorAccentAny: isAccentTint(style.root.effectiveTextColor),
+      rootComputedColorAccentAny: isAccentTint(style.root.color),
+      rootTextFillAccentAny: isAccentTint(style.root.textFillColor),
       rootSurfaceAccent: isAccentSurface(style.root.background),
+      rootBackgroundAccent: isAccentTint(style.root.background),
+      rootBorderAccent: isAccentTint(style.root.borderColor),
+      rootShadowAccent: hasAccentEffect(style.root.shadow),
+      rootFilterAccent: hasAccentEffect(style.root.filter),
       beforeSurfaceAccent: isAccentSurface(style.before.background),
+      beforeColorAccent: isAccentTint(style.before.effectiveTextColor),
+      beforeComputedColorAccent: isAccentTint(style.before.color),
+      beforeTextFillAccent: isAccentTint(style.before.textFillColor),
+      beforeBackgroundAccent: isAccentTint(style.before.background),
+      beforeBorderAccent: isAccentTint(style.before.borderColor),
+      beforeShadowAccent: hasAccentEffect(style.before.shadow),
+      beforeFilterAccent: hasAccentEffect(style.before.filter),
       glyphColorAccent: style.glyph ? isAccentColor(style.glyph.effectiveTextColor) : null,
       glyphComputedColorAccent: style.glyph ? isAccentColor(style.glyph.color) : null,
       glyphTextFillAccent: style.glyph ? isAccentColor(style.glyph.textFillColor) : null,
-      glyphFilterAccent: style.glyph
-        ? style.glyph.filter !== "none" && style.glyph.filter.includes("drop-shadow")
-        : null,
+      glyphColorAccentAny: style.glyph ? isAccentTint(style.glyph.effectiveTextColor) : null,
+      glyphComputedColorAccentAny: style.glyph ? isAccentTint(style.glyph.color) : null,
+      glyphTextFillAccentAny: style.glyph ? isAccentTint(style.glyph.textFillColor) : null,
+      glyphBackgroundAccent: style.glyph ? isAccentTint(style.glyph.background) : null,
+      glyphBorderAccent: style.glyph ? isAccentTint(style.glyph.borderColor) : null,
+      glyphShadowAccent: style.glyph ? hasAccentEffect(style.glyph.shadow) : null,
+      glyphFilterAccent: style.glyph ? hasAccentEffect(style.glyph.filter) : null,
       materialOwners: materialOwners(element).map((owner) => owner.kind),
       actionOverlap: actionOverlap(element),
     };
@@ -1133,27 +1230,52 @@ async function probeExclusion(session, exclusion) {
   const probe = await evaluate(session, `(() => {
     ${visibleSource()}
     const selectors = ${JSON.stringify(exclusion.selectors)};
-    let element = null;
+    const interactiveSelector = [
+      "button",
+      "a",
+      '[role="button"]',
+      '[role="menuitem"]',
+      '[role="option"]',
+      "[tabindex]",
+    ].join(",");
+    let matched = null;
     let matchedSelector = null;
     for (const selector of selectors) {
-      element = [...document.querySelectorAll(selector)]
+      matched = [...document.querySelectorAll(selector)]
         .find((candidate) => visible(candidate, false) && centerHit(candidate));
-      if (element) {
+      if (matched) {
         matchedSelector = selector;
         break;
       }
     }
-    if (!element) return null;
+    if (!matched) return null;
+    const element = matched.matches(interactiveSelector)
+      ? matched
+      : matched.closest(interactiveSelector);
+    if (!element || !visible(element, false) || !centerHit(element)) {
+      return { matchedSelector, ownerFound: false };
+    }
     element.setAttribute(${cssString(QA_ATTRIBUTE)}, ${cssString(id)});
     const rect = element.getBoundingClientRect();
     return {
       id: ${cssString(id)},
       matchedSelector,
+      ownerFound: true,
+      ownerTagName: element.tagName,
+      ownerRole: element.getAttribute("role"),
       x: Math.max(2, Math.min(innerWidth - 2, rect.left + rect.width / 2)),
       y: Math.max(2, Math.min(innerHeight - 2, rect.top + rect.height / 2)),
     };
   })()`);
   if (!probe) return { class: exclusion.id, status: "Not observed" };
+  if (!probe.ownerFound) {
+    return {
+      class: exclusion.id,
+      status: "Fail",
+      matchedSelector: probe.matchedSelector,
+      ownerFound: false,
+    };
+  }
   await movePointer(session);
   await sleep(40);
   const idle = await readTaggedStyle(session, probe.id);
@@ -1167,28 +1289,69 @@ async function probeExclusion(session, exclusion) {
     );
     return element ? eligibleFamilies(element) : [];
   })()`);
-  const privateMaterialAbsent = Boolean(
-    hover
-    && !hover.rootSurfaceAccent
-    && !hover.beforeSurfaceAccent
-    && hover.materialOwners.length === 0,
+  const noAccent = (state) => Boolean(state)
+    && !state.rootColorAccentAny
+    && !state.rootComputedColorAccentAny
+    && !state.rootTextFillAccentAny
+    && !state.rootBackgroundAccent
+    && !state.rootBorderAccent
+    && !state.rootShadowAccent
+    && !state.rootFilterAccent
+    && !state.beforeColorAccent
+    && !state.beforeComputedColorAccent
+    && !state.beforeTextFillAccent
+    && !state.beforeBackgroundAccent
+    && !state.beforeBorderAccent
+    && !state.beforeShadowAccent
+    && !state.beforeFilterAccent
+    && !state.glyphColorAccentAny
+    && !state.glyphComputedColorAccentAny
+    && !state.glyphTextFillAccentAny
+    && !state.glyphBackgroundAccent
+    && !state.glyphBorderAccent
+    && !state.glyphShadowAccent
+    && !state.glyphFilterAccent;
+  const noAccentIdle = noAccent(idle);
+  const noAccentHover = noAccent(hover);
+  const noMaterialOwners = Boolean(idle && hover)
+    && idle.materialOwners.length === 0
+    && hover.materialOwners.length === 0;
+  const geometryStable = Boolean(idle && hover)
+    && Math.abs(idle.rect.left - hover.rect.left) <= 0.5
+    && Math.abs(idle.rect.top - hover.rect.top) <= 0.5
+    && Math.abs(idle.rect.width - hover.rect.width) <= 0.5
+    && Math.abs(idle.rect.height - hover.rect.height) <= 0.5;
+  const styleStable = Boolean(idle && hover)
+    && JSON.stringify(idle.root) === JSON.stringify(hover.root)
+    && JSON.stringify(idle.before) === JSON.stringify(hover.before)
+    && JSON.stringify(idle.glyph) === JSON.stringify(hover.glyph);
+  const result = Boolean(
+    idle
+    && hover
+    && hover.hit
+    && eligibleFamilies.length === 0
+    && noAccentIdle
+    && noAccentHover
+    && noMaterialOwners
+    && geometryStable
+    && (!exclusion.requireStable || styleStable),
   );
-  const stable = Boolean(idle && hover)
-    && idle.root.color === hover.root.color
-    && idle.root.textFillColor === hover.root.textFillColor
-    && idle.root.effectiveTextColor === hover.root.effectiveTextColor
-    && idle.root.background === hover.root.background
-    && idle.root.shadow === hover.root.shadow;
-  const result = eligibleFamilies.length === 0
-    && privateMaterialAbsent
-    && (!exclusion.requireStable || stable);
   return {
     class: exclusion.id,
     status: result ? "Pass" : "Fail",
     matchedSelector: probe.matchedSelector,
+    ownerFound: true,
+    ownerTagName: probe.ownerTagName,
+    ownerRole: probe.ownerRole,
     eligibleFamilies,
-    privateMaterialAbsent,
-    stable,
+    checks: {
+      pointerHit: hover?.hit ?? false,
+      noAccentIdle,
+      noAccentHover,
+      noMaterialOwners,
+      geometryStable,
+      styleStable,
+    },
     idle,
     hover,
   };
@@ -1319,14 +1482,18 @@ async function layoutState(session) {
 
 async function captureScreenshot(session, filename) {
   if (!screenshotDir) return null;
-  await fs.mkdir(screenshotDir, { recursive: true });
+  await ensurePrivateArtifactDirectory(screenshotDir);
   const result = await session.send("Page.captureScreenshot", {
     format: "png",
     fromSurface: true,
     captureBeyondViewport: false,
   });
   const output = path.join(screenshotDir, filename);
-  await fs.writeFile(output, Buffer.from(result.data, "base64"));
+  await writePrivateArtifact(
+    output,
+    Buffer.from(result.data, "base64"),
+    { prepareDirectory: false },
+  );
   return output;
 }
 
@@ -1518,7 +1685,6 @@ async function probeSummaryStructure(session) {
           root.pointerEvents === "none"
           || root.effectiveOpacity <= 0.01
           || root.layoutHiddenConfirmed
-          || root.fullyOutsideViewport
           || root.nearestClippingAncestor?.fullyClipped),
     };
   })()`);
@@ -1640,8 +1806,21 @@ async function auditCell(session, view, viewport, originalThreadId, runContext =
   for (const exclusion of exclusions) {
     if (exclusion.status === "Fail") failures.push(`${exclusion.class}: exclusion probe failed`);
   }
+  const requiredSendExclusion = exclusions.find(({ class: name }) => name === "send-primary");
+  if (requiredSendExclusion?.status !== "Pass") {
+    failures.push(`send-primary: required exclusion was ${requiredSendExclusion?.status ?? "missing"}`);
+  }
   for (const direct of [persistence, grouped, summaryReplacement]) {
     if (direct.status === "Fail") failures.push(`${direct.class}: direct probe failed`);
+  }
+  if (grouped.status !== "Pass") {
+    failures.push(`grouped-row-owner: required direct probe was ${grouped.status}`);
+  }
+  if (view === "session" && persistence.status !== "Pass") {
+    failures.push(`selected-session: required direct probe was ${persistence.status}`);
+  }
+  if (view === "session" && viewport.id === "desktop" && summaryReplacement.status !== "Pass") {
+    failures.push(`summary-native-before: required desktop direct probe was ${summaryReplacement.status}`);
   }
   if (homeScope && homeScope.suggestionCards !== 4) {
     failures.push(`home scope: expected 4 suggestion cards, observed ${homeScope.suggestionCards}`);
@@ -1711,7 +1890,7 @@ const accentMetrics = {
   contrastAgainstSurface: contrastRatio(correctedAccent, surface),
 };
 const report = {
-  schema: "codextheme-private-skin-app-chrome-qa-v1",
+  schema: "codextheme-private-skin-app-chrome-qa-v2",
   generatedAt: new Date().toISOString(),
   source: "repository-local buildPrivateSkinPackage + @codextheme/runtime",
   mode: homeOnly ? "home-only" : (sessionOnly ? "session-only" : "full"),
@@ -1733,21 +1912,20 @@ const report = {
     originalOpen: null,
     changedForAudit: false,
     closedDuringSessionMatrix: null,
+    semanticToggle: null,
   },
   draft: {
     authorizedTemporaryClear: temporarilyClearHomeDraft,
-    backupFile: null,
     backupRemoved: null,
     kind: null,
-    stringLength: null,
-    byteLength: null,
-    sha256Before: null,
-    sha256After: null,
     preflightClear: null,
     preflightSuggestions: null,
-    preflightRestoreHashEqual: null,
+    preflightExactEquality: null,
     selectionCaptured: null,
     selectionRestored: null,
+    focusRestored: null,
+    scrollRestored: null,
+    independentExactEquality: null,
   },
   cells: [],
   restoration: {
@@ -1770,34 +1948,53 @@ let session;
 let original;
 let homeDraftBackup;
 let homeDraftBackupFile;
+let homeDraftHashBefore;
 let originalHomeProjectContext;
 let homeDraftRestoredInPlace = false;
+let mutationAuthorized = false;
 try {
+  const [target] = (await listCdpTargets(PORT, 2_500)).filter((entry) => adapter.matchTarget(entry));
+  if (!target) throw new Error("No Codex renderer target is available.");
+  report.renderer = { targetId: target.id, title: "[redacted]", url: "[redacted]" };
+  session = new CdpSession(target, 12_000);
+  await session.open();
+  original = await readRootState(session);
+  report.originalState = {
+    view: original.view,
+    width: original.width,
+    height: original.height,
+    devicePixelRatio: original.devicePixelRatio,
+    browserPanelVisible: original.browserPanelVisible,
+    menuCount: original.menuCount,
+    qaMarkerCount: original.qaMarkerCount,
+    composerBottom: original.composerBottom,
+    selectedTaskPresent: Boolean(original.selectedThreadId),
+  };
+  report.browserPanel.originalOpen = original.browserPanelVisible;
+  if (original.menuCount !== 0) {
+    throw new Error(
+      `Preflight requires no open menu or listbox; observed ${original.menuCount}.`,
+    );
+  }
+  if (original.view !== "session" || !original.selectedThreadId) {
+    throw new Error("The audit requires the current populated Session so it can restore the selected task deterministically.");
+  }
+  mutationAuthorized = true;
   progress("apply:start", `port=${PORT}`);
   const applied = await applyTheme({ adapter, targetTheme, port: PORT, timeoutMs: 12_000 });
-  report.applied = applied.map(({ targetId, title, result }) => ({
+  report.applied = applied.map(({ targetId, result }) => ({
     targetId,
-    title,
     pass: result?.pass === true,
   }));
   if (!applied.length || !applied.every((entry) => entry.result?.pass === true)) {
     throw new Error("The deterministic private package did not pass runtime verification.");
   }
   progress("apply:end", `targets=${applied.length}`);
-  const [target] = (await listCdpTargets(PORT, 2_500)).filter((entry) => adapter.matchTarget(entry));
-  if (!target) throw new Error("No Codex renderer target is available.");
-  report.renderer = { targetId: target.id, title: target.title, url: target.url };
-  session = await new CdpSession(target, 12_000).open();
-  original = await readRootState(session);
-  report.originalState = original;
-  report.browserPanel.originalOpen = original.browserPanelVisible;
-  if (original.view !== "session" || !original.selectedThreadId) {
-    throw new Error("The audit requires the current populated Session so it can restore the selected task deterministically.");
-  }
+  const themedState = await readRootState(session);
   const rootChecks = {
-    active: original.active,
-    namespace: original.namespace.includes("codextheme-codex-skin"),
-    accent: original.accent.toLowerCase() === correctedAccent.toLowerCase(),
+    active: themedState.active,
+    namespace: themedState.namespace.includes("codextheme-codex-skin"),
+    accent: themedState.accent.toLowerCase() === correctedAccent.toLowerCase(),
     saturation: accentMetrics.saturation >= 41.5,
     contrast: accentMetrics.contrastAgainstSurface >= 4.5,
   };
@@ -1836,28 +2033,26 @@ try {
   if (!sessionOnly && temporarilyClearHomeDraft) {
     homeDraftBackup = await readHomeDraft(session);
     if (!homeDraftBackup) throw new Error("Could not read the authorized Home draft editor.");
-    const beforeHash = sha256(homeDraftBackup.value);
+    if (!homeDraftBackup.selection?.valid) {
+      throw new Error("The Home draft editor does not have a valid restorable selection.");
+    }
+    homeDraftHashBefore = sha256(homeDraftBackup.value);
     homeDraftBackupFile = path.join(
       "/private/tmp",
       `codextheme-home-draft-backup-${process.pid}.json`,
     );
-    await fs.writeFile(
+    await writePrivateArtifact(
       homeDraftBackupFile,
       `${JSON.stringify(homeDraftBackup)}\n`,
-      { mode: 0o600 },
+      { prepareDirectory: false },
     );
-    await fs.chmod(homeDraftBackupFile, 0o600);
     report.draft = {
       ...report.draft,
-      backupFile: homeDraftBackupFile,
       backupRemoved: false,
       kind: homeDraftBackup.kind,
-      stringLength: homeDraftBackup.value.length,
-      byteLength: Buffer.byteLength(homeDraftBackup.value, "utf8"),
-      sha256Before: beforeHash,
       selectionCaptured: Boolean(homeDraftBackup.selection?.valid),
     };
-    progress("draft:backup", `sha256=${beforeHash} bytes=${report.draft.byteLength}`);
+    progress("draft:backup", "mode=0600 selection=valid");
     await setHomeDraft(session, homeDraftBackup, "");
     await waitFor(
       session,
@@ -1897,15 +2092,23 @@ try {
       "the reversible preflight Home draft restoration",
     );
     const preflightRestored = await readHomeDraft(session);
-    report.draft.preflightRestoreHashEqual = Boolean(
+    const preflightEditorState = await restoreHomeEditorState(session, homeDraftBackup);
+    const preflightExactState = await readHomeDraft(session);
+    report.draft.preflightExactEquality = Boolean(
       preflightRestored
-      && sha256(preflightRestored.value) === beforeHash
-      && preflightRestored.value === homeDraftBackup.value,
+      && sha256(preflightRestored.value) === homeDraftHashBefore
+      && preflightRestored.value === homeDraftBackup.value
+      && preflightEditorState?.restored
+      && preflightExactState
+      && selectionSnapshotsEqual(homeDraftBackup.selection, preflightExactState.selection)
+      && preflightExactState.active === homeDraftBackup.active
+      && preflightExactState.scrollTop === homeDraftBackup.scrollTop
+      && preflightExactState.scrollLeft === homeDraftBackup.scrollLeft,
     );
-    if (!report.draft.preflightRestoreHashEqual) {
-      throw new Error("The reversible Home draft preflight did not restore byte-for-byte.");
+    if (!report.draft.preflightExactEquality) {
+      throw new Error("The reversible Home draft preflight did not restore exact editor state.");
     }
-    progress("draft:preflight", "clear=true suggestions=4 restoreHashEqual=true");
+    progress("draft:preflight", "clear=true suggestions=4 exactEquality=true");
     await setHomeDraft(session, homeDraftBackup, "");
     await waitFor(
       session,
@@ -1929,10 +2132,22 @@ try {
 } catch (error) {
   report.fatalError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 } finally {
-  if (session) {
+  restorationStarted = true;
+  if (session && !mutationAuthorized) {
+    for (const key of Object.keys(report.restoration)) {
+      report.restoration[key] = "Not required: preflight failed before mutation";
+    }
+    session.close();
+  } else if (session) {
     try {
       await closeMenu(session);
-      report.restoration.menu = "Pass";
+      const finalMenuCount = await evaluate(
+        session,
+        `document.querySelectorAll("[role=\\"menu\\"], [role=\\"listbox\\"]").length`,
+      );
+      report.restoration.menu = finalMenuCount === 0
+        ? "Pass"
+        : `Fail: ${finalMenuCount} menu or listbox roots remain`;
     } catch (error) {
       report.restoration.menu = `Fail: ${error.message}`;
     }
@@ -1973,13 +2188,18 @@ try {
           homeDraftBackup.selection,
           restoredDraft?.selection,
         );
-        report.draft.sha256After = afterHash;
+        report.draft.focusRestored = restoredDraft?.active === homeDraftBackup.active;
+        report.draft.scrollRestored = Boolean(restoredDraft)
+          && restoredDraft.scrollTop === homeDraftBackup.scrollTop
+          && restoredDraft.scrollLeft === homeDraftBackup.scrollLeft;
         if (!restoredDraft
           || restoredDraft.value !== homeDraftBackup.value
-          || afterHash !== report.draft.sha256Before
+          || afterHash !== homeDraftHashBefore
           || !restoredEditorState?.restored
-          || !report.draft.selectionRestored) {
-          throw new Error("The Home draft text or editor selection did not restore exactly.");
+          || !report.draft.selectionRestored
+          || !report.draft.focusRestored
+          || !report.draft.scrollRestored) {
+          throw new Error("The Home draft editor state did not restore exactly.");
         }
         homeDraftRestoredInPlace = true;
       }
@@ -2017,9 +2237,10 @@ try {
           : null;
         if (!independentlyRestoredDraft
           || independentlyRestoredDraft.value !== homeDraftBackup.value
-          || independentHash !== report.draft.sha256Before) {
-          throw new Error("The independent persisted Home draft hash did not match.");
+          || independentHash !== homeDraftHashBefore) {
+          throw new Error("The independently persisted Home draft was not exactly equal.");
         }
+        report.draft.independentExactEquality = true;
         await restoreThread(session, original.selectedThreadId);
         await fs.unlink(homeDraftBackupFile);
         report.draft.backupRemoved = true;
@@ -2094,6 +2315,10 @@ try {
   }
 }
 
+report.browserPanel.semanticToggle = observedBrowserToggleIdentity;
+if (terminationSignal && !report.fatalError) {
+  report.fatalError = `Termination requested (${terminationSignal}).`;
+}
 const restorationPass = Object.values(report.restoration).every((value) => value === "Pass");
 const expectedCellCount = homeOnly || sessionOnly ? 2 : 4;
 const cellsPass = report.cells.length === expectedCellCount
@@ -2108,8 +2333,7 @@ report.result = !report.fatalError
   : "Fail";
 
 if (reportFile) {
-  await fs.mkdir(path.dirname(reportFile), { recursive: true });
-  await fs.writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`);
+  await writePrivateArtifact(reportFile, `${JSON.stringify(report, null, 2)}\n`);
 }
 console.log(JSON.stringify({
   result: report.result,
@@ -2137,4 +2361,6 @@ console.log(JSON.stringify({
   restoration: report.restoration,
   fatalError: report.fatalError,
 }, null, 2));
+process.removeListener("SIGINT", sigintHandler);
+process.removeListener("SIGTERM", sigtermHandler);
 if (report.result !== "Pass") process.exitCode = 1;
