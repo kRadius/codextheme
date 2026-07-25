@@ -56,22 +56,45 @@ function pixelEdges(value) {
   return { top, right, bottom, left };
 }
 
+function selectorSpecificity(selector) {
+  const ids = (selector.match(/#[\w-]+/gu) ?? []).length;
+  const classes = (selector.match(/\.[\w-]+|\[[^\]]+\]|:(?!:)[\w-]+/gu) ?? []).length;
+  const withoutCountedParts = selector
+    .replace(/#[\w-]+|\.[\w-]+|\[[^\]]+\]|::?[\w-]+(?:\([^)]*\))?/gu, " ")
+    .replace(/[>+~*]/gu, " ");
+  const elements = (withoutCountedParts.match(/\b[a-z][\w-]*\b/gu) ?? []).length;
+  return [ids, classes, elements];
+}
+
+function compareSpecificity(left, right) {
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return left[index] - right[index];
+  }
+  return 0;
+}
+
 function assertPrimaryRemainsNative(source) {
   for (const { selectors, declarations } of cssRules(source)) {
-    const primarySelectors = selectors.filter((selector) => selector.includes(".mockup-composer-primary"));
-    if (primarySelectors.length === 0) continue;
-    for (const selector of primarySelectors) {
-      assert.doesNotMatch(
-        selector,
-        /:(?:hover|focus-visible)|\.is-hover-preview/u,
-        "primary Send must not have a transient interaction selector",
-      );
+    const usesInteractionMaterial =
+      /--studio-icon-hover-(?:surface|border|glow)-alpha|0 0 18px/u.test(declarations);
+    for (const selector of selectors) {
+      const isTransient = /:(?:hover|focus-visible)|\.is-hover-preview/u.test(selector);
+      const targetsPrimaryClass = selector.includes(".mockup-composer-primary");
+      if (targetsPrimaryClass) {
+        assert.equal(isTransient, false, "primary Send must not have a transient interaction selector");
+        assert.equal(usesInteractionMaterial, false, "primary Send must not use shared interaction material");
+      }
+
+      const isComposerDescendant =
+        selector.includes(".mockup-composer-actions") &&
+        selector.trim() !== ".mockup-composer-actions";
+      if (isComposerDescendant && usesInteractionMaterial) {
+        assert.ok(
+          selector.includes(".mockup-composer-secondary"),
+          "primary Send must not inherit transient composer action material",
+        );
+      }
     }
-    assert.doesNotMatch(
-      declarations,
-      /--studio-icon-hover-(?:surface|border|glow)-alpha|0 0 18px/u,
-      "primary Send must not use shared interaction material",
-    );
   }
 }
 
@@ -246,6 +269,22 @@ test("preview interaction audit rejects primary transient material and selected 
 }`),
     /primary Send must not have a transient interaction selector/u,
   );
+  for (const selector of [
+    ".mockup-composer-actions b:hover",
+    ".mockup-composer-actions b:focus-visible",
+    ".mockup-composer-actions b.is-hover-preview",
+    ".mockup-composer-actions > :last-child:hover",
+  ]) {
+    assert.throws(
+      () => assertPrimaryRemainsNative(`${css}
+${selector} {
+  background: color-mix(in srgb, var(--studio-accent) var(--studio-icon-hover-surface-alpha), transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--studio-accent) var(--studio-icon-hover-glow-alpha), transparent);
+}`),
+      /primary Send/u,
+      `${selector} must be recognized as a primary Send mutation`,
+    );
+  }
 
   assert.doesNotThrow(() => assertSelectedOutranksTransient(css));
   const selectedFixture = `.mockup-sidebar-control.mockup-selected {
@@ -292,16 +331,46 @@ test("preview sidebar fits a bounded 320px and 375px vertical budget", () => {
   const sidebarMarkup = mockup.match(/<aside className="mockup-sidebar"[\s\S]*?<\/aside>/u)?.[0] ?? "";
   assert.match(sidebarMarkup, /className="mockup-sidebar-control">Codex/u);
   assert.match(sidebarMarkup, /className="mockup-sidebar-control mockup-project mockup-selected"/u);
+  assert.match(sidebarMarkup, /<p>Projects<\/p>/u);
   assert.ok(
     [...sidebarMarkup.matchAll(/className="[^"]*\bmockup-sidebar-optional\b[^"]*"/gu)].length >= 6,
     "nonessential sidebar preview rows must be explicitly marked",
   );
 
   const smallWidthCss = atRuleBody(css, "@media (max-width: 480px)");
-  assert.match(
-    declarationsForSelector(smallWidthCss, ".mockup-sidebar-optional"),
-    /display:\s*none/u,
+  const hideRule = cssRules(smallWidthCss).find(({ declarations }) =>
+    declarationValues(declarations, "display").includes("none"),
   );
+  assert.ok(hideRule, "small breakpoint must include a display:none hide rule");
+  const hideSelector = hideRule.selectors.find((selector) =>
+    selector.includes(".mockup-sidebar-optional"),
+  );
+  assert.ok(hideSelector, "small breakpoint hide rule must target optional sidebar rows");
+  for (const competingSelector of [".mockup-sidebar nav span", ".mockup-sidebar footer"]) {
+    assert.ok(
+      compareSpecificity(
+        selectorSpecificity(hideSelector),
+        selectorSpecificity(competingSelector),
+      ) >= 0,
+      `${hideSelector} must outrank ${competingSelector}`,
+    );
+  }
+
+  const navMarkup = sidebarMarkup.match(/<nav>([\s\S]*?)<\/nav>/u)?.[1] ?? "";
+  const navRows = [...navMarkup.matchAll(/<span className="([^"]*)"[^>]*>([\s\S]*?)<\/span>/gu)]
+    .map(([, className, contents]) => ({
+      className,
+      label: contents.replace(/<i>[\s\S]*?<\/i>/gu, "").replace(/<[^>]+>/gu, "").trim(),
+    }));
+  const retainedNavRows = navRows.filter(({ className }) =>
+    !className.split(/\s+/u).includes("mockup-sidebar-optional"),
+  );
+  const hiddenNavRows = navRows.filter(({ className }) =>
+    className.split(/\s+/u).includes("mockup-sidebar-optional"),
+  );
+  assert.deepEqual(retainedNavRows.map(({ label }) => label), ["New chat", "Commands"]);
+  assert.deepEqual(hiddenNavRows.map(({ label }) => label), ["Scheduled", "Plugins"]);
+  assert.match(sidebarMarkup, /<footer className="mockup-sidebar-optional">/u);
 
   const sidebarPadding = pixelEdges(declarationValues(
     declarationsForSelector(smallWidthCss, ".mockup-sidebar"),
@@ -334,7 +403,7 @@ test("preview sidebar fits a bounded 320px and 375px vertical budget", () => {
 
   const conservativeLineHeight = 10;
   const onePixelBorderPair = 2;
-  const visibleNavRows = 2;
+  const visibleNavRows = retainedNavRows.length;
   const estimatedDemand =
     sidebarPadding.top + sidebarPadding.bottom +
     conservativeLineHeight + brandPadding.top + brandPadding.bottom + onePixelBorderPair + brandMargin.top +

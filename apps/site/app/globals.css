@@ -450,7 +450,7 @@ button { font: inherit; }
   .mockup-sidebar nav span { padding: 2px 4px; }
   .mockup-sidebar > p { margin: 5px 0 2px; }
   .mockup-sidebar > b, .mockup-project { padding: 2px 4px; }
-  .mockup-sidebar-optional { display: none; }
+  .mockup-sidebar .mockup-sidebar-optional { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
