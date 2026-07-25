@@ -1,6 +1,14 @@
 const ENABLED = ':not(:disabled, [aria-disabled="true"])';
 const SAFE_ACTION = ':not([data-variant="destructive"]):not([class*="text-token-danger"]):not([class*="text-token-error"]):not(:has([class*="text-token-danger"], [class*="text-token-error"]))';
 const TRANSIENT_STATE = ':is(:hover, :focus-visible, [data-state="open"])';
+const NOT_SELECTED = ':not(:is([aria-current="page"], [aria-selected="true"], [data-state="active"]))';
+const NOT_UNSAFE_DIRECT_CHILD = ':not(:has(> button:is(:disabled, [aria-disabled="true"], [data-variant="destructive"])))';
+const NOT_SELECTED_DIRECT_CHILD = ':not(:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"])))';
+
+const GROUPED_ROOTS = new Set([
+  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground)",
+  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group",
+]);
 
 export const PRIVATE_SKIN_INTERACTION_FAMILIES = Object.freeze([
   Object.freeze({
@@ -56,11 +64,14 @@ function owned(selector) {
 }
 
 function eligible(selector) {
-  return `${selector}${ENABLED}${SAFE_ACTION}`;
+  const groupedGuard = GROUPED_ROOTS.has(selector) ? NOT_UNSAFE_DIRECT_CHILD : "";
+  return `${selector}${ENABLED}${SAFE_ACTION}${groupedGuard}`;
 }
 
 function stateful(selector) {
-  return `${eligible(selector)}${TRANSIENT_STATE}`;
+  const selectedGuard = selector.startsWith("aside.app-shell-left-panel ") ? NOT_SELECTED : "";
+  const groupedSelectedGuard = GROUPED_ROOTS.has(selector) ? NOT_SELECTED_DIRECT_CHILD : "";
+  return `${eligible(selector)}${selectedGuard}${groupedSelectedGuard}${TRANSIENT_STATE}`;
 }
 
 function selectorList(family, transform = (selector) => selector) {

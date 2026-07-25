@@ -150,13 +150,23 @@ test("private skin interaction CSS is owned, eligible, transient, and fail-close
 const TEST_ENABLED = ':not(:disabled, [aria-disabled="true"])';
 const TEST_SAFE_ACTION = ':not([data-variant="destructive"]):not([class*="text-token-danger"]):not([class*="text-token-error"]):not(:has([class*="text-token-danger"], [class*="text-token-error"]))';
 const TEST_STATE = ':is(:hover, :focus-visible, [data-state="open"])';
+const TEST_NOT_SELECTED = ':not(:is([aria-current="page"], [aria-selected="true"], [data-state="active"]))';
+const TEST_NOT_UNSAFE_DIRECT_CHILD = ':not(:has(> button:is(:disabled, [aria-disabled="true"], [data-variant="destructive"])))';
+const TEST_NOT_SELECTED_DIRECT_CHILD = ':not(:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"])))';
+const TEST_GROUPED_ROOTS = new Set([
+  "aside.app-shell-left-panel .group:has(> button > .text-token-foreground)",
+  "aside.app-shell-left-panel [role=\"listitem\"] [role=\"button\"].group",
+]);
 
 function testedEligible(selector) {
-  return `${selector}${TEST_ENABLED}${TEST_SAFE_ACTION}`;
+  const groupedGuard = TEST_GROUPED_ROOTS.has(selector) ? TEST_NOT_UNSAFE_DIRECT_CHILD : "";
+  return `${selector}${TEST_ENABLED}${TEST_SAFE_ACTION}${groupedGuard}`;
 }
 
 function testedStateful(selector) {
-  return `${testedEligible(selector)}${TEST_STATE}`;
+  const selectedGuard = selector.startsWith("aside.app-shell-left-panel ") ? TEST_NOT_SELECTED : "";
+  const groupedSelectedGuard = TEST_GROUPED_ROOTS.has(selector) ? TEST_NOT_SELECTED_DIRECT_CHILD : "";
+  return `${testedEligible(selector)}${selectedGuard}${groupedSelectedGuard}${TEST_STATE}`;
 }
 
 const PRIVATE_SKIN_BASE_ICON_SELECTORS = PRIVATE_SKIN_INTERACTION_FAMILIES
@@ -508,6 +518,7 @@ function sidebarSurfaceCandidates(root, scenario) {
   }
   if (
     root.startsWith("aside.app-shell-left-panel button:has(> .text-token-foreground)")
+    || root.startsWith("aside.app-shell-left-panel button:not(:where(.group > button))")
     || root.startsWith("aside.app-shell-left-panel .group > button")
   ) {
     if (scenario.kind === "standalone") return ["standalone-button"];
@@ -548,14 +559,14 @@ function sidebarSurfaceSelectorMatches(root, scenario, identity) {
 
   let positiveState = positiveRootState || positiveChildState;
   const rootInteraction = topLevelPseudoArguments(root, "is").some((argument) => (
-    argument.includes(":hover") || argument.includes(":focus-visible")
+    argument.includes(":hover") || argument.includes(":focus-visible") || argument.includes("[data-state=\"open\"]")
   ));
   if (rootInteraction) {
     positiveState ||= identity === "standalone-button" || identity === "group-primary-button"
-      ? ["primary-hover", "primary-focus"].includes(scenario.transient)
+      ? ["primary-hover", "primary-focus", "primary-open"].includes(scenario.transient)
       : identity === "group-row"
-        ? ["root-hover", "root-focus", "primary-hover", "quick-hover"].includes(scenario.transient)
-        : ["root-hover", "root-focus"].includes(scenario.transient);
+        ? ["root-hover", "root-focus", "root-open", "primary-hover", "quick-hover"].includes(scenario.transient)
+        : ["root-hover", "root-focus", "root-open"].includes(scenario.transient);
   }
   const descendantFocus = topLevelPseudoArguments(root, "has")
     .some((argument) => argument === "button:focus-visible");
@@ -587,8 +598,27 @@ function sidebarSurfaceSelectorMatches(root, scenario, identity) {
   if (targetDisabled && root.includes(":not(:disabled, [aria-disabled=\"true\"])")) return false;
   if (
     primaryDisabled
-    && identity === "group-row"
-    && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground))")
+    && ["group-row", "project-task-row"].includes(identity)
+    && (
+      root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"]) > .text-token-foreground))")
+      || root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))")
+    )
+  ) return false;
+  if (
+    scenario.destructive
+    && scenario.unsafeTarget === "primary"
+    && ["group-row", "project-task-row"].includes(identity)
+    && root.includes(":not(:has(> button:is(:disabled, [aria-disabled=\"true\"], [data-variant=\"destructive\"])))")
+  ) return false;
+  if (
+    scenario.danger
+    && ["group-row", "project-task-row"].includes(identity)
+    && root.includes(":not(:has([class*=\"text-token-danger\"], [class*=\"text-token-error\"]))")
+  ) return false;
+  if (
+    scenario.error
+    && ["group-row", "project-task-row"].includes(identity)
+    && root.includes(":not(:has([class*=\"text-token-danger\"], [class*=\"text-token-error\"]))")
   ) return false;
   if (
     primaryDisabled
@@ -852,6 +882,21 @@ test("sidebar cascade keeps selected material after guarded transient material",
     settings: normalizePrivateSkinSettings({}),
   })));
   const { css } = resolveThemeTarget(bundle, "codex");
+  for (const scenario of [
+    { kind: "standalone", persistentOwner: "root", persistentState: "aria-current", transient: "primary-hover" },
+    { kind: "standalone", persistentOwner: "root", persistentState: "aria-selected", transient: "primary-focus" },
+    { kind: "standalone", persistentOwner: "root", persistentState: "aria-current", transient: "primary-open" },
+    { kind: "group", persistentOwner: "root", persistentState: "aria-selected", transient: "root-hover" },
+    { kind: "group", persistentOwner: "root", persistentState: "data-state-active", transient: "root-focus" },
+    { kind: "group", persistentOwner: "root", persistentState: "aria-current", transient: "root-open" },
+    { kind: "group", persistentOwner: "primary", persistentState: "aria-selected", transient: "root-hover" },
+    { kind: "listitem", persistentOwner: "root", persistentState: "aria-current", transient: "root-hover" },
+  ]) {
+    const selected = sidebarCascadeWinners(css, scenario);
+    assertSelectedCascade(selected);
+    assert.equal(selected.declaration("glyph", "filter"), undefined, `Selected glyph must not retain transient glow: ${JSON.stringify(scenario)}`);
+  }
+
   const sidebarPaint = PRIVATE_SKIN_TRANSIENT_PAINT_SELECTORS.filter((selector) => selector.startsWith("aside."));
   const materialSelectors = privateSkinLayerSelectors(css, "material")
     .filter((selector) => selector.startsWith("aside.app-shell-left-panel "));
@@ -877,6 +922,39 @@ test("sidebar cascade keeps selected material after guarded transient material",
     "Composer coverage must remain limited to safe enabled secondary controls.",
   );
   assert.doesNotMatch(css, /\.size-token-button-composer/u, "Send must remain outside private icon material selectors.");
+});
+
+test("grouped transient roots reject unsafe direct child controls", () => {
+  const bundle = validateThemePackage(JSON.parse(buildPrivateSkinPackage({
+    id: "mtest123.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    exportedAt: "2026-07-19T00:00:00.000Z",
+    image: Buffer.from("safe-image"),
+    settings: normalizePrivateSkinSettings({}),
+  })));
+  const { css } = resolveThemeTarget(bundle, "codex");
+  for (const kind of ["group", "listitem"]) {
+    for (const unsafe of [
+      { disabled: true, disabledTarget: "primary" },
+      { ariaDisabled: true, disabledTarget: "primary" },
+      { destructive: true, unsafeTarget: "primary" },
+      { danger: true, unsafeTarget: "primary" },
+      { error: true, unsafeTarget: "primary" },
+    ]) {
+      const cascade = sidebarCascadeWinners(css, {
+        kind,
+        transient: "root-hover",
+        ...unsafe,
+      });
+      assert.deepEqual(cascade.paintedRoots(), [], `Unsafe direct child must suppress grouped transient paint: ${JSON.stringify({ kind, ...unsafe })}`);
+      assert.equal(cascade.declaration("glyph", "filter"), undefined, `Unsafe direct child must suppress grouped glyph glow: ${JSON.stringify({ kind, ...unsafe })}`);
+    }
+  }
+
+  for (const kind of ["group", "listitem"]) {
+    const normalTransient = sidebarCascadeWinners(css, { kind, transient: "root-hover" });
+    assert.deepEqual(normalTransient.paintedRoots(), [sidebarScenarioRootIdentity({ kind })], "An unselected safe grouped control must retain transient paint.");
+    assert.match(normalTransient.declaration("glyph", "filter")?.value ?? "", /drop-shadow\(0 0 7px/u);
+  }
 });
 
 test("generated packages contain only local images and safe Codex CSS", () => {
