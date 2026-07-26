@@ -7,9 +7,9 @@ import { confirmRestart } from "./prompt.mjs";
 import { runtime as productionRuntime } from "./runtime.mjs";
 import { createStateStore } from "./state.mjs";
 
-export const VERSION = "0.2.9";
-const REAPPLY = "npx --yes @codextheme/cli@0.2.9 reapply";
-const RESTORE = "npx --yes @codextheme/cli@0.2.9 restore";
+export const VERSION = "0.2.10";
+const REAPPLY = "npx --yes @codextheme/cli@0.2.10 reapply";
+const RESTORE = "npx --yes @codextheme/cli@0.2.10 restore";
 
 const HELP = `CodexTheme ${VERSION}
 
@@ -33,8 +33,10 @@ function safePublicError(error) {
     "E_PLATFORM",
     "E_CODEX_NOT_FOUND",
     "E_RESTART_REQUIRED",
+    "E_RESTART_FAILED",
     "E_DOM_INCOMPATIBLE",
     "E_CORE_VERIFY",
+    "E_RUNTIME_FAILED",
     "E_RESTORE_FAILED",
     "E_PRIVATE_NOT_FOUND",
     "E_PRIVATE_EXPIRED",
@@ -45,7 +47,7 @@ function safePublicError(error) {
     "E_HANDOFF_FAILED",
   ]);
   if (allowed.has(error?.code)) return { code: error.code, message: error.message, exitCode: 1 };
-  return { code: "E_DOM_INCOMPATIBLE", message: "CodexTheme 未能完成本次操作。", exitCode: 1 };
+  return { code: "E_RUNTIME_FAILED", message: "CodexTheme 未能完成本次操作。", exitCode: 1 };
 }
 
 function writeApplyResult(stdout, result, name, successMessage, { showReapply = true } = {}) {

@@ -11,12 +11,16 @@ function mappedError(error) {
   switch (error?.code) {
     case "CODEXTHEME_RESTART_REQUIRED":
       return new CliError("E_RESTART_REQUIRED", "需要得到你的确认后才能重新打开 Codex。");
+    case "CODEXTHEME_SHUTDOWN_TIMEOUT":
+    case "CODEXTHEME_PORT_OCCUPIED":
+    case "CODEXTHEME_TARGET_TIMEOUT":
+      return new CliError("E_RESTART_FAILED", "重新打开 Codex 时，旧进程或本机调试端口未能及时释放。");
     case "CODEXTHEME_DOM_INCOMPATIBLE":
       return new CliError("E_DOM_INCOMPATIBLE", "当前 Codex 界面结构与该主题暂不兼容。");
     case "CODEXTHEME_VERIFY_FAILED":
       return new CliError("E_CORE_VERIFY", "主题应用后的完整性验证失败，已尝试回滚。");
     default:
-      return new CliError("E_DOM_INCOMPATIBLE", "Codex 主题运行时未能完成本次操作。");
+      return new CliError("E_RUNTIME_FAILED", "Codex 主题运行时未能完成本次操作。");
   }
 }
 

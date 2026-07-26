@@ -149,6 +149,36 @@ test("handoff runner reports failed recovery without retaining the pending job",
   assert.deepEqual(app.calls.at(-1), ["store.removePending"]);
 });
 
+test("handoff runner preserves the safe restart failure stage", async () => {
+  const app = harness({
+    schemaVersion: 1,
+    createdAt: "2026-07-19T08:00:00.000Z",
+    parentPid: 4321,
+    action: { source: "catalog", themeSlug: "cathedral-nocturne" },
+  });
+  const lifecycle = {
+    async applyTheme() {
+      throw Object.assign(new Error("private shutdown detail"), { code: "E_RESTART_FAILED" });
+    },
+  };
+
+  assert.equal(await runHandoffJob({
+    ...app,
+    lifecycle,
+    cache: {},
+    runtime: { recover: async () => ({ recovered: true }) },
+  }), 1);
+  assert.deepEqual(app.results[0], {
+    schemaVersion: 1,
+    status: "failure",
+    completedAt,
+    code: "E_RESTART_FAILED",
+    message: "重新打开 Codex 时，旧进程或本机调试端口未能及时释放。",
+    recovered: true,
+  });
+  assert.doesNotMatch(JSON.stringify(app.results), /private shutdown detail/);
+});
+
 test("worker invocation accepts only the exact pending path and parent pid", () => {
   assert.equal(validateWorkerInvocation(
     ["/safe/handoff/pending.json", "4321"],

@@ -127,7 +127,38 @@ export async function findRunningPids(adapter, platform = process.platform, exec
   return [];
 }
 
-async function stopExisting(adapter, pids, platform = process.platform, executablePath = null) {
+export async function waitForAppRelease({
+  adapter,
+  port,
+  platform = process.platform,
+  executablePath = null,
+  findRunningPidsApi = findRunningPids,
+  isPortOccupiedApi = isPortOccupied,
+  wait = delay,
+  now = Date.now,
+  timeoutMs = 7500,
+  pollMs = 250,
+} = {}) {
+  const deadline = now() + timeoutMs;
+  while (true) {
+    const [pids, portOccupied] = await Promise.all([
+      findRunningPidsApi(adapter, platform, executablePath),
+      isPortOccupiedApi(port),
+    ]);
+    if (!pids.length && !portOccupied) return;
+    const remaining = deadline - now();
+    if (remaining <= 0) {
+      const error = new Error(`${adapter.displayName} did not release its process and loopback CDP port.`);
+      error.code = "CODEXTHEME_SHUTDOWN_TIMEOUT";
+      error.appId = adapter.id;
+      error.port = port;
+      throw error;
+    }
+    await wait(Math.min(pollMs, remaining));
+  }
+}
+
+async function stopExisting(adapter, pids, port, platform = process.platform, executablePath = null) {
   const config = adapter.platforms[platform];
   if (platform === "darwin" && config.bundleId) {
     await execFileAsync("osascript", ["-e", `tell application id "${config.bundleId}" to quit`]).catch(() => {});
@@ -135,15 +166,24 @@ async function stopExisting(adapter, pids, platform = process.platform, executab
     const script = `Stop-Process -Id ${pids.join(",")} -Force -ErrorAction SilentlyContinue`;
     await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]).catch(() => {});
   }
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    if (!(await findRunningPids(adapter, platform, executablePath)).length) return;
-    await delay(250);
+  try {
+    await waitForAppRelease({ adapter, port, platform, executablePath });
+    return;
+  } catch (error) {
+    if (error?.code !== "CODEXTHEME_SHUTDOWN_TIMEOUT" || platform === "win32") throw error;
   }
   if (platform !== "win32") {
     for (const pid of pids) {
       try { process.kill(pid, "SIGTERM"); } catch { /* Process already exited. */ }
     }
   }
+  await waitForAppRelease({
+    adapter,
+    port,
+    platform,
+    executablePath,
+    timeoutMs: 5000,
+  });
 }
 
 export async function launchApp({ adapter, port = adapter.defaultPort, appPath = null, profilePath = null, restartExisting = false, timeoutMs = 30000 }) {
@@ -175,7 +215,7 @@ export async function launchApp({ adapter, port = adapter.defaultPort, appPath =
     if (!restartExisting) {
       throw new Error(`${adapter.displayName} is already running without CodexTheme on port ${port}. Close it or pass --restart-existing.`);
     }
-    await stopExisting(adapter, runningPids, process.platform, discovered.executable);
+    await stopExisting(adapter, runningPids, port, process.platform, discovered.executable);
   }
 
   if (await isPortOccupied(port)) {

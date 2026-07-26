@@ -134,6 +134,40 @@ test("authorized worker without a handoff coordinator retries with restart", asy
   assert.deepEqual(app.calls.filter(([name]) => name === "apply"), [["apply", false], ["apply", true]]);
 });
 
+test("restart coordination failures are not mislabeled as DOM incompatibility", async () => {
+  const app = harness({
+    apply: async () => {
+      throw Object.assign(new Error("old process retained the CDP port"), {
+        code: "CODEXTHEME_SHUTDOWN_TIMEOUT",
+      });
+    },
+  });
+
+  await assert.rejects(
+    () => applyTheme(applyOptions(app)),
+    {
+      code: "E_RESTART_FAILED",
+      message: "重新打开 Codex 时，旧进程或本机调试端口未能及时释放。",
+    },
+  );
+});
+
+test("unknown runtime failures remain distinct from DOM incompatibility", async () => {
+  const app = harness({
+    apply: async () => {
+      throw new Error("unclassified runtime failure");
+    },
+  });
+
+  await assert.rejects(
+    () => applyTheme(applyOptions(app)),
+    {
+      code: "E_RUNTIME_FAILED",
+      message: "Codex 主题运行时未能完成本次操作。",
+    },
+  );
+});
+
 test("verification failure never writes state", async () => {
   const app = harness({ apply: async () => ({ targets: [{ result: { pass: false } }] }) });
   await assert.rejects(() => applyTheme(applyOptions(app)), { code: "E_CORE_VERIFY" });

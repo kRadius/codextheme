@@ -5,7 +5,9 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { getAdapter } from "../src/adapters/index.mjs";
-import { discoverApp, launchApp } from "../src/runtime/launcher.mjs";
+import * as launcher from "../src/runtime/launcher.mjs";
+
+const { discoverApp, launchApp } = launcher;
 
 test("custom app path accepts a macOS app bundle or executable", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "codextheme-app-path-"));
@@ -57,4 +59,28 @@ test("launcher reports an occupied custom CDP port before spawning", async (t) =
       return true;
     },
   );
+});
+
+test("restart release waits until both the old process and CDP port are gone", async () => {
+  assert.equal(typeof launcher.waitForAppRelease, "function");
+  let tick = 0;
+  const waits = [];
+
+  await launcher.waitForAppRelease({
+    adapter: getAdapter("codex"),
+    port: 9335,
+    executablePath: "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
+    findRunningPidsApi: async () => tick === 0 ? [4321] : [],
+    isPortOccupiedApi: async () => tick < 2,
+    wait: async (milliseconds) => {
+      waits.push(milliseconds);
+      tick += 1;
+    },
+    now: () => tick * 100,
+    timeoutMs: 1000,
+    pollMs: 100,
+  });
+
+  assert.equal(tick, 2);
+  assert.deepEqual(waits, [100, 100]);
 });

@@ -3,8 +3,10 @@ import { applyPrivateTheme, applyTheme } from "./lifecycle.mjs";
 
 const PUBLIC_FAILURES = new Map([
   ["E_CODEX_NOT_FOUND", "没有找到已安装的 Codex Desktop。"],
+  ["E_RESTART_FAILED", "重新打开 Codex 时，旧进程或本机调试端口未能及时释放。"],
   ["E_DOM_INCOMPATIBLE", "当前 Codex 界面结构与该主题暂不兼容。"],
   ["E_CORE_VERIFY", "主题应用后的完整性验证失败。"],
+  ["E_RUNTIME_FAILED", "Codex 主题运行时未能完成本次操作。"],
   ["E_PRIVATE_CACHE", "无法安全读取本地私有主题缓存。"],
   ["E_RESTORE_FAILED", "主题应用失败，且未能完整恢复 Codex 官方外观。"],
   ["E_HANDOFF_BUSY", "已有一个 Codex 重启任务正在处理。"],
