@@ -21,10 +21,9 @@ const BASES = Object.freeze({
     composerBlur: 22,
     borderAlpha: 38,
     radius: 12,
-    iconSurfaceAlpha: 92,
-    iconBorderAlpha: 58,
-    iconGlowAlpha: 42,
-    iconGlyphOnAccent: true,
+    iconHoverSurfaceAlpha: 30,
+    iconHoverBorderAlpha: 52,
+    iconHoverGlowAlpha: 28,
     saturation: 104,
     imageContrast: 106,
     shadow: "0 22px 58px rgba(0,0,0,.42)",
@@ -46,10 +45,9 @@ const BASES = Object.freeze({
     composerBlur: 28,
     borderAlpha: 30,
     radius: 16,
-    iconSurfaceAlpha: 24,
-    iconBorderAlpha: 44,
-    iconGlowAlpha: 24,
-    iconGlyphOnAccent: false,
+    iconHoverSurfaceAlpha: 20,
+    iconHoverBorderAlpha: 40,
+    iconHoverGlowAlpha: 18,
     saturation: 108,
     imageContrast: 102,
     shadow: "0 18px 42px rgba(0,0,0,.30)",
@@ -71,10 +69,9 @@ const BASES = Object.freeze({
     composerBlur: 12,
     borderAlpha: 18,
     radius: 8,
-    iconSurfaceAlpha: 12,
-    iconBorderAlpha: 26,
-    iconGlowAlpha: 0,
-    iconGlyphOnAccent: false,
+    iconHoverSurfaceAlpha: 10,
+    iconHoverBorderAlpha: 28,
+    iconHoverGlowAlpha: 0,
     saturation: 92,
     imageContrast: 100,
     shadow: "0 12px 28px rgba(0,0,0,.24)",
@@ -86,6 +83,9 @@ const FALLBACK_COLORS = Object.freeze({
   secondary: "#8b5cf6",
   highlight: "#c4b5fd",
 });
+
+const INTERACTION_SATURATION_FLOOR = 42;
+const ACHROMATIC_SATURATION_THRESHOLD = 4;
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -154,13 +154,97 @@ function contrastRatio(first, second) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function readableAccent(accent, surface) {
-  if (contrastRatio(accent, surface) >= 4.5) return accent;
-  for (let percentage = 1; percentage <= 100; percentage += 1) {
-    const candidate = mixHex(accent, "#ffffff", percentage / 100);
-    if (contrastRatio(candidate, surface) >= 4.5) return candidate;
+function rgbToHsl(red, green, blue) {
+  const [normalizedRed, normalizedGreen, normalizedBlue] = [red, green, blue]
+    .map((value) => value / 255);
+  const maximum = Math.max(normalizedRed, normalizedGreen, normalizedBlue);
+  const minimum = Math.min(normalizedRed, normalizedGreen, normalizedBlue);
+  const range = maximum - minimum;
+  const lightness = (maximum + minimum) / 2;
+  let hue = 0;
+  if (range > 0) {
+    if (maximum === normalizedRed) {
+      hue = ((normalizedGreen - normalizedBlue) / range) % 6;
+    } else if (maximum === normalizedGreen) {
+      hue = (normalizedBlue - normalizedRed) / range + 2;
+    } else {
+      hue = (normalizedRed - normalizedGreen) / range + 4;
+    }
+    hue = (hue * 60 + 360) % 360;
   }
-  return "#ffffff";
+  const saturation = range === 0
+    ? 0
+    : range / (1 - Math.abs(2 * lightness - 1)) * 100;
+  return { hue, saturation, lightness };
+}
+
+function hslToHex(hue, saturation, lightness) {
+  const normalizedSaturation = clamp(saturation, 0, 100) / 100;
+  const normalizedLightness = clamp(lightness, 0, 1);
+  const chroma = (1 - Math.abs(2 * normalizedLightness - 1)) * normalizedSaturation;
+  const sector = ((hue % 360) + 360) % 360 / 60;
+  const intermediate = chroma * (1 - Math.abs((sector % 2) - 1));
+  let channels;
+  if (sector < 1) channels = [chroma, intermediate, 0];
+  else if (sector < 2) channels = [intermediate, chroma, 0];
+  else if (sector < 3) channels = [0, chroma, intermediate];
+  else if (sector < 4) channels = [0, intermediate, chroma];
+  else if (sector < 5) channels = [intermediate, 0, chroma];
+  else channels = [chroma, 0, intermediate];
+  const match = normalizedLightness - chroma / 2;
+  return hex(...channels.map((value) => (value + match) * 255));
+}
+
+function readableInteractionAccent(source, surface) {
+  if (
+    source.color
+    && source.saturation >= INTERACTION_SATURATION_FLOOR
+    && contrastRatio(source.color, surface) >= 4.5
+  ) {
+    return source.color;
+  }
+  const saturation = Math.max(source.saturation, INTERACTION_SATURATION_FLOOR);
+  for (let step = 0; step <= 100; step += 1) {
+    const offset = step * 0.01;
+    const lightnesses = step === 0
+      ? [source.lightness]
+      : [source.lightness + offset, source.lightness - offset];
+    for (const lightness of lightnesses) {
+      if (lightness < 0 || lightness > 1) continue;
+      const candidate = hslToHex(source.hue, saturation, lightness);
+      const candidateHsl = rgbToHsl(...parseHex(candidate, FALLBACK_COLORS.highlight));
+      if (
+        candidateHsl.saturation >= INTERACTION_SATURATION_FLOOR - 0.5
+        && hueDistance(candidateHsl.hue, source.hue) <= 2
+        && contrastRatio(candidate, surface) >= 4.5
+      ) {
+        return candidate;
+      }
+    }
+  }
+  return FALLBACK_COLORS.highlight;
+}
+
+function interactionAccent(safe, surface) {
+  const highlightHsl = rgbToHsl(...parseHex(safe.highlight, FALLBACK_COLORS.highlight));
+  if (highlightHsl.saturation >= ACHROMATIC_SATURATION_THRESHOLD) {
+    return readableInteractionAccent({
+      ...highlightHsl,
+      color: safe.highlight,
+    }, surface);
+  }
+
+  const candidates = [safe.secondary, safe.primary]
+    .map((color) => rgbToHsl(...parseHex(color, FALLBACK_COLORS.primary)))
+    .sort((first, second) => second.saturation - first.saturation);
+  const hueSource = candidates[0].saturation >= ACHROMATIC_SATURATION_THRESHOLD
+    ? candidates[0]
+    : rgbToHsl(...parseHex(FALLBACK_COLORS.highlight, FALLBACK_COLORS.highlight));
+  return readableInteractionAccent({
+    hue: hueSource.hue,
+    saturation: Math.max(highlightHsl.saturation, INTERACTION_SATURATION_FLOOR),
+    lightness: highlightHsl.lightness,
+  }, surface);
 }
 
 function pixelLuminance(red, green, blue) {
@@ -377,7 +461,7 @@ export function deriveSkinTokens(profile = {}, settings = {}) {
   const surface = mixHex(safe.primary, "#06080d", recipe === "focus" ? 0.90 : 0.84);
   return {
     recipe,
-    accent: readableAccent(safe.highlight, surface),
+    accent: interactionAccent(safe, surface),
     accentSoft: safe.secondary,
     surface,
     surfaceRaised: mixHex(safe.secondary, "#0b0d12", recipe === "glass" ? 0.78 : 0.86),
@@ -401,10 +485,9 @@ export function deriveSkinTokens(profile = {}, settings = {}) {
     composerBlur: base.composerBlur,
     borderAlpha: base.borderAlpha,
     radius: base.radius,
-    iconSurfaceAlpha: base.iconSurfaceAlpha,
-    iconBorderAlpha: base.iconBorderAlpha,
-    iconGlowAlpha: base.iconGlowAlpha,
-    iconGlyphOnAccent: base.iconGlyphOnAccent,
+    iconHoverSurfaceAlpha: base.iconHoverSurfaceAlpha,
+    iconHoverBorderAlpha: base.iconHoverBorderAlpha,
+    iconHoverGlowAlpha: base.iconHoverGlowAlpha,
     saturation: base.saturation,
     imageContrast: base.imageContrast,
     shadow: base.shadow,

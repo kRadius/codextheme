@@ -1,6 +1,7 @@
 import { THEME_FORMAT } from "@codextheme/runtime/theme";
 import { MAX_PRIVATE_PACKAGE_BYTES, normalizePrivateSkinSettings } from "./private-skin-schema.mjs";
 import { deriveSkinTokens } from "./private-skin-profile.mjs";
+import { buildPrivateSkinInteractionCss } from "./private-skin-interactions.mjs";
 
 const SAFE_HEX = /^#[0-9a-f]{6}$/iu;
 
@@ -28,6 +29,7 @@ function buildCss(tokens) {
   const zoom = (tokens.zoom / 100).toFixed(2);
   const saturation = (tokens.saturation / 100).toFixed(2);
   const imageContrast = (tokens.imageContrast / 100).toFixed(2);
+  const interactionCss = buildPrivateSkinInteractionCss();
   return `:root.codextheme-codex-skin {
   color-scheme: dark !important;
   --codextheme-accent: ${tokens.accent};
@@ -38,10 +40,9 @@ function buildCss(tokens) {
   --codextheme-muted-ink: ${tokens.mutedInk};
   --codextheme-line: color-mix(in srgb, ${tokens.accent} ${tokens.borderAlpha}%, transparent);
   --codextheme-radius: ${tokens.radius}px;
-  --codextheme-icon-surface-alpha: ${tokens.iconSurfaceAlpha}%;
-  --codextheme-icon-border-alpha: ${tokens.iconBorderAlpha}%;
-  --codextheme-icon-glow-alpha: ${tokens.iconGlowAlpha}%;
-  --codextheme-icon-glyph: ${tokens.iconGlyphOnAccent ? "var(--codextheme-surface)" : "var(--codextheme-accent)"};
+  --codextheme-icon-hover-surface-alpha: ${tokens.iconHoverSurfaceAlpha}%;
+  --codextheme-icon-hover-border-alpha: ${tokens.iconHoverBorderAlpha}%;
+  --codextheme-icon-hover-glow-alpha: ${tokens.iconHoverGlowAlpha}%;
 }
 
 html.codextheme-codex-skin body {
@@ -98,41 +99,29 @@ html.codextheme-codex-skin .composer-surface-chrome {
   backdrop-filter: blur(${tokens.composerBlur}px) saturate(1.08) !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel :is([aria-current="page"], [aria-selected="true"], [data-state="active"]) {
+${interactionCss}
+
+html.codextheme-codex-skin aside.app-shell-left-panel :is([aria-current="page"], [aria-selected="true"], [data-state="active"]):not(:where(.group > button)) {
+  color: var(--codextheme-accent) !important;
   background: color-mix(in srgb, var(--codextheme-accent-soft) ${tokens.selectionAlpha}%, transparent) !important;
   border-color: color-mix(in srgb, var(--codextheme-accent) 44%, transparent) !important;
   border-radius: var(--codextheme-radius) !important;
   box-shadow: inset 3px 0 0 var(--codextheme-accent) !important;
 }
 
-html.codextheme-codex-skin aside.app-shell-left-panel :is(button, a, [role="button"]) svg {
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) > .text-token-foreground) {
   color: var(--codextheme-accent) !important;
-  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
+  background: color-mix(in srgb, var(--codextheme-accent-soft) ${tokens.selectionAlpha}%, transparent) !important;
+  border-color: color-mix(in srgb, var(--codextheme-accent) 44%, transparent) !important;
+  border-radius: var(--codextheme-radius) !important;
+  box-shadow: inset 3px 0 0 var(--codextheme-accent) !important;
 }
 
-html.codextheme-codex-skin [data-message-author-role="assistant"] svg {
+html.codextheme-codex-skin aside.app-shell-left-panel button:has(> .text-token-foreground):not(:where(.group > button)):is([aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button > .text-token-foreground):is([aria-current="page"], [aria-selected="true"], [data-state="active"]) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel .group:has(> button:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) > .text-token-foreground) :is(.text-token-foreground, svg),
+html.codextheme-codex-skin aside.app-shell-left-panel [role="listitem"] [role="button"].group:is([aria-current="page"], [aria-selected="true"], [data-state="active"]) svg {
   color: var(--codextheme-accent) !important;
-  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent));
-}
-
-html.codextheme-codex-skin .dream-home :is(button, [role="button"]) svg {
-  color: var(--codextheme-icon-glyph) !important;
-  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
-  border-radius: 50% !important;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
-    0 0 0 5px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-border-alpha), transparent),
-    0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
-}
-
-html.codextheme-codex-skin .composer-surface-chrome :is(button, [role="button"]) svg {
-  color: var(--codextheme-icon-glyph) !important;
-  background-color: color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent) !important;
-  border-radius: 50% !important;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-surface-alpha), transparent),
-    0 0 0 5px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-border-alpha), transparent),
-    0 0 18px color-mix(in srgb, var(--codextheme-accent) var(--codextheme-icon-glow-alpha), transparent) !important;
 }
 
 html.codextheme-codex-skin :is(pre, code, [data-language]) {
