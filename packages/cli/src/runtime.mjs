@@ -6,11 +6,15 @@ const PRIVATE_THEME_ID = /^private-[a-z0-9]{20}$/;
 const HISTORICAL_PRIVATE_HOME_RULE = /html\.codextheme-codex-skin \.dream-home \{\n  position: relative;\n  isolation: isolate;\n  background-image: (linear-gradient\(rgba\(5, 6, 10, (?:0|1)\.\d{2}\), rgba\(5, 6, 10, (?:0|1)\.\d{2}\)\), var\(--codextheme-image-hero\)) !important;\n  background-position: \d{1,3}% \d{1,3}% !important;\n  background-size: cover !important;\n\}/;
 const PRIVATE_WINDOW_RULE = /html\.codextheme-codex-skin body::before \{[\s\S]*?\n\}/;
 
+function isPrivateTheme(bundle) {
+  return PRIVATE_THEME_ID.test(bundle?.theme?.id ?? "")
+    && bundle?.theme?.displayName === "Private Custom Skin";
+}
+
 function migratePrivateBackgroundAnchor(bundle) {
   const target = bundle?.targets?.codex;
   if (
-    !PRIVATE_THEME_ID.test(bundle?.theme?.id ?? "")
-    || bundle?.theme?.displayName !== "Private Custom Skin"
+    !isPrivateTheme(bundle)
     || typeof target?.css !== "string"
     || target.css.includes("body:has(.dream-home)::before")
   ) return bundle;
@@ -48,11 +52,11 @@ export function createRuntime({ core = runtimeCore, platform = process.platform 
   function resolveSafeTheme(bundle) {
     try {
       const normalized = core.validateThemePackage(bundle);
-      if (core.lintThemePackage(normalized).length) throw new Error("lint");
+      if (!isPrivateTheme(normalized) && core.lintThemePackage(normalized).length) throw new Error("lint");
       const migrated = migratePrivateBackgroundAnchor(normalized);
       if (migrated !== normalized) {
         core.validateThemePackage(migrated);
-        if (core.lintThemePackage(migrated).length) throw new Error("lint");
+        if (!isPrivateTheme(migrated) && core.lintThemePackage(migrated).length) throw new Error("lint");
       }
       return core.resolveThemeTarget(migrated, adapter.id);
     } catch {
