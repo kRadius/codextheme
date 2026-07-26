@@ -180,7 +180,10 @@ export function buildPrivateSkinPackage({ id, exportedAt, image, settings, profi
     Math.max(60, Number.isFinite(safeProfile?.contrast) ? safeProfile.contrast : 74),
   ));
   const base64 = Buffer.from(image).toString("base64");
-  const randomPart = id.split(".")[1].slice(0, 20).toLowerCase();
+  const randomPart = Buffer
+    .from(id.split(".")[1], "base64url")
+    .subarray(0, 10)
+    .toString("hex");
   const bundle = {
     format: THEME_FORMAT,
     schemaVersion: 1,
