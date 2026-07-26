@@ -102,6 +102,33 @@ test("preflight reports missing theme nodes separately from adapter landmarks", 
   assert.equal(vm.runInNewContext(expression, context).compatible, true);
 });
 
+test("Codex preflight accepts the stable startup shell before the composer mounts", () => {
+  const adapter = getAdapter("codex");
+  const visibleElement = { getBoundingClientRect: () => ({ width: 100, height: 40 }) };
+  const matchedSelectors = new Set([
+    "main.main-surface",
+    "aside.app-shell-left-panel",
+  ]);
+  const context = {
+    document: { querySelector: (selector) => matchedSelectors.has(selector) ? visibleElement : null },
+    getComputedStyle: () => ({ display: "block", visibility: "visible" }),
+    innerWidth: 1200,
+    innerHeight: 800,
+  };
+
+  const result = vm.runInNewContext(buildProbeExpression(adapter, {}), context);
+  assert.equal(result.compatible, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.missing)), []);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.warnings)), [{
+    scope: "adapter",
+    context: null,
+    severity: "recommended",
+    name: "composer",
+    selectors: [".composer-surface-chrome"],
+    invalidSelectors: [],
+  }]);
+});
+
 test("preflight reports invalid selectors instead of hiding parser failures", () => {
   const adapter = getAdapter("codex");
   const visibleElement = { getBoundingClientRect: () => ({ width: 100, height: 40 }) };

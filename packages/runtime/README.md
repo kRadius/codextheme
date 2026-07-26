@@ -7,7 +7,7 @@ This package is the low-level engine used by `@codextheme/cli`. Most people shou
 ## Install
 
 ```sh
-npm install @codextheme/runtime@0.1.2
+npm install @codextheme/runtime@0.1.3
 ```
 
 ## API

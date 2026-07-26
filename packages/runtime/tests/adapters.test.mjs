@@ -23,13 +23,15 @@ test("Codex target matcher accepts workspace app pages and rejects auxiliary ove
 test("Codex verification keeps only current cross-route landmarks", () => {
   const adapter = getAdapter("codex");
   assert.deepEqual(adapter.lastVerified.darwin, {
-    appVersion: "26.715.52143",
-    build: "5591",
-    verifiedAt: "2026-07-21",
+    appVersion: "26.721.41059",
+    build: "5848",
+    verifiedAt: "2026-07-26",
   });
   assert.deepEqual(adapter.verification.rootAny, ["main.main-surface"]);
   assert.deepEqual(adapter.verification.required, [
     { name: "sidebar", any: ["aside.app-shell-left-panel"] },
+  ]);
+  assert.deepEqual(adapter.verification.recommended, [
     { name: "composer", any: [".composer-surface-chrome"] },
   ]);
   assert.doesNotMatch(JSON.stringify(adapter.verification), /"main"|"aside"|contenteditable|textarea/);

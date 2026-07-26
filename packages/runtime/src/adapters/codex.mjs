@@ -6,7 +6,7 @@ const codex = {
   displayName: "OpenAI Codex",
   defaultPort: 9335,
   lastVerified: {
-    darwin: { appVersion: "26.715.52143", build: "5591", verifiedAt: "2026-07-21" },
+    darwin: { appVersion: "26.721.41059", build: "5848", verifiedAt: "2026-07-26" },
   },
   rendererProfiles: {
     [codexThemeV1Profile.id]: codexThemeV1Profile,
@@ -38,6 +38,8 @@ const codex = {
     rootAny: ["main.main-surface"],
     required: [
       { name: "sidebar", any: ["aside.app-shell-left-panel"] },
+    ],
+    recommended: [
       { name: "composer", any: [".composer-surface-chrome"] },
     ],
   },
