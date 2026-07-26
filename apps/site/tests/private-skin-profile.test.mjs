@@ -376,6 +376,21 @@ test("low-chroma highlights become vivid, hue-preserving interaction accents", (
   assert.ok(contrastRatio(tokens.accent, tokens.surface) >= 4.5);
 });
 
+test("warm low-chroma photographs use a cool complementary interaction accent", () => {
+  const profile = analyzeImagePixels(solid(148, 137, 121, 32, 32));
+  const tokens = deriveSkinTokens(profile, { recipe: profile.recommendedRecipe });
+  const accentHsl = hsl(tokens.accent);
+  const primaryHsl = hsl(profile.primary);
+  const complementaryHue = (primaryHsl.hue + 180) % 360;
+
+  assert.ok(
+    hueDistance(accentHsl.hue, complementaryHue) <= 2,
+    `${tokens.accent} should complement ${profile.primary} instead of amplifying it into gold`,
+  );
+  assert.ok(accentHsl.saturation >= 41.5);
+  assert.ok(contrastRatio(tokens.accent, tokens.surface) >= 4.5);
+});
+
 test("vivid readable highlights remain unchanged interaction accents", () => {
   const tokens = deriveSkinTokens({
     primary: "#08253b",

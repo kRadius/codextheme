@@ -86,6 +86,7 @@ const FALLBACK_COLORS = Object.freeze({
 
 const INTERACTION_SATURATION_FLOOR = 42;
 const ACHROMATIC_SATURATION_THRESHOLD = 4;
+const USABLE_IMAGE_ACCENT_SATURATION = 24;
 
 function clamp(value, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -227,7 +228,7 @@ function readableInteractionAccent(source, surface) {
 
 function interactionAccent(safe, surface) {
   const highlightHsl = rgbToHsl(...parseHex(safe.highlight, FALLBACK_COLORS.highlight));
-  if (highlightHsl.saturation >= ACHROMATIC_SATURATION_THRESHOLD) {
+  if (highlightHsl.saturation >= USABLE_IMAGE_ACCENT_SATURATION) {
     return readableInteractionAccent({
       ...highlightHsl,
       color: safe.highlight,
@@ -237,9 +238,12 @@ function interactionAccent(safe, surface) {
   const candidates = [safe.secondary, safe.primary]
     .map((color) => rgbToHsl(...parseHex(color, FALLBACK_COLORS.primary)))
     .sort((first, second) => second.saturation - first.saturation);
-  const hueSource = candidates[0].saturation >= ACHROMATIC_SATURATION_THRESHOLD
-    ? candidates[0]
-    : rgbToHsl(...parseHex(FALLBACK_COLORS.highlight, FALLBACK_COLORS.highlight));
+  const strongestImageHue = candidates[0];
+  const hueSource = strongestImageHue.saturation >= USABLE_IMAGE_ACCENT_SATURATION
+    ? strongestImageHue
+    : strongestImageHue.saturation >= ACHROMATIC_SATURATION_THRESHOLD
+      ? { ...strongestImageHue, hue: (strongestImageHue.hue + 180) % 360 }
+      : rgbToHsl(...parseHex(FALLBACK_COLORS.highlight, FALLBACK_COLORS.highlight));
   return readableInteractionAccent({
     hue: hueSource.hue,
     saturation: Math.max(highlightHsl.saturation, INTERACTION_SATURATION_FLOOR),
