@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lintThemePackage, validateThemePackage } from "@codextheme/runtime";
+import { validateThemePackage } from "@codextheme/runtime";
 
 const PRODUCTION_ORIGIN = "https://codextheme.tech";
 const SAFE_ID = /^[a-z0-9]+\.[A-Za-z0-9_-]{32}$/;
@@ -103,7 +103,6 @@ export function createPrivateThemeSource({ origin = PRODUCTION_ORIGIN, fetchImpl
         bundle = JSON.parse(serialized);
         assertPrivateShape(bundle);
         validateThemePackage(bundle);
-        if (lintThemePackage(bundle).length) throw new Error("lint");
       } catch {
         throw sourceError("E_PRIVATE_INVALID", "私有主题安全验证失败。");
       }
